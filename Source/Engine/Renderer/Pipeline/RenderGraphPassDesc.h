@@ -403,6 +403,13 @@ namespace sw
     struct RenderPassAttachment
     {
         REFLECT_BODY();
+        /** @brief 기록 없는 첨부로 만듭니다(깃발 칸은 비트필드라 생성자가 정한다). */
+        RenderPassAttachment() noexcept
+            : _bHistory{ SW_FALSE }
+            , _reservedFlags{ 0 }
+        {
+        }
+
         PROPERTY( Required, InheritKey )
         string _name;
 
@@ -458,6 +465,28 @@ namespace sw
          */
         PROPERTY()
         RenderResolutionSpace _resolutionSpace{ RenderResolutionSpace::Render };
+
+        /**
+         * @brief 고정 픽셀 크기입니다(가로 · 세로를 함께 적는다). 0 이면 프레임 크기를 `_resolutionDivisor` 로 나눈 크기다.
+         * @details 화면과 상관없는 타깃(LUT · 작은 분석 타깃)용이다(언리얼 `FRDGTextureDesc::Extent` · 유니티 `TextureDesc` 의 고정 크기). 고정 크기 첨부는 나눗수 · 해상도 공간을 받지 않고
+         *          (렌더 배율 · 동적 해상도가 바꾸지 않는다) 앨리어싱에 들지 않는다. 그림자 맵(ShadowMap · LocalShadowMap 역할)은 크기를 렌더 설정이 정해 적을 수 없다(검증).
+         */
+        PROPERTY()
+        uint32 _width{ 0 };
+
+        PROPERTY()
+        uint32 _height{ 0 };
+
+        /**
+         * @brief 프레임을 넘어 지난 프레임 내용의 복사본(기록)을 뷰마다 둔다(언리얼 `FTemporalAAHistory` · 유니티 `RTHandle` 기록 자리). 시간 누적 패스(TAA · VolumetricClouds)의 출력은 이 칸을 적어야 한다(검증).
+         * @details 기록은 출력과 같은 크기 · 형식의 텍스처 하나를 더 잡는다 — 메모리 예산에 든다는 것을 데이터가 말한다. 기록을 읽는 실행이 그 두 종류뿐이라 다른 첨부에는 적을 수 없다(검증).
+         */
+        PROPERTY()
+        uint8                  _bHistory      : 1;
+        [[maybe_unused]] uint8 _reservedFlags : 7;
+
+        /** @brief 고정 크기 첨부(`_width` · `_height`)면 true 입니다. */
+        [[nodiscard]] bool isFixedSize() const { return _width != 0 || _height != 0; }
     };
 } // namespace sw
 

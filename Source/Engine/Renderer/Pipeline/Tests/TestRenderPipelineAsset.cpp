@@ -599,6 +599,47 @@ SW_TEST_CASE( RenderPipelineAssetTest, PipelineChoiceEndsAtTheQualityTier )
     SW_EXPECT_EQUAL( string( "ForwardPipeline" ), pCached->getDesc()._name );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 첨부의 고정 크기는 가로 · 세로를 함께 적고 배율 규칙과 섞지 않는다. 기록(`_bHistory`)은 시간 누적 패스의 출력만 적고, 그 출력은 꼭 적는다
+ * @details 변이: 고정 크기 검사를 지우면 한 변만 적은 첨부가 읽혀 둘째 묶음이 진다. 기록 검사를 지우면 컴퓨트 출력의 기록 선언이 읽혀(실행이 읽지 않는 값) 마지막 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
+{
+    const auto makeXML = []( string_view outputAttributes )
+    {
+        StringBuilder<constant::buffer::kMax1024> xml;
+        xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                    "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>" );
+        xml.appendFormat( "<RenderPassAttachment _name=\"Lut\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\" %#/>", outputAttributes );
+        xml.appendFormat( "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"Compute\" %#><_listInput><item>A</item></_listInput><_listOutput><item>Lut</item></_listOutput>"
+                          "</RenderGraphPassDesc></_listPass></RenderPipelineDesc>",
+                          ComputePassTestUtil::withShader() );
+        return string( xml.view() );
+    };
+    RenderPipelineAsset fixed;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( fixed, makeXML( "_width=\"32\" _height=\"16\"" ) ) );
+    const RenderPassAttachment& lut = fixed.getDesc()._listAttachment[1];
+    SW_EXPECT_TRUE( lut.isFixedSize() );
+    SW_EXPECT_EQUAL( 32u, lut._width );
+    SW_EXPECT_EQUAL( 16u, lut._height );
+
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ "engine/pipeline/deferredpipeline.xml" } ) );
+    const RenderPassAttachment* pTAA = VectorUtil::findIf( deferred.getDesc()._listAttachment, []( const RenderPassAttachment& attachment )
+    { return attachment._name == "TAAColor"; } );
+    SW_REQUIRE_TRUE( pTAA != nullptr );
+    SW_EXPECT_TRUE( pTAA->_bHistory != SW_FALSE );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentFixedSizeInvalid" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryUnread" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\"" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\" _height=\"32\" _resolutionDivisor=\"2\"" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_bHistory=\"true\"" ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
 SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 {

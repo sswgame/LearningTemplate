@@ -36,12 +36,6 @@ namespace sw
             static constexpr auto kGBufferNormal     = "GBufferNormal";
             static constexpr auto kGBufferMaterial   = "GBufferMaterial";
             static constexpr auto kGBufferCustomData = "GBufferCustomData";
-            static constexpr auto kLitColor          = "LitColor";
-            static constexpr auto kBloomColor        = "BloomColor";
-            static constexpr auto kBloomBright       = "BloomBright";
-            static constexpr auto kOutlineColor      = "OutlineColor";
-            static constexpr auto kTransparentColor  = "TransparentColor";
-            static constexpr auto kTAAColor          = "TAAColor";
         };
 
         static constexpr uint32 kDefaultTransientSize = 1280;
@@ -331,11 +325,6 @@ namespace sw
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
         hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };
         hashed_string _gbufferCustomData{ FrameRendererUtil::Attachment::kGBufferCustomData };
-        hashed_string _litColor{ FrameRendererUtil::Attachment::kLitColor };
-        hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
-        hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };
-        hashed_string _transparentColor{ FrameRendererUtil::Attachment::kTransparentColor };
-        hashed_string _taaColor{ FrameRendererUtil::Attachment::kTAAColor };
 
         /// 셰이더가 보는 이름입니다(어태치먼트 이름과 다를 수 있습니다. registerPassTexture 의 canonical 인자).
         /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 바인딩하고 셰이더가 `g_<Role>Index` 로 읽습니다.

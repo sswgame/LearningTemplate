@@ -220,6 +220,22 @@ namespace sw
                             break;
                         }
                     }
+                    if ( attachment.isFixedSize() )
+                    {
+                        // 고정 크기는 배율 규칙과 함께 쓰지 않는다 — 어느 쪽이 크기를 정하는지 둘이 되면 렌더 배율이 바뀔 때 PSO · 뷰포트가 갈린다.
+                        const bool                bBothAxes = attachment._width != 0 && attachment._height != 0;
+                        const bool                bScaled   = attachment._resolutionDivisor != 1 || attachment._resolutionSpace != RenderResolutionSpace::Render;
+                        const RenderPassInputRole fixedRole =
+                            resolveRenderPassInputRole( attachment._name, isDepthAttachment( &attachment ), string_view( attachment._role ) );
+                        const bool bShadowAtlas = fixedRole == RenderPassInputRole::ShadowMap || fixedRole == RenderPassInputRole::LocalShadowMap;
+                        if ( bBothAxes == false || bScaled || bShadowAtlas )
+                        {
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentFixedSizeInvalid",
+                                             "[%#] attachment '%#': _width %# x _height %# - write both, keep _resolutionDivisor 1 and _resolutionSpace Render, and not on a shadow map (its size is the render config's)",
+                                             sourcePath, attachment._name, attachment._width, attachment._height );
+                            ++issueCount;
+                        }
+                    }
                     if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentResolutionDivisorOnlyAccepted", "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2, 4, 8 and 16 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
@@ -627,6 +643,46 @@ namespace sw
             }
 
             /**
+             * @brief 2-0d) 기록(`_bHistory`)은 시간 누적 패스의 출력에만 있고, 그 출력은 기록을 적어야 한다 — 기록을 읽는 실행이 TAA(`executeTAAPass`) · 볼륨 구름 둘이다.
+             * @details 기록 텍스처는 그 패스의 첫 컬러 출력의 복사본이다(`FrameViewResources::updateOutputHistory`). 적지 않은 기록이 코드에서 생기거나, 적은 기록이 쓰이지 않고 메모리만 잡지 않게 한다.
+             */
+            static uint32 validateAttachmentHistories( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32     issueCount{ 0 };
+                const auto isHistoryOutput = [&desc]( const RenderPassAttachment& attachment )
+                {
+                    return VectorUtil::containsIf( desc._listPass, [&attachment]( const RenderGraphPassDesc& pass )
+                    {
+                        const bool bTemporalPass = pass._type == RenderPassKind::TAA || pass._type == RenderPassKind::VolumetricClouds;
+                        return bTemporalPass && pass._listResolvedColorOutput.empty() == false && pass._listResolvedColorOutput[0]._attachment.view() == string_view( attachment._name );
+                    } );
+                };
+                for ( const RenderPassAttachment& attachment : desc._listAttachment )
+                {
+                    const bool bHistoryOutput = isHistoryOutput( attachment );
+                    if ( bHistoryOutput && attachment._bHistory == SW_FALSE )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryMissing", "[%#] attachment '%#' is the output of a temporal pass (TAA, VolumetricClouds) - declare _bHistory=\"true\" (its copy lives across frames)",
+                                         sourcePath, attachment._name );
+                        ++issueCount;
+                    }
+                    // 쓰는 패스가 없는 첨부(가져온 묶음에만 있다)는 기록도 만들어지지 않는다 — 읽히지 않는 선언이 아니라 쓰이지 않는 첨부다.
+                    const bool bWritten = VectorUtil::containsIf( desc._listPass, [&attachment]( const RenderGraphPassDesc& pass )
+                    {
+                        return VectorUtil::containsIf( pass._listResolvedColorOutput, [&attachment]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                        { return output._attachment.view() == string_view( attachment._name ); } );
+                    } );
+                    if ( bHistoryOutput == false && bWritten && attachment._bHistory != SW_FALSE )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryUnread", "[%#] attachment '%#': _bHistory - only the first output of a TAA or VolumetricClouds pass keeps a history", sourcePath,
+                                         attachment._name );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
              * @brief 2-0c) 머티리얼 거르기(`_requiredMaterialDefine` · `_excludedMaterialDefine`)는 씬 메시를 그리는 패스만 적는다 — 다른 패스는 배치를 그리지 않아 읽는 쪽이 없다.
              *        같은 define 을 요구하면서 빼면 어느 배치도 그리지 않는다.
              */
@@ -913,7 +969,7 @@ namespace sw
                             pFirst = pAttachment;
                             return;
                         }
-                        if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
+                        if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor && pAttachment->_width == pFirst->_width && pAttachment->_height == pFirst->_height )
                             return;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputsDivisorDivisor", "[%#] pass '%#': outputs '%#' (divisor %#) and '%#' (divisor %#) differ in size - all outputs of one pass must have the same size",
                                          sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
@@ -1239,7 +1295,8 @@ namespace sw
                     const string                sourceName = pSource->_attachment.c_str();
                     const RenderPassAttachment* pOutput    = findAttachment( desc, outputName );
                     const RenderPassAttachment* pSourceAtt = findAttachment( desc, sourceName );
-                    const bool                  bSameShape = pOutput != nullptr && pSourceAtt != nullptr && pOutput->_format == pSourceAtt->_format && pOutput->_resolutionDivisor == pSourceAtt->_resolutionDivisor;
+                    const bool                  bSameShape = pOutput != nullptr && pSourceAtt != nullptr && pOutput->_format == pSourceAtt->_format && pOutput->_resolutionDivisor == pSourceAtt->_resolutionDivisor &&
+                                            pOutput->_width == pSourceAtt->_width && pOutput->_height == pSourceAtt->_height;
                     if ( bSameShape == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputSourceDiffer", "[%#] pass '%#' (%#): output '%#' and source '%#' differ in format or divisor - when the effect is off the output names the source",
@@ -1459,6 +1516,7 @@ namespace sw
         issueCount += Internal::validatePassPermutations( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
         issueCount += Internal::validatePassMaterialFilters( _desc, sourcePath );
+        issueCount += Internal::validateAttachmentHistories( _desc, sourcePath );
         issueCount += Internal::validatePassRenderState( _desc, sourcePath );
         issueCount += Internal::validateComputePasses( _desc, sourcePath );
         issueCount += Internal::validateFrameGraph( _desc, sourcePath );
