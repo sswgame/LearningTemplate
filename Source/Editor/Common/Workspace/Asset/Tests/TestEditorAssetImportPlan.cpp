@@ -3,7 +3,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 
 using namespace sw;

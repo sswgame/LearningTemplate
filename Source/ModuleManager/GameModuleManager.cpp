@@ -251,7 +251,7 @@ namespace sw
 
     bool GameModuleManager::KitReloadClient::isLibraryUsable( ModuleLibraryHandle /*library*/ )
     {
-        return true; // 대조할 API 표가 없다 — 키트의 계약(엔진 ABI 스탬프 · 정적 등록자)은 리로드 매니저의 prepare 가 이미 본다
+        return true; // 대조할 API 표가 없다 — 키트의 계약(엔진 ABI 다이제스트 · 정적 등록자)은 리로드 매니저의 prepare 가 이미 본다
     }
 
     // ======================================================================

@@ -276,7 +276,7 @@ namespace sw
                 // 쓰기를 적용하기 전에 잠금 안에서 범위를 다시 읽는다 — 이 트랜잭션의 쓰기는 견줄 대상이 아니다
                 vector<ServiceRecord> listRecord;
                 listLocked( write._table, write._key, write._range._cursorKey, write._range._maxCount, write._range._bDescending == SW_TRUE, listRecord );
-                if ( ServiceTransaction::computeRangeFingerprint( listRecord, 0 ) != write._range._fingerprint )
+                if ( ServiceTransaction::computeRangeDigest( listRecord, 0 ) != write._range._digest )
                 {
                     outInfo._conflictIndex = static_cast<int32>( writeIndex );
                     return ServiceStoreResult::Conflict;

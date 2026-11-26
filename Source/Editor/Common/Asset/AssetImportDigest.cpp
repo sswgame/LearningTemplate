@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
@@ -32,10 +32,10 @@ namespace sw::editor
     namespace
     {
         /**
-         * @struct AssetImportStampInternal
+         * @struct AssetImportDigestInternal
          * @brief `import.stamp` 읽기 · 쓰기 · 대조와 원본 폴더 하나의 일괄 임포트입니다(파일은 병렬로 임포트하고 합치기는 직렬입니다).
          */
-        struct AssetImportStampInternal
+        struct AssetImportDigestInternal
         {
             /** @brief 스탬프 한 줄입니다. */
             struct StampEntry
@@ -196,10 +196,10 @@ namespace sw::editor
             };
 
             /** @brief DDC 키 서술입니다(`DerivedDataCache` 가 항목 머리에 적어 키 충돌을 미스로 만든다). 원본 해시가 원본 바이트 · 규칙 · 임포터 판 · 대상 형식을 이미 섞는다. */
-            static string makeCacheKeyDescription( const IRawAssetImporter& importer, const SourceFile& file, uint64 sourceHash, uint64 codeFingerprint )
+            static string makeCacheKeyDescription( const IRawAssetImporter& importer, const SourceFile& file, uint64 sourceHash, uint64 codeDigest )
             {
                 string text( "import=" );
-                text.append( importer.getStampHeader() ).append( "\ncode=" ).append( formatHash( codeFingerprint ) ).append( "\nsource=" ).append( formatHash( sourceHash ) );
+                text.append( importer.getStampHeader() ).append( "\ncode=" ).append( formatHash( codeDigest ) ).append( "\nsource=" ).append( formatHash( sourceHash ) );
                 if ( importer.isImportedPathEmbedded() )
                     text.append( "\npath=" ).append( file._assetPath );
                 else
@@ -358,7 +358,7 @@ namespace sw::editor
                     return false;
                 if ( unpackImportedFiles( importer, file, payload ) == false )
                 {
-                    SW_LOG_WARNING_ID( "AssetImportStamp.CacheEntryNotRestored", "Import: the DDC entry of '%#' could not be written back - imported again", file._assetPath );
+                    SW_LOG_WARNING_ID( "AssetImportDigest.CacheEntryNotRestored", "Import: the DDC entry of '%#' could not be written back - imported again", file._assetPath );
                     return false;
                 }
                 return true;
@@ -370,12 +370,12 @@ namespace sw::editor
                 vector<uint8> payload;
                 if ( packImportedFiles( importer, file, payload ) == false )
                 {
-                    SW_LOG_INFO_ID( "AssetImportStamp.CacheEntrySkipped", "Import: '%#' is not stored in the DDC - its results could not be read or lie outside its folder", file._assetPath );
+                    SW_LOG_INFO_ID( "AssetImportDigest.CacheEntrySkipped", "Import: '%#' is not stored in the DDC - its results could not be read or lie outside its folder", file._assetPath );
                     return;
                 }
                 const uint64 key = HashUtil::computeStringHash64( keyDescription.c_str(), keyDescription.size(), false );
                 if ( derivedDataCache.store( key, keyDescription, payload ) == false )
-                    SW_LOG_WARNING_ID( "AssetImportStamp.CacheStoreFailed", "Import: could not store '%#' in the DDC", file._assetPath );
+                    SW_LOG_WARNING_ID( "AssetImportDigest.CacheStoreFailed", "Import: could not store '%#' in the DDC", file._assetPath );
             }
 
             /**
@@ -437,15 +437,15 @@ namespace sw::editor
                     bool   bServedFromCache = false;
                     if ( _pDerivedDataCache != nullptr && current._sourceHash != 0 )
                     {
-                        const uint64 codeFingerprint = _pImporter->findCodeFingerprint();
-                        if ( codeFingerprint == 0 )
+                        const uint64 codeDigest = _pImporter->findCodeDigest();
+                        if ( codeDigest == 0 )
                         {
                             StringBuilder<constant::buffer::kMax512> problemBuilder;
                             problemBuilder.appendFormat( "%#: 임포터 코드 지문이 없습니다 - Config/Dev/CookCodeInputs.json 에 임포터를 적습니다", file._assetPath );
                             outResult._problem = string( problemBuilder.view() );
                             return;
                         }
-                        cacheKeyDescription = makeCacheKeyDescription( *_pImporter, file, current._sourceHash, codeFingerprint );
+                        cacheKeyDescription = makeCacheKeyDescription( *_pImporter, file, current._sourceHash, codeDigest );
                         bServedFromCache    = serveFromCache( *_pImporter, *_pDerivedDataCache, file, cacheKeyDescription );
                     }
                     if ( bServedFromCache == false )
@@ -640,7 +640,7 @@ namespace sw::editor
                 for ( const EditorContentFile& contentFile : listContentFile )
                 {
                     listPath.push_back( FileUtil::toDiskPath( contentFile._path ) );
-                    mapByteCount.emplace( listPath.back().str(), contentFile._fileStamp._sizeBytes );
+                    mapByteCount.emplace( listPath.back().str(), contentFile._fileStat._sizeBytes );
                 }
                 AssetSourceLocator::collectStoredSources( rawFolder, listPath );
                 VectorUtil::sort( listPath );
@@ -873,7 +873,7 @@ namespace sw::editor
                     problemBuilder.appendFormat( "%#: 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다", sideFolder.str() );
                     inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                 }
-                SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath.str() );
+                SW_LOG_INFO_ID( "AssetImportDigest.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath.str() );
             }
 
             /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
@@ -981,7 +981,7 @@ namespace sw::editor
 {
     uint64 IRawAssetImporter::computeImportedHash( const AbsolutePath& importedPath ) const
     {
-        return AssetImportStampUtil::computeFileHash( importedPath );
+        return AssetImportDigestUtil::computeFileHash( importedPath );
     }
 
     void IRawAssetImporter::collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const
@@ -990,21 +990,21 @@ namespace sw::editor
             outListPath.push_back( importedPath );
     }
 
-    AssetImportSummary AssetImportStampUtil::importAll( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
-                                                        const DerivedDataCache& derivedDataCache )
+    AssetImportSummary AssetImportDigestUtil::importAll( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
+                                                         const DerivedDataCache& derivedDataCache )
     {
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache, nullptr );
+        return AssetImportDigestInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache, nullptr );
     }
 
-    AssetImportSummary AssetImportStampUtil::importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
-                                                            TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache, const AssetImportControl* pControl )
+    AssetImportSummary AssetImportDigestUtil::importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
+                                                             TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache, const AssetImportControl* pControl )
     {
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &listAssetPath, pTaskManager, &derivedDataCache, pControl );
+        return AssetImportDigestInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &listAssetPath, pTaskManager, &derivedDataCache, pControl );
     }
 
-    void AssetImportStampUtil::importChangedSources( AssetSourceBatch& batch, const vector<AssetSourceBatchEntry>& listEntry, const IRawAssetImporter& importer )
+    void AssetImportDigestUtil::importChangedSources( AssetSourceBatch& batch, const vector<AssetSourceBatchEntry>& listEntry, const IRawAssetImporter& importer )
     {
-        using Internal = AssetImportStampInternal;
+        using Internal = AssetImportDigestInternal;
         if ( listEntry.empty() )
             return;
         vector<AbsolutePath> listRoot;
@@ -1018,7 +1018,7 @@ namespace sw::editor
         const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Import );
         if ( derivedDataCache.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "AssetImportStamp.DerivedDataConfigUnreadable", "Import of '%#' skipped: %# (%#)", importer.getRawFolderName(), derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            SW_LOG_ERROR_ID( "AssetImportDigest.DerivedDataConfigUnreadable", "Import of '%#' skipped: %# (%#)", importer.getRawFolderName(), derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return;
         }
         for ( const AbsolutePath& root : listRoot )
@@ -1032,7 +1032,7 @@ namespace sw::editor
             const AssetImportSummary summary = importSources( root, importer, listSourcePath, batch._pTaskManager, *derivedDataCache, &batch._control );
             for ( const string& problem : summary._listProblem )
             {
-                SW_LOG_ERROR_ID( "AssetImportStamp.ChangedSourceNotImported", "Import failed: %#", problem.c_str() );
+                SW_LOG_ERROR_ID( "AssetImportDigest.ChangedSourceNotImported", "Import failed: %#", problem.c_str() );
             }
             unordered_set<string> uniqueSkipped;
             for ( const string& skippedPath : summary._listSkippedPath )
@@ -1048,22 +1048,22 @@ namespace sw::editor
                     item._bHandled = false;
                 }
             }
-            SW_LOG_INFO_ID( "AssetImportStamp.ChangedSourcesImported", "Import of '%#': %# changed -> %# imported", importer.getRawFolderName(), static_cast<uint32>( listSourcePath.size() ), summary._importedCount );
+            SW_LOG_INFO_ID( "AssetImportDigest.ChangedSourcesImported", "Import of '%#': %# changed -> %# imported", importer.getRawFolderName(), static_cast<uint32>( listSourcePath.size() ), summary._importedCount );
         }
     }
 
-    bool AssetImportStampUtil::isUnderRawFolder( string_view path, string_view rawFolderName )
+    bool AssetImportDigestUtil::isUnderRawFolder( string_view path, string_view rawFolderName )
     {
         string rawFolder;
         string relativePath;
-        return AssetImportStampInternal::splitRawPath( path, rawFolderName, rawFolder, relativePath );
+        return AssetImportDigestInternal::splitRawPath( path, rawFolderName, rawFolder, relativePath );
     }
 
-    string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
+    string AssetImportDigestUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
     {
         string rawFolder;
         string relativePath;
-        if ( AssetImportStampInternal::splitRawPath( rawPath, rawFolderName, rawFolder, relativePath ) == false )
+        if ( AssetImportDigestInternal::splitRawPath( rawPath, rawFolderName, rawFolder, relativePath ) == false )
             return {};
 
         const string domainFolder   = FileUtil::getDirectoryPart( rawFolder );
@@ -1071,19 +1071,19 @@ namespace sw::editor
         return FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), importedExtension );
     }
 
-    AbsolutePath AssetImportStampUtil::makeImportedPath( const AbsolutePath& rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
+    AbsolutePath AssetImportDigestUtil::makeImportedPath( const AbsolutePath& rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
     {
         string rawFolder;
         string relativePath;
-        if ( AssetImportStampInternal::splitRawPath( rawPath.str(), rawFolderName, rawFolder, relativePath ) == false )
+        if ( AssetImportDigestInternal::splitRawPath( rawPath.str(), rawFolderName, rawFolder, relativePath ) == false )
             return {};
         return FileUtil::toDiskPath( rawFolder ).getParent().join( importedFolderName ).join( relativePath ).removeExtension().appendSuffix( importedExtension );
     }
 
-    uint64 AssetImportStampUtil::computeFileHash( const DiskPath& path )
+    uint64 AssetImportDigestUtil::computeFileHash( const DiskPath& path )
     {
-        FileStamp  stamp{};
-        const bool bMissingOrEmpty = FileUtil::getFileStamp( path, stamp ) == false || stamp._sizeBytes == 0;
+        FileStat   fileStat{};
+        const bool bMissingOrEmpty = FileUtil::getFileStat( path, fileStat ) == false || fileStat._sizeBytes == 0;
         return bMissingOrEmpty ? 0 : ContentHash::computeFile( path );
     }
 } // namespace sw::editor

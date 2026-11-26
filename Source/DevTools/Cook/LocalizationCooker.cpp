@@ -10,7 +10,7 @@
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
 
@@ -97,10 +97,10 @@ namespace sw
     CookJobDesc LocalizationCooker::makeCookJobDesc()
     {
         CookJobDesc desc;
-        desc._cookerName      = "Localization";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Localization" );
-        desc._target          = "Any";
-        desc._settingsHash    = 0; // 쿠킹 설정이 없다 — 무엇을 굽는지는 프로젝트 파일(작업의 입력)이 정한다
+        desc._cookerName   = "Localization";
+        desc._codeDigest   = CookCodeDigest::find( "Localization" );
+        desc._target       = "Any";
+        desc._settingsHash = 0; // 쿠킹 설정이 없다 — 무엇을 굽는지는 프로젝트 파일(작업의 입력)이 정한다
         return desc;
     }
 } // namespace sw

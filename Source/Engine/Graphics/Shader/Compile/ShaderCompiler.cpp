@@ -15,7 +15,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -117,12 +117,12 @@ namespace sw
                     text.append( "fxc=" ).append( to_string( action._fxcHash ) ).append( "\n" );
                 }
 #endif
-                action._jobDesc._cookerName      = "Shader";
-                action._jobDesc._codeFingerprint = ShaderCompiler::getToolchainFingerprint(); // 도구 지문 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다
-                action._jobDesc._target          = string( ShaderCooker::getSubfolderForFormat( desc._targetFormat ) );
-                action._jobDesc._settingsHash    = HashUtil::computeStringHash64( string_view{ text }, false );
+                action._jobDesc._cookerName   = "Shader";
+                action._jobDesc._codeDigest   = ShaderCompiler::getToolchainDigest(); // 도구 지문 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다
+                action._jobDesc._target       = string( ShaderCooker::getSubfolderForFormat( desc._targetFormat ) );
+                action._jobDesc._settingsHash = HashUtil::computeStringHash64( string_view{ text }, false );
 
-                text.append( "target=" ).append( action._jobDesc._target ).append( "\ntoolchain=" ).append( to_string( action._jobDesc._codeFingerprint ) );
+                text.append( "target=" ).append( action._jobDesc._target ).append( "\ntoolchain=" ).append( to_string( action._jobDesc._codeDigest ) );
                 text.append( "\nsourceHash=" ).append( to_string( sourceHash ) );
                 action._actionKey = HashUtil::computeStringHash64( string_view{ text }, false );
                 return action;
@@ -184,7 +184,7 @@ namespace sw
                 const string reachable = ShaderReachableText::make( string_view( reinterpret_cast<const utf8*>( text.data() ), text.size() ), setup._call._desc._entryPoint );
                 SourceKey    sourceKey;
                 sourceKey._description.append( "Shader preprocessed text\ntarget=" ).append( setup._action._jobDesc._target ).append( "\nprofile=" ).append( setup._call._profile );
-                sourceKey._description.append( "\nentry=" ).append( setup._call._desc._entryPoint ).append( "\ntoolchain=" ).append( to_string( setup._action._jobDesc._codeFingerprint ) );
+                sourceKey._description.append( "\nentry=" ).append( setup._call._desc._entryPoint ).append( "\ntoolchain=" ).append( to_string( setup._action._jobDesc._codeDigest ) );
                 sourceKey._description.append( "\nfxc=" ).append( to_string( setup._action._fxcHash ) ).append( "\nlength=" ).append( to_string( reachable.size() ) );
                 sourceKey._description.append( "\ntext=" ).append( to_string( HashUtil::computeStringHash64( reachable, false ) ) );
                 sourceKey._key = HashUtil::computeStringHash64( sourceKey._description, false );
@@ -454,7 +454,7 @@ namespace sw
             static LoadedRecord findSourceRecord( const DerivedDataCache& cache, const ShaderCompileDesc& desc, const CompileAction& action, ShaderCompileSession& session )
             {
                 LoadedRecord source;
-                source._description = ShaderSourceRecord::makeKeyDescription( desc._source.str(), action._jobDesc._target, action._jobDesc._codeFingerprint, action._sourceHash );
+                source._description = ShaderSourceRecord::makeKeyDescription( desc._source.str(), action._jobDesc._target, action._jobDesc._codeDigest, action._sourceHash );
                 vector<uint8> bytes;
                 if ( cache.find( source.getKey(), source._description, bytes ) == false || source._record.read( bytes ) == false )
                     source._record = ShaderSourceRecord{};
@@ -844,20 +844,20 @@ namespace sw
         }
     }
 
-    uint64 ShaderCompiler::getToolchainFingerprint()
+    uint64 ShaderCompiler::getToolchainDigest()
     {
-        static const uint64 s_fingerprint = []
+        static const uint64 s_toolchainDigest = []
         {
             // SPIR-V 타깃 환경(-fspv-target-env)은 Vulkan 요구 판이다.
             constexpr uint32 kVulkanTargetVersion = constant::render::kVulkanRequiredMajor * 1000 + constant::render::kVulkanRequiredMinor;
-            return makeToolchainFingerprint( CookCodeFingerprint::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeFingerprint::getShaderCompilerVersion() );
+            return makeToolchainDigest( CookCodeDigest::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeDigest::getShaderCompilerVersion() );
         }();
-        return s_fingerprint;
+        return s_toolchainDigest;
     }
 
-    uint64 ShaderCompiler::makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion )
+    uint64 ShaderCompiler::makeToolchainDigest( uint64 compilerCodeDigest, uint32 vulkanTargetVersion, string_view compilerVersion )
     {
-        uint64 hash = HashUtil::computeStringHash64( to_string( compilerCodeFingerprint ), false );
+        uint64 hash = HashUtil::computeStringHash64( to_string( compilerCodeDigest ), false );
         hash        = HashUtil::computeStringHash64( to_string( vulkanTargetVersion ), false, hash );
         return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
     }

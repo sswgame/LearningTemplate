@@ -62,7 +62,7 @@ namespace
         }
     };
 
-    const CookJobDesc kDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 };
+    const CookJobDesc kDesc{ ._cookerName = "Fake", ._codeDigest = 1, ._target = "Test", ._settingsHash = 0 };
 } // namespace
 
 /**
@@ -134,8 +134,8 @@ SW_TEST_CASE( CookStoreTest, CooksAgainWhenInputOrVersionChanges )
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:two" ), fixture.readOutput( "x.bin" ) );
 
-    CookJobDesc nextVersion      = kDesc; // 쿠커 코드가 바뀌면 지문이 바뀌어 다시 굽는다
-    nextVersion._codeFingerprint = 2;
+    CookJobDesc nextVersion = kDesc; // 쿠커 코드가 바뀌면 지문이 바뀌어 다시 굽는다
+    nextVersion._codeDigest = 2;
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
     SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
     SW_EXPECT_EQUAL( 3, fixture._bakeCount );

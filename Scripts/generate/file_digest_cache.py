@@ -1,5 +1,5 @@
 """
-파일 내용 지문의 캐시 — 빌드마다 도는 지문 생성기(`engine_abi_stamp.py` · `cook_code_fingerprint.py`)가 같이 쓴다.
+파일 내용 지문의 캐시 — 빌드마다 도는 지문 생성기(`engine_abi_digest.py` · `cook_code_digest.py`)가 같이 쓴다.
 
 그 생성기들은 헤더 하나만 바뀌어도 트리 전체(수천 파일)를 읽어 해시했다 — 고친 파일 수가 아니라 트리 크기에 비례하는 모양이다.
 파일마다 (mtime, 크기) → 내용 SHA-1 을 빌드 트리의 JSON 에 두고, 둘 중 하나라도 다른 파일만 다시 읽는다. 지문에 넣을 것만 남기는 변환(`normalize`)을 줄 수 있다 — 변환을 바꾸면 `CACHE_VERSION` 을 올린다. 지문은 경로와 파일 SHA-1 을

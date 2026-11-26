@@ -89,7 +89,7 @@ namespace sw
                 const AutomationUserDataIsolation* const pIsolation = engine::areEngineSubsystemsBound() ? engine::findSubsystem<AutomationUserDataIsolation>() : nullptr;
                 if ( pIsolation == nullptr || pIsolation->getPlatformFolder().empty() )
                     return false;
-                outValue = UserDataFolderStamp::take( pIsolation->getPlatformFolder() ) != pIsolation->getPlatformStartStamp() ? 1.0 : 0.0;
+                outValue = UserDataFolderStat::take( pIsolation->getPlatformFolder() ) != pIsolation->getPlatformStartStat() ? 1.0 : 0.0;
                 return true;
             }
         };
@@ -194,22 +194,22 @@ namespace sw
         return gv_automationAllowOutsideUserData;
     }
 
-    UserDataFolderStamp UserDataFolderStamp::take( const AbsolutePath& folder )
+    UserDataFolderStat UserDataFolderStat::take( const AbsolutePath& folder )
     {
-        UserDataFolderStamp stamp;
-        stamp._bExists = FileUtil::isDirectory( folder );
-        if ( stamp._bExists == false )
-            return stamp;
-        (void)FileUtil::getFileWriteTime( folder, stamp._latestWriteTicks ); // 못 읽으면 0 — 항목 시각이 채운다
-        (void)FileUtil::forEachDirectoryEntry( folder, true, [&stamp]( const DirectoryEntry& entry )
+        UserDataFolderStat folderStat;
+        folderStat._bExists = FileUtil::isDirectory( folder );
+        if ( folderStat._bExists == false )
+            return folderStat;
+        (void)FileUtil::getFileWriteTime( folder, folderStat._latestWriteTicks ); // 못 읽으면 0 — 항목 시각이 채운다
+        (void)FileUtil::forEachDirectoryEntry( folder, true, [&folderStat]( const DirectoryEntry& entry )
         {
-            ++stamp._entryCount;
+            ++folderStat._entryCount;
             int64 ticks = 0;
-            if ( FileUtil::getFileWriteTime( entry.makePath(), ticks ) && ticks > stamp._latestWriteTicks )
-                stamp._latestWriteTicks = ticks;
+            if ( FileUtil::getFileWriteTime( entry.makePath(), ticks ) && ticks > folderStat._latestWriteTicks )
+                folderStat._latestWriteTicks = ticks;
             return true;
         } ); // 훑다 멈추면 그때까지의 수 — 다음에 찍을 때 달라져 바뀐 것으로 보인다(거짓 통과가 아니다)
-        return stamp;
+        return folderStat;
     }
 
     SubsystemInitResult AutomationUserDataIsolation::initializeSubsystem()
@@ -219,7 +219,7 @@ namespace sw
         if ( commandLine.isAutomatedRun() == false )
             return SubsystemInitResult::Succeeded; // 사람의 실행은 사람의 폴더를 쓴다
         _platformFolder                = UserDataPath::findPlatformDataDirectory( GameSelection::getName() );
-        _platformStartStamp            = _platformFolder.empty() ? UserDataFolderStamp{} : UserDataFolderStamp::take( _platformFolder );
+        _platformStartStat             = _platformFolder.empty() ? UserDataFolderStat{} : UserDataFolderStat::take( _platformFolder );
         const bool       bAllowOutside = AutomationUserDataRoot::isOutsideAllowed();
         expected<string> root          = AutomationUserDataRoot::resolve( bAllowOutside );
         if ( root.has_value() == false )

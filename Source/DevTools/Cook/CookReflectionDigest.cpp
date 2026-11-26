@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Cook/CookReflectionFingerprint.h"
+#include "DevTools/Cook/CookReflectionDigest.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
@@ -22,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        struct CookReflectionFingerprintInternal
+        struct CookReflectionDigestInternal
         {
             /** @brief 잎 칸 하나의 값입니다. 경로는 칸 이름 해시의 사슬이라 같은 자리면 같다. */
             struct DefaultValue
@@ -126,7 +126,7 @@ namespace sw
 
 namespace sw
 {
-    uint64 CookReflectionFingerprint::compute( const TypeRegistry& registry )
+    uint64 CookReflectionDigest::compute( const TypeRegistry& registry )
     {
         vector<const TypeInfo*> listType; // 기본 인스턴스를 만드는 일이 레지스트리를 다시 찾는다 — 순회 잠금 안에서 하지 않는다
         registry.forEachType( [&listType]( const TypeInfo& type )
@@ -142,7 +142,7 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax1024> textBuilder;
             textBuilder.appendFormat( "%#|layout=%#|default=%#", pType->_fullyQualifiedName.view(), pType->getSchemaLayoutHash(),
-                                      CookReflectionFingerprintInternal::computeDefaultHash( *pType, registry, scratch ) );
+                                      CookReflectionDigestInternal::computeDefaultHash( *pType, registry, scratch ) );
             for ( const PropertyInfo& property : pType->_listProperty )
             {
                 const PropertyMetadata& metadata   = *property._metadata;

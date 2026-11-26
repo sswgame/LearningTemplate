@@ -71,7 +71,7 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         if ( _listFrameStart.empty() || _listFrameStart.back()._frameIndex != frameIndex )
-            _listFrameStart.push_back( FrameStart{ LogStamp::getNextSequence(), frameIndex } );
+            _listFrameStart.push_back( FrameStart{ LogMetadata::getNextSequence(), frameIndex } );
     }
 
     uint32 AutomationLogCapture::countLinesWithID( const string& id, const string& contains, uint32 sinceFrame ) const
@@ -134,7 +134,7 @@ namespace sw
         line._message    = entry._message;
         line._id         = entry._pID != nullptr ? entry._pID : "";
         line._level      = entry._level;
-        line._frameIndex = findFrameIndex( entry._stamp._sequence );
+        line._frameIndex = findFrameIndex( entry._metadata._sequence );
         _listLogLine.push_back( std::move( line ) );
     }
 } // namespace sw

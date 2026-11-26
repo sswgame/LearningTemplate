@@ -22,7 +22,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
@@ -49,7 +49,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -837,7 +837,7 @@ namespace sw::editor
             string_view getRawFolderName() const override { return ModelImporter::kRawFolder; }
             string_view getStampHeader() const override { return ModelImportUtil::kImportStampHeader; }
             string_view getImportedLabel() const override { return "메시"; }
-            uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "ModelImport" ); }
+            uint64      findCodeDigest() const override { return CookCodeDigest::find( "ModelImport" ); }
             /** @brief 결과 글이 `_shared/` · 머티리얼 리소스 경로를 적으므로 DDC 키에 리소스 경로를 넣는다. */
             bool         isImportedPathEmbedded() const override { return true; }
             void         collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const override { ModelImporter::collectImportedFiles( importedPath, outListPath ); }
@@ -1038,7 +1038,7 @@ namespace sw::editor
 
     void ModelImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportDigestUtil` 한 곳이라
         // 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
         vector<AssetSourceBatchEntry> listEntry;
         for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
@@ -1062,7 +1062,7 @@ namespace sw::editor
         if ( bReady == false )
             return;
         const ModelRawImporter importer{ *batch._pAssetPaths, config, textureConfig, batch._pTaskManager };
-        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
+        AssetImportDigestUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
@@ -1079,7 +1079,7 @@ namespace sw::editor
             problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
         }
-        AssetImportSummary    summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
+        AssetImportSummary    summary = AssetImportDigestUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
         unordered_set<string> uniqueDomain;
         vector<AbsolutePath>  listDomain;
         for ( const string& sourcePath : summary._listSourcePath )
@@ -1154,8 +1154,8 @@ namespace sw::editor
 
     AbsolutePath ModelImporter::makeImportedModelPath( const AbsolutePath& rawModelPath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawModelPath, ModelImporter::kRawFolder, ModelImportUtil::kImportedModelFolder,
-                                                       MeshAssetFormat::kExtension );
+        return AssetImportDigestUtil::makeImportedPath( rawModelPath, ModelImporter::kRawFolder, ModelImportUtil::kImportedModelFolder,
+                                                        MeshAssetFormat::kExtension );
     }
 
     AbsolutePath ModelImporter::makeImportedSideFolder( const AbsolutePath& importedMeshPath )
@@ -1306,14 +1306,14 @@ namespace sw::editor
 
     uint64 ModelImporter::computeImportedHash( const AbsolutePath& importedMeshPath )
     {
-        uint64 hash = AssetImportStampUtil::computeFileHash( importedMeshPath );
+        uint64 hash = AssetImportDigestUtil::computeFileHash( importedMeshPath );
         if ( hash == 0 )
             return 0;
         // 옆의 `.fracture` 도 결과다. 지워지거나 바뀌면 어긋남이다.
         const AbsolutePath fracturePath = FileUtil::toDiskPath( FractureAsset::makePathForMesh( importedMeshPath.str() ) );
         if ( FileUtil::exists( fracturePath ) )
         {
-            const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
+            const uint64 fractureHash = AssetImportDigestUtil::computeFileHash( fracturePath );
             hash                      = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
@@ -1326,7 +1326,7 @@ namespace sw::editor
             if ( relative.size() > sideFolder.size() )
                 relative = relative.substr( sideFolder.size() );
             hash                  = HashUtil::computeStringHash64( relative.c_str(), relative.size(), false, hash );
-            const uint64 fileHash = AssetImportStampUtil::computeFileHash( file );
+            const uint64 fileHash = AssetImportDigestUtil::computeFileHash( file );
             hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
             // 옆 폴더 파일이 가리키는 공유 파일도 결과다 — 지우거나 손대면 어긋남이다.
             string text;

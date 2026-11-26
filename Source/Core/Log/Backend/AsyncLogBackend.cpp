@@ -98,11 +98,11 @@ namespace sw
             }
 
             /** @brief 시계 레이블(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)입니다. 남긴 순간 정하지 않았으면 빈 글입니다. */
-            static fixed_string<32> makeClockTag( const LogStamp& stamp )
+            static fixed_string<32> makeClockTag( const LogMetadata& metadata )
             {
                 fixed_string<32> tickTag{};
-                if ( stamp._bHasClock )
-                    formatstring( tickTag.data(), tickTag.capacity(), ( stamp._clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", stamp._clockNumber );
+                if ( metadata._bHasClock )
+                    formatstring( tickTag.data(), tickTag.capacity(), ( metadata._clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", metadata._clockNumber );
                 return tickTag;
             }
 
@@ -494,7 +494,7 @@ namespace sw
 #endif
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         // 1단계: 사건의 시각을 글로 바꾼다(같은 초 안에서는 캐시한 문자열을 재사용한다). 시각 · 시계 · 문맥은 남긴 순간의 것이다 — 여기서 재지 않는다
-        const Internal::DateStamp stamp = Internal::makeDateStamp( event._stamp._time );
+        const Internal::DateStamp stamp = Internal::makeDateStamp( event._metadata._time );
 
         const utf8* pEffectiveTag  = ( StringUtil::isNullOrEmpty( event._pTag ) ) ? constant::log::kDefaultLogTag : event._pTag;
         const utf8* pEffectiveFile = ( StringUtil::isNullOrEmpty( event._pFile ) ) ? constant::log::kDefaultLogFile : event._pFile;
@@ -502,8 +502,8 @@ namespace sw
 
         // 문맥이 없으면 꼬리표가 빈 글이다.
         utf8 arrContextTag[LogContext::kMaxTagSize];
-        (void)event._stamp._context.formatTag( arrContextTag, LogContext::kMaxTagSize );
-        const fixed_string<32> tickTag = Internal::makeClockTag( event._stamp );
+        (void)event._metadata._context.formatTag( arrContextTag, LogContext::kMaxTagSize );
+        const fixed_string<32> tickTag = Internal::makeClockTag( event._metadata );
 
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::buffer::kMax8192> formattedBuffer{};
@@ -531,7 +531,7 @@ namespace sw
             entry._line      = event._line;
             entry._pID       = event._pID;
             entry._timeStamp = stamp._text.c_str();
-            entry._stamp     = event._stamp;
+            entry._metadata  = event._metadata;
             _onLogWritten.broadcast( entry );
         }
 
@@ -554,14 +554,14 @@ namespace sw
                 message        = escapedMessage;
             }
             JSONLogFields params;
-            params._stamp   = event._stamp;
-            params._time    = stamp._text.c_str();
-            params._level   = event._level;
-            params._tag     = pEffectiveTag;
-            params._message = message;
-            params._id      = event._pID != nullptr ? string_view{ event._pID } : string_view{};
-            params._file    = pEffectiveFile;
-            params._line    = event._line;
+            params._metadata = event._metadata;
+            params._time     = stamp._text.c_str();
+            params._level    = event._level;
+            params._tag      = pEffectiveTag;
+            params._message  = message;
+            params._id       = event._pID != nullptr ? string_view{ event._pID } : string_view{};
+            params._file     = pEffectiveFile;
+            params._line     = event._line;
             JSONLinesLogOutput::appendLine( record._json, params );
         }
         submitRecord( std::move( record ) );

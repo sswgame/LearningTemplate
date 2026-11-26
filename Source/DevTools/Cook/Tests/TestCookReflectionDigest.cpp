@@ -5,7 +5,7 @@
 #include "Core/Task/TaskArgs.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "DevTools/Cook/CookReflectionFingerprint.h"
+#include "DevTools/Cook/CookReflectionDigest.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/FunctionInfo.h"
@@ -17,18 +17,18 @@
 #include <memory>
 #include <new>
 
-// CookReflectionFingerprintTest — 쿠킹 키의 리플렉션 지문: 저작 칸의 배치(역할 · 형식 · 기반)와 쿠킹 결과를 정하는 메타데이터가 바뀌면 다르고, 쿠킹본이 싣지 않는 역할(SaveGame)은 같다(nogpu).
+// CookReflectionDigestTest — 쿠킹 키의 리플렉션 지문: 저작 칸의 배치(역할 · 형식 · 기반)와 쿠킹 결과를 정하는 메타데이터가 바뀌면 다르고, 쿠킹본이 싣지 않는 역할(SaveGame)은 같다(nogpu).
 
 using namespace sw;
 
 namespace
 {
-    struct FingerprintSample
+    struct DigestSample
     {
         int32 _value;
     };
 
-    struct FingerprintTestUtil
+    struct DigestTestUtil
     {
         static PropertyInfo makeProperty( const utf8* pName, const utf8* pTypeName ) { return PropertyInfo{ hashed_string( pName ), hashed_string( pTypeName ), 0 }; }
 
@@ -39,7 +39,7 @@ namespace
             TypeInfo info;
             info._name               = hashed_string( pName );
             info._fullyQualifiedName = hashed_string( qualified.view() );
-            info._moduleName         = hashed_string( "TestCookFingerprint" );
+            info._moduleName         = hashed_string( "TestCookDigest" );
             info._size               = 8;
             if ( pParentName != nullptr )
             {
@@ -55,25 +55,25 @@ namespace
         {
             TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
             registry.registerClass( type );
-            return CookReflectionFingerprint::compute( registry );
+            return CookReflectionDigest::compute( registry );
         }
     };
 } // namespace
 
-/** @brief [CookReflectionFingerprintTest] 저장 역할 · 원소 형식 · 선언 기본값 · 에셋 경로 표시가 바뀌면 지문이 다르고, SaveGame 만 바꾸면 같다 */
-SW_TEST_CASE( CookReflectionFingerprintTest, RolesAndMetadataChangeTheFingerprint )
+/** @brief [CookReflectionDigestTest] 저장 역할 · 원소 형식 · 선언 기본값 · 에셋 경로 표시가 바뀌면 지문이 다르고, SaveGame 만 바꾸면 같다 */
+SW_TEST_CASE( CookReflectionDigestTest, RolesAndMetadataChangeTheDigest )
 {
-    const test::ScopedTestModule scopedModule( "TestCookFingerprint" );
-    TypeInfo                     type = FingerprintTestUtil::makeType( "FingerprintRole", nullptr );
-    type._listProperty                = { FingerprintTestUtil::makeProperty( "_value", "int32" ) };
-    const uint64 plain                = FingerprintTestUtil::computeWith( type );
-    SW_EXPECT_EQUAL( plain, FingerprintTestUtil::computeWith( type ) );
+    const test::ScopedTestModule scopedModule( "TestCookDigest" );
+    TypeInfo                     type = DigestTestUtil::makeType( "DigestRole", nullptr );
+    type._listProperty                = { DigestTestUtil::makeProperty( "_value", "int32" ) };
+    const uint64 plain                = DigestTestUtil::computeWith( type );
+    SW_EXPECT_EQUAL( plain, DigestTestUtil::computeWith( type ) );
 
     const auto computeEdited = [&type]( void ( *pEdit )( PropertyMetadata& ) )
     {
         TypeInfo edited = type;
         pEdit( edited._listProperty[0]._metadata.edit() );
-        return FingerprintTestUtil::computeWith( edited );
+        return DigestTestUtil::computeWith( edited );
     };
     SW_EXPECT_EQUAL( plain, computeEdited( []( PropertyMetadata& metadata )
     { metadata._bSaveGame = SW_TRUE; } ) );
@@ -89,18 +89,18 @@ SW_TEST_CASE( CookReflectionFingerprintTest, RolesAndMetadataChangeTheFingerprin
     { metadata._defaultValue = "7"; } ) );
 
     type._listProperty[0]._elementTypeName = hashed_string( "float32" );
-    SW_EXPECT_TRUE( plain != FingerprintTestUtil::computeWith( type ) );
+    SW_EXPECT_TRUE( plain != DigestTestUtil::computeWith( type ) );
 }
 
-/** @brief [CookReflectionFingerprintTest] 생성자가 주는 기본값만 다른 타입은 지문이 다르고, 만들 때마다 다른 값은 지문에 들지 않는다 */
-SW_TEST_CASE( CookReflectionFingerprintTest, ConstructorDefaultsChangeTheFingerprint )
+/** @brief [CookReflectionDigestTest] 생성자가 주는 기본값만 다른 타입은 지문이 다르고, 만들 때마다 다른 값은 지문에 들지 않는다 */
+SW_TEST_CASE( CookReflectionDigestTest, ConstructorDefaultsChangeTheDigest )
 {
-    const test::ScopedTestModule scopedModule( "TestCookFingerprint" );
-    TypeInfo                     type = FingerprintTestUtil::makeType( "FingerprintDefault", nullptr );
-    type._listProperty                = { FingerprintTestUtil::makeProperty( "_value", "int32" ) };
-    type._size                        = sizeof( FingerprintSample );
+    const test::ScopedTestModule scopedModule( "TestCookDigest" );
+    TypeInfo                     type = DigestTestUtil::makeType( "DigestDefault", nullptr );
+    type._listProperty                = { DigestTestUtil::makeProperty( "_value", "int32" ) };
+    type._size                        = sizeof( DigestSample );
     type._destroyInstance             = []( void* pInstance )
-    { std::destroy_at( static_cast<FingerprintSample*>( pInstance ) ); };
+    { std::destroy_at( static_cast<DigestSample*>( pInstance ) ); };
 
     const auto computeConstructed = [&type]( Delegate<TaskValue( void*, const TaskArgs& )> constructor )
     {
@@ -110,13 +110,13 @@ SW_TEST_CASE( CookReflectionFingerprintTest, ConstructorDefaultsChangeTheFingerp
         method._invoker         = std::move( constructor );
         TypeInfo constructed    = type;
         constructed._listMethod = { method };
-        return FingerprintTestUtil::computeWith( constructed );
+        return DigestTestUtil::computeWith( constructed );
     };
     const auto makeConstructor = []( const int32 value )
     {
         return SW_DELEGATE_LAMBDA( Delegate<TaskValue( void*, const TaskArgs& )>, [value]( void* pMemory, const TaskArgs& ) -> TaskValue
         {
-            new ( pMemory ) FingerprintSample{ value };
+            new ( pMemory ) DigestSample{ value };
             return TaskValue{};
         } );
     };
@@ -130,7 +130,7 @@ SW_TEST_CASE( CookReflectionFingerprintTest, ConstructorDefaultsChangeTheFingerp
     {
         return SW_DELEGATE_LAMBDA( Delegate<TaskValue( void*, const TaskArgs& )>, [&nextValue]( void* pMemory, const TaskArgs& ) -> TaskValue
         {
-            new ( pMemory ) FingerprintSample{ ++nextValue };
+            new ( pMemory ) DigestSample{ ++nextValue };
             return TaskValue{};
         } );
     };
@@ -138,20 +138,20 @@ SW_TEST_CASE( CookReflectionFingerprintTest, ConstructorDefaultsChangeTheFingerp
     SW_EXPECT_EQUAL( eachTimeNew, computeConstructed( makeEachTimeNew() ) );
 }
 
-/** @brief [CookReflectionFingerprintTest] 자기 칸이 같고 기반만 다른 타입은 지문이 다르다 */
-SW_TEST_CASE( CookReflectionFingerprintTest, BaseTypeChangesTheFingerprint )
+/** @brief [CookReflectionDigestTest] 자기 칸이 같고 기반만 다른 타입은 지문이 다르다 */
+SW_TEST_CASE( CookReflectionDigestTest, BaseTypeChangesTheDigest )
 {
-    const test::ScopedTestModule scopedModule( "TestCookFingerprint" );
-    TypeInfo                     baseA = FingerprintTestUtil::makeType( "FingerprintBaseA", nullptr );
-    baseA._listProperty                = { FingerprintTestUtil::makeProperty( "_a", "int32" ) };
-    TypeInfo baseB                     = FingerprintTestUtil::makeType( "FingerprintBaseB", nullptr );
-    baseB._listProperty                = { FingerprintTestUtil::makeProperty( "_b", "int32" ) };
-    (void)FingerprintTestUtil::computeWith( baseA );
-    (void)FingerprintTestUtil::computeWith( baseB );
+    const test::ScopedTestModule scopedModule( "TestCookDigest" );
+    TypeInfo                     baseA = DigestTestUtil::makeType( "DigestBaseA", nullptr );
+    baseA._listProperty                = { DigestTestUtil::makeProperty( "_a", "int32" ) };
+    TypeInfo baseB                     = DigestTestUtil::makeType( "DigestBaseB", nullptr );
+    baseB._listProperty                = { DigestTestUtil::makeProperty( "_b", "int32" ) };
+    (void)DigestTestUtil::computeWith( baseA );
+    (void)DigestTestUtil::computeWith( baseB );
 
-    TypeInfo derived      = FingerprintTestUtil::makeType( "FingerprintDerived", "FingerprintBaseA" );
-    derived._listProperty = { FingerprintTestUtil::makeProperty( "_own", "int32" ) };
-    const uint64 fromA    = FingerprintTestUtil::computeWith( derived );
+    TypeInfo derived      = DigestTestUtil::makeType( "DigestDerived", "DigestBaseA" );
+    derived._listProperty = { DigestTestUtil::makeProperty( "_own", "int32" ) };
+    const uint64 fromA    = DigestTestUtil::computeWith( derived );
     derived._parentFQN    = baseB._fullyQualifiedName;
-    SW_EXPECT_TRUE( fromA != FingerprintTestUtil::computeWith( derived ) );
+    SW_EXPECT_TRUE( fromA != DigestTestUtil::computeWith( derived ) );
 }

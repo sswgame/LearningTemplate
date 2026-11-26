@@ -1,5 +1,5 @@
 /**
- * @file CookReflectionFingerprint.h
+ * @file CookReflectionDigest.h
  * @brief 리플렉션 표의 지문입니다 — 씬 · 프리로드 목록 · 프리팹 · 내비메시처럼 리플렉션으로 읽거나 쓰는 쿠킹 작업의 설정 해시(`CookJobDesc::_settingsHash`)입니다.
  */
 #pragma once
@@ -9,8 +9,8 @@ namespace sw
 {
     class TypeRegistry;
 
-    /** @struct CookReflectionFingerprint @brief 파일 머리말 참고. */
-    struct CookReflectionFingerprint
+    /** @struct CookReflectionDigest @brief 파일 머리말 참고. */
+    struct CookReflectionDigest
     {
         /**
          * @brief @p registry 의 타입 · 프로퍼티 · 열거자와 타입마다의 기본 인스턴스 값의 지문입니다. 이름순으로 늘어놓아 등록 순서(링크 순서)와 관계없다.

@@ -136,7 +136,7 @@ endfunction()
 #     타깃 고유 정의 헤더(`sw_set_target_defs_header`)가 사라진다. 그래서 PCH 플래그를 타깃 옵션 맨 앞(`BEFORE`)에 직접 넣어 정의 헤더 ·
 #     의존 타깃의 `FlagOps.gen.h` 가 PCH **뒤에** 읽히게 한다.
 #   GNU 드라이버(Linux · Android)는 `-include-pch <소유자>/cmake_pch.hxx.pch`(CMake Compiler/Clang.cmake 의 USE_PCH 와 같은 파일)다 — clang 은 이 PCH 를
-#     어떤 `-include` 보다 먼저 싣는다. 명령줄에서 소스 하나만 뺄 수 없으므로 `SKIP_PRECOMPILE_HEADERS` 소스(ABI 스탬프 · 서버 전용 표시 TU)도
+#     어떤 `-include` 보다 먼저 싣는다. 명령줄에서 소스 하나만 뺄 수 없으므로 `SKIP_PRECOMPILE_HEADERS` 소스(ABI 다이제스트 · 서버 전용 표시 TU)도
 #     PCH 를 싣는다 — 같은 정의 · 옵션이라 결과는 같고 의존만 하나 는다. 소스별 옵션은 유니티 묶음에서 그 소스를 빼므로 쓰지 않는다.
 #   PCH 안 헤더는 `/showIncludes` · depfile 에 나오지 않으므로 소유자의 PCH 산출물을 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
 #   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. clang-cl 의 `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.

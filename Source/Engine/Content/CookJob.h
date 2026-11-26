@@ -91,11 +91,11 @@ namespace sw
      */
     struct CookJobDesc
     {
-        string _cookerName;           ///< 쿠커 이름(예: "Scene")
-        uint64 _codeFingerprint{ 0 }; ///< 쿠커 코드의 지문(`CookCodeFingerprint::find`) — 코드가 바뀌면 그 쿠커의 결과가 모두 다시 베이크된다. 사람이 올리는 번호가 없다
-        string _target;               ///< 대상 플랫폼 · 백엔드(예: "Windows")
-        uint64 _settingsHash{ 0 };    ///< 쿠킹 설정의 해시(설정이 없으면 0 을 명시한다)
-        string _output{};             ///< 이 작업이 만드는 출력의 이름(`CookStore` 가 채운다)
+        string _cookerName;        ///< 쿠커 이름(예: "Scene")
+        uint64 _codeDigest{ 0 };   ///< 쿠커 코드의 지문(`CookCodeDigest::find`) — 코드가 바뀌면 그 쿠커의 결과가 모두 다시 베이크된다. 사람이 올리는 번호가 없다
+        string _target;            ///< 대상 플랫폼 · 백엔드(예: "Windows")
+        uint64 _settingsHash{ 0 }; ///< 쿠킹 설정의 해시(설정이 없으면 0 을 명시한다)
+        string _output{};          ///< 이 작업이 만드는 출력의 이름(`CookStore` 가 채운다)
 
         /** @brief 출력 @p output 을 만드는 작업의 값입니다. */
         [[nodiscard]] CookJobDesc forOutput( string_view output ) const

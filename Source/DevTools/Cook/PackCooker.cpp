@@ -27,7 +27,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Content/Pack/PackChunkManifest.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -1664,8 +1664,8 @@ namespace sw
         }
 
         CookJobDesc desc;
-        desc._cookerName      = "Pack";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Pack" );
+        desc._cookerName = "Pack";
+        desc._codeDigest = CookCodeDigest::find( "Pack" );
         StringBuilder<constant::buffer::kMax128> targetBuilder;
         targetBuilder.appendFormat( "%#-%#", params._buildTarget, params._shaderFolder );
         desc._target = string( targetBuilder.view() );

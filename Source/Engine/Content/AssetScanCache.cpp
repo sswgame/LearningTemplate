@@ -67,10 +67,10 @@ namespace sw
         vector<LoadedEntry> listLoaded;
         const bool          bRead = reader.readCountedList( listLoaded, Internal::kMinEntryBytes, [&reader]( LoadedEntry& outLoaded )
                  {
-            outLoaded._key                     = reader.readString();
-            outLoaded._entry._stamp._sizeBytes = reader.readUint64();
-            outLoaded._entry._stamp._writeTime = reader.readUint64();
-            outLoaded._entry._payload          = reader.readByteVector();
+            outLoaded._key                        = reader.readString();
+            outLoaded._entry._fileStat._sizeBytes = reader.readUint64();
+            outLoaded._entry._fileStat._writeTime = reader.readUint64();
+            outLoaded._entry._payload             = reader.readByteVector();
         } );
         if ( bRead == false || reader.isFullyRead() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "asset scan cache is truncated or malformed", cachePath.str() } );
@@ -99,8 +99,8 @@ namespace sw
             if ( entry._bUsed == false )
                 continue; // 사라진 파일
             writer.writeString( key );
-            writer.writeUint64( entry._stamp._sizeBytes );
-            writer.writeUint64( entry._stamp._writeTime );
+            writer.writeUint64( entry._fileStat._sizeBytes );
+            writer.writeUint64( entry._fileStat._writeTime );
             writer.writeByteVector( entry._payload );
         }
         writer.writePodAt( hashOffset, ContentHash::computeBytes( bytes.data() + Internal::kHeaderBytes, bytes.size() - Internal::kHeaderBytes ) );
@@ -110,10 +110,10 @@ namespace sw
         return {};
     }
 
-    const vector<uint8>* AssetScanCache::find( const string& key, const FileStamp& stamp )
+    const vector<uint8>* AssetScanCache::find( const string& key, const FileStat& fileStat )
     {
         const auto found = _mapEntry.find( key );
-        if ( found == _mapEntry.end() || found->second._stamp != stamp )
+        if ( found == _mapEntry.end() || found->second._fileStat != fileStat )
             return nullptr;
         if ( found->second._bUsed == false )
         {
@@ -123,14 +123,14 @@ namespace sw
         return &found->second._payload;
     }
 
-    void AssetScanCache::record( const string& key, const FileStamp& stamp, vector<uint8> payload )
+    void AssetScanCache::record( const string& key, const FileStat& fileStat, vector<uint8> payload )
     {
-        if ( ContentHash::isStampStable( stamp ) == false )
+        if ( ContentHash::isStatStable( fileStat ) == false )
             return;
         Entry& entry = _mapEntry[key];
         if ( entry._bUsed == false )
             ++_usedCount;
-        entry     = Entry{ stamp, std::move( payload ), true };
+        entry     = Entry{ fileStat, std::move( payload ), true };
         _bChanged = SW_TRUE;
     }
 } // namespace sw

@@ -14,7 +14,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
@@ -27,7 +27,7 @@
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
@@ -401,7 +401,7 @@ namespace sw::editor
 
         /**
          * @struct TextureImporterInternal
-         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 연결하는 이름과 버전입니다. 스탬프 절차는 `AssetImportStampUtil` 이 합니다.
+         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 연결하는 이름과 버전입니다. 스탬프 절차는 `AssetImportDigestUtil` 이 합니다.
          */
         struct TextureImporterInternal
         {
@@ -433,7 +433,7 @@ namespace sw::editor
             string_view  getRawFolderName() const override { return TextureImporter::kRawFolder; }
             string_view  getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
             string_view  getImportedLabel() const override { return "DDS"; }
-            uint64       findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
+            uint64       findCodeDigest() const override { return CookCodeDigest::find( "TextureImport" ); }
             bool         isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
             AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
             uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const override
@@ -483,7 +483,7 @@ namespace sw::editor
 
         /**
          * @class TextureVariantRawImporter
-         * @brief 형식 묶음 하나의 쿠킹 변형을 일괄 절차(`AssetImportStampUtil`)에 태웁니다. 결과는 임포트한 DDS 곁(`a.astc.dds`)이고 스탬프는 묶음마다 따로입니다.
+         * @brief 형식 묶음 하나의 쿠킹 변형을 일괄 절차(`AssetImportDigestUtil`)에 태웁니다. 결과는 임포트한 DDS 곁(`a.astc.dds`)이고 스탬프는 묶음마다 따로입니다.
          */
         class TextureVariantRawImporter final : public TextureRawImporter
         {
@@ -616,7 +616,7 @@ namespace sw::editor
             problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
         }
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
+        return AssetImportDigestUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
     }
 
     bool TextureImporter::importTexture( const AbsolutePath& sourcePath, const AbsolutePath& outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
@@ -704,7 +704,7 @@ namespace sw::editor
 
     void TextureImporter::importChangedSources( AssetSourceBatch& batch )
     {
-        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportDigestUtil` 한 곳이라
         // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
         vector<AssetSourceBatchEntry> listEntry;
         for ( size_t itemIndex = 0; itemIndex < batch._listItem.size(); ++itemIndex )
@@ -725,7 +725,7 @@ namespace sw::editor
         if ( listEntry.empty() || config.loadFromFile( makeDefaultImportConfigPath() ) == false )
             return;
         const TextureRawImporter importer{ config, batch._pTaskManager };
-        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
+        AssetImportDigestUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AssetImportSummary TextureImporter::importAllTextures( const AbsolutePath& resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
@@ -740,7 +740,7 @@ namespace sw::editor
             problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
         }
-        AssetImportSummary summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
+        AssetImportSummary summary = AssetImportDigestUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
         // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
         const vector<string>& listSourcePath = summary._listSourcePath;
         // 원본마다 공유 규칙 이름을 한 번만 구한다 — 규칙마다 원본 전체를 훑으면 규칙 수 × 원본 수다.
@@ -773,14 +773,14 @@ namespace sw::editor
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
-                                                       TextureImporter::kImportedExtension );
+        return AssetImportDigestUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
+                                                        TextureImporter::kImportedExtension );
     }
 
     AbsolutePath TextureImporter::makeImportedTexturePath( const AbsolutePath& rawTexturePath )
     {
-        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
-                                                       TextureImporter::kImportedExtension );
+        return AssetImportDigestUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
+                                                        TextureImporter::kImportedExtension );
     }
 
     uint64 TextureImporter::computeSourceHash( const AbsolutePath& sourcePath, const TextureImportRule& rule )

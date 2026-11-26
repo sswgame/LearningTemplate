@@ -208,12 +208,12 @@ SW_TEST_CASE( ModuleHotReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
     SW_EXPECT_FALSE( FileUtil::exists( path ) );
 }
 
-/** @brief [ModuleHotReloadLogicTest] 섀도 복사본: 엔진 ABI 스탬프가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
-SW_TEST_CASE( ModuleHotReloadLogicTest, ShadowCopyRefusesUnstampedFile )
+/** @brief [ModuleHotReloadLogicTest] 섀도 복사본: 엔진 ABI 다이제스트가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, ShadowCopyRefusesFileWithoutDigest )
 {
     SW_EXPECT_LOG( "ModuleHotReloadManager.ModuleBuiltAgainstDifferent" );
     const AbsolutePath original = test::makeScratchPath( "NotAModule.bin" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no stamp in here" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no digest in here" ) );
 
     ShadowCopyParams params{};
     params._moduleName         = "NotAModule";

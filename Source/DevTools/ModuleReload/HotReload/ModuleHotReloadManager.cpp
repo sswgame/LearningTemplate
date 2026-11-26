@@ -23,7 +23,7 @@
 #include "DevTools/ModuleReload/HotReload/ModuleLibraryPatch.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Module/EngineABIStamp.h"
+#include "Engine/Module/EngineABIDigest.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -90,7 +90,7 @@ namespace sw
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 그 의존을 import 하지 않으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
-             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 스탬프 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
+             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 다이제스트 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
              *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 실제로 묶인 의존의 것입니다.
              */
             static bool isBoundTo( void* pModule, string_view dependencyName, string_view dependencyFileName, void* pExpected, const void*& pOutActual,
@@ -103,14 +103,14 @@ namespace sw
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 (void)dependencyFileName;
-                fixed_string<constant::buffer::kMax256> stampSymbolName;
-                formatstring( stampSymbolName.data(), stampSymbolName.capacity(), "sw_moduleEngineABIStamp_%#", dependencyName );
-                pOutExpected = ModuleLibraryUtil::getDynamicSymbol( pExpected, stampSymbolName.view() );
+                fixed_string<constant::buffer::kMax256> digestSymbolName;
+                formatstring( digestSymbolName.data(), digestSymbolName.capacity(), "sw_moduleEngineABIDigest_%#", dependencyName );
+                pOutExpected = ModuleLibraryUtil::getDynamicSymbol( pExpected, digestSymbolName.view() );
                 pOutActual   = nullptr;
-                // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
+                // 다이제스트가 없는 모듈(정적 링크 · 다이제스트를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
-                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, stampSymbolName.view() );
+                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, digestSymbolName.view() );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #else
                 (void)pModule;
@@ -124,8 +124,8 @@ namespace sw
             }
 
             /**
-             * @brief 섀도 복사 없이 여는 라이브러리 파일 @p modulePath 를 열어도 되는지 봅니다(엔진 ABI 스탬프 · 지연 import).
-             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 전에 본다 — 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+             * @brief 섀도 복사 없이 여는 라이브러리 파일 @p modulePath 를 열어도 되는지 봅니다(엔진 ABI 다이제스트 · 지연 import).
+             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 전에 본다 — 다이제스트가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
              */
             [[nodiscard]] static bool isLibraryFileUsable( string_view moduleName, const AbsolutePath& modulePath )
             {
@@ -135,11 +135,11 @@ namespace sw
                     SW_LOG_ERROR_ID( "ModuleHotReloadManager.FailedReadModuleFile", "Failed to read the module %# (locked)", modulePath.str() );
                     return false;
                 }
-                string moduleStamp;
-                if ( ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
+                string moduleDigest;
+                if ( ModuleLibraryPatch::findEngineABIDigest( bytes, moduleDigest ) == false || moduleDigest != engine::getEngineABIDigest() )
                 {
                     SW_LOG_ERROR_ID( "ModuleHotReloadManager.ModuleFileBuiltAgainstDifferent", "Module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
-                                     moduleName, moduleStamp, engine::getEngineABIStamp() );
+                                     moduleName, moduleDigest, engine::getEngineABIDigest() );
                     return false;
                 }
                 return ModuleShadowCopy::shouldRejectDelayImports( moduleName, modulePath.str(), bytes ) == false;
@@ -361,8 +361,8 @@ namespace sw
         ModuleRecord& context = *iter->second;
         SW_LOG_INFO_ID( "HotReload.ManualQueued", "Manual hot reload queued for %# (debounce %#ms)...",
                         moduleName, kMtimeDebounceMs );
-        context._debounceStamp = FileStamp{};
-        (void)FileUtil::getFileStamp( context._originalModulePath, context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
+        context._debounceStat = FileStat{};
+        (void)FileUtil::getFileStat( context._originalModulePath, context._debounceStat ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
         context._debounceTimer.restart();
         context._bMtimeDebouncing = true;
         context._bForceReload     = true;
@@ -451,8 +451,8 @@ namespace sw
             for ( auto& [name, pContext] : _mapModule )
             {
                 ModuleRecord& context = *pContext;
-                FileStamp     sourceStamp{};
-                if ( FileUtil::getFileStamp( context._originalModulePath, sourceStamp ) == false || sourceStamp == context._loadedSourceStamp )
+                FileStat      sourceStat{};
+                if ( FileUtil::getFileStat( context._originalModulePath, sourceStat ) == false || sourceStat == context._loadedSourceStat )
                     continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
                 SW_LOG_TRACE_ID( "ModuleHotReloadManager.ModuleBuildStampChanged", "Module build stamp changed — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
@@ -468,19 +468,19 @@ namespace sw
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
                 continue;
 
-            FileStamp  sourceStamp{};
-            const bool bReadable = FileUtil::getFileStamp( context._originalModulePath, sourceStamp );
+            FileStat   sourceStat{};
+            const bool bReadable = FileUtil::getFileStat( context._originalModulePath, sourceStat );
             // 바깥 링커가 쓰는 중인지는 알릴 길이 없어 조용해지기를 시간 창(`kMtimeDebounceMs`)으로 기다린다 — 바깥 도구의 쓰기만 시간으로 거르는 자리.
-            if ( bReadable == false || sourceStamp != context._debounceStamp ) // 없으면(빌드가 쓰는 중) 더 기다린다
+            if ( bReadable == false || sourceStat != context._debounceStat ) // 없으면(빌드가 쓰는 중) 더 기다린다
             {
-                context._debounceStamp = sourceStamp;
+                context._debounceStat = sourceStat;
                 context._debounceTimer.restart();
                 continue;
             }
 
             context._bMtimeDebouncing = false;
             const bool bForce         = context._bForceReload.exchange( false );
-            if ( bForce || sourceStamp != context._loadedSourceStamp )
+            if ( bForce || sourceStat != context._loadedSourceStat )
             {
                 SW_LOG_TRACE_ID( "ModuleHotReloadManager.FileWatcherStableQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
@@ -724,8 +724,8 @@ namespace sw
             }
         }
 
-        outShadow._sourceStamp = FileStamp{};
-        if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) == false )
+        outShadow._sourceStat = FileStat{};
+        if ( FileUtil::getFileStat( context._originalModulePath, outShadow._sourceStat ) == false )
             SW_LOG_WARNING_ID( "ModuleHotReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath.str() );
 
         AbsolutePath libraryPath = context._originalModulePath;
@@ -845,7 +845,7 @@ namespace sw
 
             context._pLibraryModule      = prepared._pHandle;
             context._tempModulePath      = prepared._tempPath;
-            context._loadedSourceStamp   = prepared._sourceStamp;
+            context._loadedSourceStat    = prepared._sourceStat;
             context._libraryName._loaded = context._libraryName._current;
             prepared._pHandle            = nullptr;
             prepared._tempPath           = {};
@@ -918,8 +918,8 @@ namespace sw
         prepared._heads         = engine::ModuleRegistrarHeads{};
         prepared._previousHeads = engine::ModuleRegistrarHeads{};
         ModuleShadowCopy::removeArtifacts( prepared._tempPath );
-        prepared._tempPath    = {};
-        prepared._sourceStamp = FileStamp{};
+        prepared._tempPath   = {};
+        prepared._sourceStat = FileStat{};
     }
 
     void ModuleHotReloadManager::unloadModule( ModuleRecord& context )
@@ -1145,8 +1145,8 @@ namespace sw
         , _tempModulePath{}
         , _libraryName{}
         , _pLibraryModule{ nullptr }
-        , _loadedSourceStamp{}
-        , _debounceStamp{}
+        , _loadedSourceStat{}
+        , _debounceStat{}
         , _debounceTimer{}
         , _bPendingReload{ false }
         , _bMtimeDebouncing{ false }

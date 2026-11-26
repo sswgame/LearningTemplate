@@ -1,7 +1,7 @@
 /**
  * @file TestCaseStateSnapshot.h
  * @brief 단위 케이스 앞뒤의 프로세스 상태를 읽어, 케이스가 흘린 것을 이름으로 냅니다(`TestRunOptions::_onCaseBegin` · `_onCaseEnd`).
- * @details 시나리오 단계의 상태 지문(`AutomationStageFingerprint`)의 단위 실행기 자리다 — 흘린 상태(남은 비동기 로드 · 되돌리지 않은 전역 변수 · 떼지 않은 도메인)가 다음 케이스에
+ * @details 시나리오 단계의 상태 지문(`AutomationStageSnapshot`)의 단위 실행기 자리다 — 흘린 상태(남은 비동기 로드 · 되돌리지 않은 전역 변수 · 떼지 않은 도메인)가 다음 케이스에
  *          오류 로그로 나타나 엉뚱한 케이스가 졌다. 흘린 그 케이스가 진다.
  *          케이스마다 드는 것은 수 몇 개와 해시 몇 개의 비교다 — 다를 때만 무엇이 다른지 글을 만든다.
  */

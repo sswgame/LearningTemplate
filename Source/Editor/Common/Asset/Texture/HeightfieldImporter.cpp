@@ -11,7 +11,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -19,7 +19,7 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 
@@ -179,7 +179,7 @@ namespace sw::editor
             string_view getRawFolderName() const override { return HeightfieldImporter::kRawFolder; }
             string_view getStampHeader() const override { return HeightfieldImporterInternal::kImportStampHeader; }
             string_view getImportedLabel() const override { return "지형 에셋"; }
-            uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "HeightfieldImport" ); }
+            uint64      findCodeDigest() const override { return CookCodeDigest::find( "HeightfieldImport" ); }
             bool        isSourceFile( string_view path ) const override
             {
                 return HeightfieldImporter::isSourceHeightfield( path ) || HeightfieldImporter::isSourceLayerWeights( path );
@@ -243,7 +243,7 @@ namespace sw::editor
         const string                             stem = FileUtil::removeExtension( FileUtil::getFileNamePart( rawPath.str() ) );
         StringBuilder<constant::buffer::kMax256> nameBuilder;
         nameBuilder.appendFormat( "%#.png", string_view( stem ).substr( 0, stem.size() - Internal::kSplatSuffix.size() ) );
-        return AssetImportStampUtil::makeImportedPath( rawPath.getParent().join( nameBuilder.view() ), kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
+        return AssetImportDigestUtil::makeImportedPath( rawPath.getParent().join( nameBuilder.view() ), kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
     }
 
     bool HeightfieldImporter::readLayerWeights( const AbsolutePath& sourcePath, LayerWeightsAsset& outData )
@@ -295,7 +295,7 @@ namespace sw::editor
 
     bool HeightfieldImporter::isRawHeightfieldPath( string_view path )
     {
-        return AssetIdentityRules::getProjectRules().isImportSource( kRawFolder, path ) && AssetImportStampUtil::isUnderRawFolder( path, kRawFolder );
+        return AssetIdentityRules::getProjectRules().isImportSource( kRawFolder, path ) && AssetImportDigestUtil::isUnderRawFolder( path, kRawFolder );
     }
 
     void HeightfieldImporter::importChangedSources( AssetSourceBatch& batch )
@@ -311,13 +311,13 @@ namespace sw::editor
                 listEntry.push_back( AssetSourceBatchEntry{ itemIndex, HeightfieldImporterInternal::findAffectedSources( item._relativePath ) } );
         }
         const HeightfieldRawImporter importer;
-        AssetImportStampUtil::importChangedSources( batch, listEntry, importer );
+        AssetImportDigestUtil::importChangedSources( batch, listEntry, importer );
     }
 
     AbsolutePath HeightfieldImporter::makeImportedHeightfieldPath( const AbsolutePath& rawPath )
     {
         using Internal = HeightfieldImporterInternal;
-        return AssetImportStampUtil::makeImportedPath( rawPath, kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension );
+        return AssetImportDigestUtil::makeImportedPath( rawPath, kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension );
     }
 
     uint64 HeightfieldImporter::computeSourceHash( const AbsolutePath& sourcePath )
@@ -405,6 +405,6 @@ namespace sw::editor
             problemBuilder.appendFormat( "DDC config: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return AssetImportSummary::makeFailed( string( problemBuilder.view() ) );
         }
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        return AssetImportDigestUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
     }
 } // namespace sw::editor

@@ -130,9 +130,9 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     SW_EXPECT_TRUE_MSG( tagged.find( "[Test] [Info] [trace=0123456789abcdef0000000000000001 acct=0000000000000042] - context line\n" ) != string::npos,
                         tagged.c_str() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( entryCapture._listEntry.size() ) );
-    SW_EXPECT_TRUE( entryCapture._listEntry[0]._stamp._context.isEmpty() );
-    SW_EXPECT_TRUE( entryCapture._listEntry[1]._stamp._context._traceID == context._traceID );
-    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._stamp._context._principalID, uint64( 0x42 ) );
+    SW_EXPECT_TRUE( entryCapture._listEntry[0]._metadata._context.isEmpty() );
+    SW_EXPECT_TRUE( entryCapture._listEntry[1]._metadata._context._traceID == context._traceID );
+    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._metadata._context._principalID, uint64( 0x42 ) );
 }
 
 /**

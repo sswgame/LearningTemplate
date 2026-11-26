@@ -83,7 +83,7 @@ endfunction()
 #   REFLECTION_EXCLUDE  자동 훑기에서 뺄 경로 정규식(하위 폴더의 다른 모듈 — 키트 · 게임의 `/Editor/`)
 #   NO_REFLECTION       리플렉션 단계를 두지 않는다(RHI 백엔드)
 #   NO_REGISTRY         동적 모듈 레지스트리에 넣지 않는다 — App 이 `Bin/Modules` 에서 올리지 않는 게임 팩(`sw_add_game_module`, 활성 게임이 아닌 것)
-#   MODULE_NAME         매니페스트 · 산출물 · ABI 스탬프 · 리플렉션 타입의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
+#   MODULE_NAME         매니페스트 · 산출물 · ABI 다이제스트 · 리플렉션 타입의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
 #   CONTENT_OWNER       콘텐츠 모듈 검사에서 이 모듈 타입의 주인(기본 MODULE_NAME) — 게임은 이름이 모두 SWGame 이라 `game:<폴더>` 로 가른다
 # ------------------------------------------------------------------------------
 function(sw_add_module_library TARGET_NAME)
@@ -390,7 +390,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_add_game_module — 게임 팩 모듈 하나. 게임 폴더의 CMakeLists 한 줄(`sw_add_game_module(SWGame)`), 인자는 모듈 이름(엔진과의 계약 `SWGame`)이다.
 #
-# 타깃은 `SWGame_<게임>` 이고 산출물 · 매니페스트 · ABI 스탬프는 모듈 이름 그대로(`SWGame`)다 — 핫 리로드 · 모듈 호스트는 모듈 이름으로 찾는다.
+# 타깃은 `SWGame_<게임>` 이고 산출물 · 매니페스트 · ABI 다이제스트는 모듈 이름 그대로(`SWGame`)다 — 핫 리로드 · 모듈 호스트는 모듈 이름으로 찾는다.
 # 활성 게임(`SW_ACTIVE_GAME`): 동적 모듈 레지스트리에 들어가고(App 이 먼저 짓고 Shipping 이 정적으로 링크한다) `Bin/Modules/SWGame` 이다.
 #   타깃 이름은 전역 속성 `SW_ACTIVE_GAME_TARGET` 에 둔다 — 링크 · 테스트 의존은 이 속성으로 묻는다(이름을 적지 않는다).
 # 함께 짓는 게임(`SW_GAMES`, Dev 전용): 레지스트리 밖(`SW_GAME_PACK_TARGETS`)이고 `Bin/Games/<게임>/SWGame`, 링크 PDB 는 `Bin/Symbols/Games/<게임>/` 이다 —
@@ -470,7 +470,7 @@ function(sw_add_game_module MODULE_NAME)
 		PDB_OUTPUT_DIRECTORY_DEBUG "${symbol_dir}"
 		PDB_OUTPUT_DIRECTORY_RELEASE "${symbol_dir}"
 	)
-	sw_add_module_engine_stamp(${target_name} MODULE_NAME ${MODULE_NAME})
+	sw_add_module_engine_abi_digest(${target_name} MODULE_NAME ${MODULE_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_GAME_PACK_TARGETS ${target_name})
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 		sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}/Editor")

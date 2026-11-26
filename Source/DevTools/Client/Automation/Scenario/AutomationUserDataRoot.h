@@ -56,21 +56,21 @@ namespace sw
         [[nodiscard]] static optional<string> findSharedStateArgument( const vector<string>& listArgument );
     };
 
-    /** @struct UserDataFolderStamp @brief 폴더 아래 항목의 수와 가장 늦은 쓰기 시각입니다 — 같은 실행 안에서 폴더가 바뀌었는지 본다(`UserData.PlatformFolderChanged`). */
-    struct UserDataFolderStamp
+    /** @struct UserDataFolderStat @brief 폴더 아래 항목의 수와 가장 늦은 쓰기 시각입니다 — 같은 실행 안에서 폴더가 바뀌었는지 본다(`UserData.PlatformFolderChanged`). */
+    struct UserDataFolderStat
     {
         uint64 _entryCount{ 0 };
         int64  _latestWriteTicks{ 0 };
         bool   _bExists{ false };
 
-        [[nodiscard]] bool operator==( const UserDataFolderStamp& other ) const
+        [[nodiscard]] bool operator==( const UserDataFolderStat& other ) const
         {
             return _entryCount == other._entryCount && _latestWriteTicks == other._latestWriteTicks && _bExists == other._bExists;
         }
-        [[nodiscard]] bool operator!=( const UserDataFolderStamp& other ) const { return ( *this == other ) == false; }
+        [[nodiscard]] bool operator!=( const UserDataFolderStat& other ) const { return ( *this == other ) == false; }
 
         /** @brief @p folder 와 그 아래 모든 항목을 훑어 찍습니다(폴더가 없으면 `_bExists` 가 거짓). */
-        [[nodiscard]] static UserDataFolderStamp take( const AbsolutePath& folder );
+        [[nodiscard]] static UserDataFolderStat take( const AbsolutePath& folder );
     };
 
     /**
@@ -93,15 +93,15 @@ namespace sw
         /** @brief 사람의 데이터 폴더(OS 규칙 · 활성 게임) 경로입니다. 모르면 빈 글. */
         const AbsolutePath& getPlatformFolder() const { return _platformFolder; }
         /** @brief 기동 때 찍은 사람의 데이터 폴더입니다. */
-        const UserDataFolderStamp& getPlatformStartStamp() const { return _platformStartStamp; }
+        const UserDataFolderStat& getPlatformStartStat() const { return _platformStartStat; }
 
     private:
         /** @brief 거절을 알리고 로드 오류(11)로 끝낼 종료 코드를 건 뒤 실패를 돌려줍니다. */
         static SubsystemInitResult reject( const Error& error );
 
     private:
-        string              _root{};
-        AbsolutePath        _platformFolder{};
-        UserDataFolderStamp _platformStartStamp{};
+        string             _root{};
+        AbsolutePath       _platformFolder{};
+        UserDataFolderStat _platformStartStat{};
     };
 } // namespace sw

@@ -373,7 +373,7 @@ namespace sw
         };
         /**
          * @brief GameFramework 키트 모듈의 주인 창구입니다(키트 모두가 하나를 같이 건다).
-         * @details 키트는 API 테이블이 없어 새 라이브러리 검사는 리로드 매니저의 엔진 ABI 스탬프 · 정적 등록자 대조로 끝난다.
+         * @details 키트는 API 테이블이 없어 새 라이브러리 검사는 리로드 매니저의 엔진 ABI 다이제스트 · 정적 등록자 대조로 끝난다.
          *          결함은 리로드 직후의 호스트 콜백에서만 날 수 있고 버릴 인스턴스가 없어 기록만 한다(그래프는 매니저가 막는다).
          */
         class KitReloadClient final : public IReloadableModuleClient

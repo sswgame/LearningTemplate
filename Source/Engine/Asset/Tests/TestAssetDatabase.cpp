@@ -451,8 +451,8 @@ SW_TEST_CASE( AssetDatabaseTest, ScanCacheReopensOnlyChangedFiles )
 SW_TEST_CASE( AssetScanCacheTest, KeepsStableRowsOfItsOwnVersion )
 {
     const AbsolutePath path = sw::test::makeScratchPath( "cache.bin" );
-    const FileStamp    stable{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond ) };
-    const FileStamp    fresh{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() ) };
+    const FileStat     stable{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond ) };
+    const FileStat     fresh{ 4u, static_cast<uint64>( FileUtil::getCurrentFileWriteTime() ) };
     {
         AssetScanCache cache{ 1u };
         cache.record( "a.xml", stable, { uint8{ 7 } } );

@@ -13,7 +13,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/NavMeshAsset.h"
@@ -85,7 +85,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineSubsystems& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineSubsystems& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionDigest,
                                            uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
@@ -104,7 +104,7 @@ namespace sw
         VectorUtil::sort( listFile );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
+        const CookJobDesc desc           = makeCookJobDesc( reflectionDigest );
         CookStats         stats;
         for ( const AbsolutePath& filePath : listFile )
         {
@@ -142,13 +142,13 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    CookJobDesc SceneNavigationCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneNavigationCooker::makeCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "NavMesh";
-        desc._codeFingerprint = CookCodeFingerprint::find( "NavMesh" );
-        desc._target          = "Any";
-        desc._settingsHash    = reflectionFingerprint; // 베이크 설정(내비 설정 표)은 읽기로 입력에 들고, 씬을 짓는 타입 표는 여기다
+        desc._cookerName   = "NavMesh";
+        desc._codeDigest   = CookCodeDigest::find( "NavMesh" );
+        desc._target       = "Any";
+        desc._settingsHash = reflectionDigest; // 베이크 설정(내비 설정 표)은 읽기로 입력에 들고, 씬을 짓는 타입 표는 여기다
         return desc;
     }
 } // namespace sw
