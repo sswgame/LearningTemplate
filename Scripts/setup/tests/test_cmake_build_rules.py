@@ -12,6 +12,8 @@ CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부
   건너뛰고, 실제 헤더에서 CMake 가 쓰는 낱말(Editor · Kit · RHI · Android · Dev · Client …)이 나온다 — 메타를 붙이자 이름을 하나도 못 읽어 모든 구성이 선 회귀.
 - 쿠킹 표(`Config/Engine/CookContract.json` rhi_backends → `Scripts/generate/cook_contract.py` 가 쓴 CookContract.cmake → cmake/Modules/Build/RHIBackends.cmake):
   configure 와 같은 생성기로 표를 쓰고 include 하면 백엔드마다 모듈 · 소스 폴더 · 명령줄 이름이 서고 기본 백엔드가 표에 있다. 명령줄 이름(dx12)은 구성을 세운다.
+  표 규칙이 어긋나면(기본 백엔드가 표에 없다 · 명령줄 이름이 겹친다) 생성기가 멈춘다.
+- `Scripts/generate/cmake_constants.py`(ConfigVars.cmake): 파이썬 상수를 CMake 가 같은 값으로 읽는다. 따옴표 · 역슬래시와 리스트(`;` 로 이은 칸)도 그대로 돌아온다.
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_cmake_build_rules.py (CTest `Scripts.CmakeBuildRules` 가 환경 변수를 준다).
 """
@@ -29,7 +31,11 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT / "Scripts"))
 
+from common import project_constants  # noqa: E402
+from common.cook_table import COOK_CONTRACT_CONFIG_RELATIVE, CookContractSpec  # noqa: E402
+from generate.cmake_constants import generate_cmake_constants  # noqa: E402
 from generate.cook_contract import generate_cook_contract  # noqa: E402
+from generate.generator_output import format_cmake_set  # noqa: E402
 CMAKE_ENVIRONMENT = "SW_CMAKE_COMMAND"  # IntegrationTests/CMakeLists.txt 가 스크립트 테스트 모두에 ${CMAKE_COMMAND} 를 준다
 CMAKE = ""
 
@@ -358,6 +364,36 @@ class CookContractTableTest(unittest.TestCase):
         with self.assertRaises(AssertionError) as context:
             rhi_backend_table("dx12")
         self.assertIn("unknown backend 'dx12'", str(context.exception))
+
+
+    def test_broken_table_rules_stop_the_generator(self) -> None:
+        table = json.loads((PROJECT_ROOT / COOK_CONTRACT_CONFIG_RELATIVE).read_text(encoding="utf-8"))
+        unknown_default = {**table, "default_rhi_backend": "dx12"}
+        rows = [dict(row) for row in table["rhi_backends"]]
+        rows[1]["command_line_name"] = rows[0]["command_line_name"]
+        shared_command_name = {**table, "rhi_backends": rows}
+        for label, broken in (("default", unknown_default), ("command name", shared_command_name)):
+            with self.subTest(case=label), self.assertRaises(ValueError):
+                CookContractSpec(broken)
+
+
+class CMakeConstantsRoundTripTest(unittest.TestCase):
+    def test_generated_constants_read_back_with_the_same_values(self) -> None:
+        tricky = 'a "quoted" path\\with'
+        with tempfile.TemporaryDirectory() as folder:
+            constants = Path(folder) / "ConfigVars.cmake"
+            generate_cmake_constants(constants)
+            lines = ["cmake_minimum_required(VERSION 3.24)", f'include("{constants.as_posix()}")', format_cmake_set("SW_PROBE_TRICKY", [tricky, "x"])]
+            names = [name for name in sorted(vars(project_constants)) if name.isupper() and isinstance(getattr(project_constants, name), str)][:8]
+            self.assertTrue(names)
+            for name in names:
+                lines.append(f'message(NOTICE "{name}=[${{SW_{name}}}]")')
+            lines += ['list(GET SW_PROBE_TRICKY 0 first)', 'list(LENGTH SW_PROBE_TRICKY count)', 'message(NOTICE "first=[${first}]")', 'message(NOTICE "count=[${count}]")']
+            values = run_cmake_script("\n".join(lines) + "\n")
+        for name in names:
+            self.assertEqual(values[name], getattr(project_constants, name), name)
+        self.assertEqual(values["count"], "2")
+        self.assertEqual(values["first"], tricky)
 
 
 if __name__ == "__main__":
