@@ -17,17 +17,17 @@
 	<Screenshot file="ppssr_off.ppm" stability="Assets"/>
 
 	<DevCommand line="scene.layer SSR on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="ppssr_on.ppm"/>
 	<DevCommand line="scene.layer SSR off"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="ppssr_back.ppm"/>
 
 	<DevCommand line="scene.layer BloomLamp on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="ppssr_lamp.ppm"/>
 	<DevCommand line="scene.layer LensFlare on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="ppssr_flare.ppm"/>
 
 	<ExpectImagesDiffer first="ppssr_off.ppm" second="ppssr_on.ppm" region="0,0.5,1,1" minDiffering="0.05"/>

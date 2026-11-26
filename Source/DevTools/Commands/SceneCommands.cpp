@@ -13,6 +13,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -77,6 +78,26 @@ namespace sw
             }
 
             /** @brief `scene.layer <name> <on|off>` — 활성 씬의 데이터 레이어를 켜고 끕니다. 인자가 없으면 켜진 레이어를 알립니다. */
+            /**
+             * @brief `camera.cut` — 활성 게임 카메라에 컷을 표시해 다음 프레임이 시간 누적 기록(TAA · 모션 블러 · 노출)을 버리게 합니다(언리얼 `bCameraCut`).
+             *        시나리오가 제자리 변화(레이어 · 변수) 뒤 사진을 같은 누적 출발점에서 찍게 한다 — 그리지 않는 프레임에 기대지 않는다(`<AdvanceSimulation>` 은 마지막 프레임을 그린다).
+             */
+            static bool runCameraCut( const vector<string>& listArgument, string& outReply )
+            {
+                (void)listArgument;
+                SceneManager*    pManager = engine::findSubsystem<SceneManager>();
+                Scene*           pScene   = pManager != nullptr ? pManager->getActiveScene() : nullptr;
+                CameraComponent* pCamera  = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
+                if ( pCamera == nullptr )
+                {
+                    outReply = "camera.cut: the active scene has no game camera";
+                    return false;
+                }
+                pCamera->markCut();
+                outReply = "camera.cut: the next frame discards temporal history";
+                return true;
+            }
+
             static bool runDataLayer( const vector<string>& listArgument, string& outReply )
             {
                 SceneManager* pManager = engine::findSubsystem<SceneManager>();
@@ -372,6 +393,8 @@ namespace sw
     SW_DEV_COMMAND( StreamingQueue, "world.streamqueue", "world.streamqueue",
                     "Show the streaming load queue: pending cells (priority, distance, stage), HLOD proxies shown, and texture mip requests (priority) with reads in flight",
                     &SceneCommandsInternal::runStreamingQueue );
+    SW_DEV_COMMAND( CameraCut, "camera.cut", "camera.cut", "Mark a cut on the active game camera so the next frame discards temporal history (TAA, motion blur, exposure)",
+                    &SceneCommandsInternal::runCameraCut );
     SW_DEV_COMMAND( DataLayer, "scene.layer", "scene.layer [<name> <on|off>]", "Turn a data layer of the active scene on or off, or list the active layers", &SceneCommandsInternal::runDataLayer );
     SW_DEV_COMMAND( SubLevel, "scene.sublevel", "scene.sublevel [add <name> <scene> <x> <y> <z> [yaw] | remove <name>]",
                     "Add a scene to the active scene as a runtime sub-level at a position, remove one, or list them with their state", &SceneCommandsInternal::runSubLevel );

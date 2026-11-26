@@ -21,7 +21,7 @@
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Screenshot file="contact_on.ppm"/>
 	<DevCommand line="gpu.show ContactShadowMask"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="contact_mask_on.ppm"/>
 	<DevCommand line="gpu.show off"/>
 	<!-- 마스크를 골든으로 지킨다 — 이 무대는 그림자 맵이 발치까지 덮어 최종 그림에는 접촉 그림자가 거의 보이지 않는다(그림자 맵이 못 잡는 곳을 메우는 기능이다).

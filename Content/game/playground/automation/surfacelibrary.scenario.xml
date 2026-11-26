@@ -20,10 +20,10 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="90"/>
 	<Screenshot file="surfacelibrary_lineup_clear.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 1 0.8 0 0"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="surfacelibrary_lineup_rain.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 1 -10"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="surfacelibrary_lineup_snow.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
 	<ExpectImagesDiffer first="surfacelibrary_lineup_clear.ppm" second="surfacelibrary_lineup_rain.ppm" region="0,0.55,1,1" minDiffering="0.2"/>
@@ -38,10 +38,10 @@
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Screenshot file="surfacelibrary_terrain_clear.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0.8 0.6 0 0"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="surfacelibrary_terrain_rain.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 1 18"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="surfacelibrary_terrain_snow.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
 	<ExpectImagesDiffer first="surfacelibrary_terrain_clear.ppm" second="surfacelibrary_terrain_rain.ppm" region="0,0.4,1,1" minDiffering="0.1"/>

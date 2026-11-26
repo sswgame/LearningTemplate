@@ -16,26 +16,26 @@
 	<Screenshot file="pplens_off.ppm" stability="Assets"/>
 
 	<DevCommand line="scene.layer LensDistortion on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="pplens_distortion.ppm"/>
 	<DevCommand line="scene.layer LensDistortion off"/>
 
 	<DevCommand line="scene.layer ChromaticAberration on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="pplens_fringe.ppm"/>
 	<DevCommand line="scene.layer ChromaticAberration off"/>
 
 	<DevCommand line="scene.layer Sharpen on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="pplens_sharpen.ppm"/>
 	<DevCommand line="scene.layer Sharpen off"/>
 
 	<DevCommand line="scene.layer FilmGrain on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="pplens_grain.ppm"/>
 	<DevCommand line="scene.layer FilmGrain off"/>
 
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="pplens_back.ppm"/>
 
 	<ExpectImagesDiffer first="pplens_off.ppm" second="pplens_distortion.ppm" region="0,0,1,1" minDiffering="0.1"/>

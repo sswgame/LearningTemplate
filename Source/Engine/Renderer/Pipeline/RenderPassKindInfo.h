@@ -326,6 +326,9 @@ namespace sw
          */
         constexpr bool usesMaterialShader() const { return hasFlag( RenderPassTraitFlag::kUsesMaterialShader ); }
 
+        /** @brief 컴퓨트 PSO 로 도는 종류인지 반환합니다(표의 엔진 컴퓨트 `kCompute` · XML 이 셰이더를 고르는 `kPipelineCompute`). 그래픽스 PSO 를 만들지 않는다. */
+        constexpr bool isComputePass() const { return hasFlag( RenderPassTraitFlag::kCompute | RenderPassTraitFlag::kPipelineCompute ); }
+
         /**
          * @brief 이 패스에 뷰 모드(Unlit, Wireframe, Normals, Depth, Overdraw)를 적용하는지 반환합니다.
          * @details 화면 색을 만드는 지오메트리 패스만 해당한다. 그림자와 뎁스 프리패스는 제외한다.

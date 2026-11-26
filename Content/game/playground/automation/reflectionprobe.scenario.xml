@@ -12,10 +12,10 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="probe_off.ppm"/>
 	<DevCommand line="scene.layer Probe on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="probe_on.ppm"/>
 	<DevCommand line="scene.layer Probe off"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="probe_off_again.ppm"/>
 	<ExpectImagesDiffer first="probe_off.ppm" second="probe_on.ppm" region="0.2,0.4,0.8,0.95" minDiffering="0.5"/>
 	<ExpectImagesDiffer first="probe_off.ppm" second="probe_off_again.ppm" region="0.2,0.4,0.8,0.95" minDiffering="0" maxDiffering="0.01"/>

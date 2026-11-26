@@ -15,14 +15,15 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="camera.cut"/> <!-- 끈 사진도 컷 뒤에 — 세 사진이 같은 누적 출발점(지터 위상)에서 찍힌다 -->
 	<Screenshot file="decals_off.ppm"/>
 
 	<DevCommand line="scene.layer Decals on"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="decals_on.ppm"/>
 	<DevCommand line="scene.layer Decals off"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="decals_back.ppm"/>
 
 	<ExpectImagesDiffer first="decals_off.ppm" second="decals_on.ppm" region="0,0.4,1,1" minDiffering="0.1"/>

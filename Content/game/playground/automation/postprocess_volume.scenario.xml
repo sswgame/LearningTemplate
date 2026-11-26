@@ -16,7 +16,7 @@
 	<Screenshot file="ppvolume_off.ppm" stability="Assets"/>
 
 	<DevCommand line="scene.layer Volume on"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="ppvolume_inside.ppm"/>
 
 	<!-- 상자(반 크기 1 m)에서 블렌드 반경(2 m)보다 멀리 — 무한 볼륨만 남는다 -->

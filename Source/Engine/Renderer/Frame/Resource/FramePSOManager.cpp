@@ -461,7 +461,7 @@ namespace sw
                 const RenderPassKindInfo&  info = getRenderPassKindInfo( pass._type );
                 // 표에 기본 셰이더가 없는 종류(Fullscreen)는 패스가 고른 셰이더로 만든다 — 둘 다 없으면 검증이 로드 오류로 알렸다.
                 const bool bHasShader = info._pDefaultShader != nullptr || pass._shaderPath.empty() == false;
-                const bool bSkipped   = bHasShader == false || info.hasFlag( RenderPassTraitFlag::kCompute ) || shouldCreatePassPSO( pass._type, caps ) == false ||
+                const bool bSkipped   = bHasShader == false || info.isComputePass() || shouldCreatePassPSO( pass._type, caps ) == false ||
                                       hasRenderTargetFormatSource( info, &pass ) == false;
                 if ( bSkipped )
                     continue;
@@ -699,7 +699,7 @@ namespace sw
                 return 0;
             const bool                 bUniqueViewType = isViewPassType( passType ) && isRepeatablePassType( passType ) == false;
             const RenderGraphPassDesc* pPass           = bUniqueViewType ? _pipeline.findUniquePass( passType ) : nullptr;
-            if ( pPass != nullptr && getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kCompute ) == false )
+            if ( pPass != nullptr && getRenderPassKindInfo( passType ).isComputePass() == false )
                 return getPassPSO( *pPass );
             return _pCache->findEnginePSO( passType );
         }

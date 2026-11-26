@@ -18,14 +18,14 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="cache_off.ppm"/>
 	<Variable name="gv_shadowCache" value="1"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="cache_on.ppm"/>
 
 	<!-- 정적 기둥을 옮긴다 — 캐시 층을 다시 그려야 그림자가 따라간다 -->
 	<DevCommand line="teleport Pillar -0.5 1.5 3"/>
 	<Screenshot file="cache_on_moved.ppm"/>
 	<Variable name="gv_shadowCache" value="0"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="cache_off_moved.ppm"/>
 	<ExpectImagesDiffer first="cache_off.ppm" second="cache_off_moved.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.005"/>
 	<ExpectImage file="cache_off.ppm" golden="shadow_cache_static"/>

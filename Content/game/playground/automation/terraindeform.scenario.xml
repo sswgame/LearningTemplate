@@ -19,7 +19,7 @@
 	<WaitUntil watch="Surface.DeformDeepestNear" key="0 0 1.5" atLeast="0.08" timeoutFrames="60"/> <!-- 도장이 땅을 팠다 -->
 	<Expect watch="Surface.DeformHeld" equals="1"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 1.5" atLeast="0.08"/>
-	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="terraindeform_on.ppm"/>
 
 	<ExpectImagesDiffer first="terraindeform_off.ppm" second="terraindeform_on.ppm" region="0.25,0.35,0.75,1" minDiffering="0.02"/>
