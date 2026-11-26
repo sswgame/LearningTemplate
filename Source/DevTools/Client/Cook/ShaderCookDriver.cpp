@@ -530,13 +530,26 @@ namespace sw
                 }
                 ShaderReflectionLibrary::clearCache();
             }
+
+            /**
+             * @brief 출처가 하나도 닿지 않은 요청을 @p inoutListRequest 에서 뺍니다(`ShaderCookRequest::isAnyOriginReached`). @p pReachedAsset 이 nullptr 이면 그대로다. 뺀 수입니다.
+             * @details 팩이 그 변형을 싣지 않으므로(`PackCooker::isStrippedShaderVariant`) 굽지 않는다. 유니티 variant stripping · 언리얼 쿠커가 쿠킹하는 머티리얼의 셰이더 맵만 컴파일하는 자리다.
+             */
+            static size_t removeUnreachedRequests( const unordered_set<string>* pReachedAsset, vector<ShaderCookRequest>& inoutListRequest )
+            {
+                if ( pReachedAsset == nullptr )
+                    return 0;
+                return VectorUtil::removeIf( inoutListRequest, [pReachedAsset]( const ShaderCookRequest& request )
+                { return ShaderCookRequest::isAnyOriginReached( request._listOrigin, *pReachedAsset ) == false; } );
+            }
         };
     } // namespace
 
-    ShaderCookSummary ShaderCookDriver::cookAllShaders( const AbsolutePath& cookedDir,
-                                                        const AbsolutePath& resourceRoot,
-                                                        ShaderTargetFormat  targetFormat,
-                                                        ShaderCookScope     scope )
+    ShaderCookSummary ShaderCookDriver::cookAllShaders( const AbsolutePath&          cookedDir,
+                                                        const AbsolutePath&          resourceRoot,
+                                                        ShaderTargetFormat           targetFormat,
+                                                        ShaderCookScope              scope,
+                                                        const unordered_set<string>* pReachedAsset )
     {
         // 표본은 빈 스테이징에만 굽는다 — 쿠커가 요청 밖의 바이너리를 지우므로 채워진 스테이징을 표본으로 덮으면 쿠킹본을 잃는다.
         vector<ShaderCookSampleAxis> listSampleAxis;
@@ -610,6 +623,10 @@ namespace sw
             listRequest               = selectSample( listRequest, listSampleAxis );
             SW_LOG_INFO_ID( "ShaderCooker.SampleSelected", "Sample cook: %# of %# requests cover every value of the rule axes (%#)", listRequest.size(), requestCount, ShaderCookSampleRule::kConfigFile.getPath() );
         }
+        const size_t requestCount   = listRequest.size();
+        const size_t unreachedCount = ShaderCookDriverInternal::removeUnreachedRequests( pReachedAsset, listRequest );
+        if ( unreachedCount > 0 )
+            SW_LOG_INFO_ID( "ShaderCooker.UnreachedVariantsNotCooked", "Shader cook: %# of %# requests come only from pipelines and materials the packs do not reach - not cooked", unreachedCount, requestCount );
         return cookRequests( cookedDir, listRequest, targetFormat );
     }
 
@@ -684,7 +701,7 @@ namespace sw
         }
     }
 
-    void ShaderCookDriver::verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem )
+    void ShaderCookDriver::verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, const unordered_set<string>* pReachedAsset, vector<string>& outListProblem )
     {
         using Internal                       = ShaderCookDriverInternal;
         const AssetPaths&         assetPaths = engine::getSubsystem<AssetPaths>();
@@ -694,6 +711,7 @@ namespace sw
             outListProblem.emplace_back( "shader cook requests could not be collected - cannot tell which domains are cooked" );
             return;
         }
+        (void)Internal::removeUnreachedRequests( pReachedAsset, listRequest ); // 굽기와 같은 목록 — 굽지 않은 변형을 빠진 것으로 잡지 않는다
         const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( assetPaths );
         if ( resolver.has_value() == false )
         {

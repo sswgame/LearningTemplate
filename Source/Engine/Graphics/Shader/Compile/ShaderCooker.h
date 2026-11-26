@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -33,7 +34,7 @@ namespace sw
         uint64 _permutationHash{ 0 };
         /**
          * @brief 이 요청을 낸 출처입니다. 묶음마다 그 에셋 id(`Content/` 기준 정규화 경로: 파이프라인 XML, 머티리얼, 둘 다)가 모두 팩에 닿으면 이 바이너리가 필요하다.
-         * @details 빈 묶음은 늘 필요하다(패스 종류 표 · 엔진 셰이더). 굽기는 출처를 보지 않고 모두 굽는다(DDC 가 결과를 나눈다). 팩 쿠커가 이 값으로 싣는 것을 고른다:
+         * @details 빈 묶음은 늘 필요하다(패스 종류 표 · 엔진 셰이더). 팩 쿠킹의 굽기는 팩이 닿은 출처의 요청만 굽고(`PackCooker::collectReachedAssets`), `--cook-shaders` 는 모두 굽는다. 팩 쿠커도 이 값으로 싣는 것을 고른다:
          *          출처가 하나도 닿지 않은 변형은 싣지 않고(`PackCooker::isStrippedShaderVariant`, 유니티 variant stripping 자리), 닿은 출처가 요청했는데 원본이 닿지 않아 버리는 것은 경고다.
          *          닿지 않은 개발 파이프라인(`deferredpipeline_gi.xml`)의 셰이더를 버리는 것은 정상이다.
          */
@@ -43,6 +44,23 @@ namespace sw
          * @details 요청을 낸 패스 종류들의 입력 계약을 모두 만족해야 하므로 합칠 때 교집합이다. 모두 켜져 있으면(머티리얼 · 계약 없는 종류) 보지 않는다. 쿠커가 리플렉션과 대조해 밖의 역할을 읽으면 쿠킹 오류다.
          */
         uint64 _readableRoleMask{ ~uint64{ 0 } };
+
+        /**
+         * @brief 출처 묶음 @p listOrigin 가운데 에셋이 모두 @p setReachedAsset 에 든 묶음이 있으면 true 입니다(빈 묶음은 늘 든다).
+         * @details 거짓이면 팩에 싣지 않는 변형이다. 굽기(`ShaderCookDriver` — 닿은 에셋을 받았을 때)와 팩(`PackCooker::isRequestedByReachedOrigin`)이 이 판정 하나를 본다.
+         */
+        [[nodiscard]] static bool isAnyOriginReached( const vector<vector<string>>& listOrigin, const unordered_set<string>& setReachedAsset )
+        {
+            for ( const vector<string>& listOriginAsset : listOrigin )
+            {
+                bool bAllReached = true;
+                for ( const string& originAsset : listOriginAsset )
+                    bAllReached = bAllReached && setReachedAsset.contains( originAsset );
+                if ( bAllReached )
+                    return true;
+            }
+            return false;
+        }
     };
 } // namespace sw
 

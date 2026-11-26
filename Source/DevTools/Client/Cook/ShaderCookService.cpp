@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 
@@ -16,16 +17,16 @@ namespace sw
         class ShaderCookService final : public IShaderCookService
         {
         public:
-            bool cookAllShaders( const AbsolutePath& cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) override
+            bool cookAllShaders( const AbsolutePath& cookedDir, ShaderTargetFormat format, ShaderCookScope scope, const unordered_set<string>* pReachedAsset ) override
             {
-                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, scope );
+                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, scope, pReachedAsset );
                 return summary.isClean();
             }
 
-            bool verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat format ) override
+            bool verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat format, const unordered_set<string>* pReachedAsset ) override
             {
                 vector<string> listProblem;
-                ShaderCookDriver::verifyCookedShaders( cookedDir, format, listProblem );
+                ShaderCookDriver::verifyCookedShaders( cookedDir, format, pReachedAsset, listProblem );
                 for ( const string& problem : listProblem )
                 {
                     SW_LOG_ERROR_ID( "Headless.ShaderCookProblem", "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
