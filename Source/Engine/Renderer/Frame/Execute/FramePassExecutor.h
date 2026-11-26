@@ -17,7 +17,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
@@ -511,7 +510,7 @@ namespace sw
         bool drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant );
 
         /**
-         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
+         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑게 합니다(`IRenderDebugChecks::recordNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드 · 개발 도구 없음) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
          */
         void scanPassOutputsForNan( IRHIDevice* pDevice );
@@ -599,7 +598,7 @@ namespace sw
         FrameBufferTable _viewResourceTable;
         /// @brief 지금 뷰의 패스 상태입니다(`selectGraphPlan` 의 실행 계획 열쇠). 용량을 뷰 · 프레임 사이에 다시 쓴다.
         vector<uint8> _listScratchPassState;
-        /// @brief 우편함 요청을 처리하는 개발 검사입니다(정점 대조 · RHI 계약 · 버퍼 보기 — `IRenderDebugChecks`). 주 렌더러의 첫 프레임에 만든다. 개발 도구가 없는 구성은 비어 있다.
+        /// @brief 개발 검사입니다(NaN 감시, 주 렌더러는 우편함 요청의 정점 대조 · RHI 계약 · 버퍼 보기 — `IRenderDebugChecks`). 만들 때 하나 받는다. 개발 도구가 없는 구성은 비어 있다.
         unique_ptr<IRenderDebugChecks> _pDebugChecks;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
         RHIBufferTransitionBatch _levelBufferTransitions;
@@ -624,9 +623,6 @@ namespace sw
         vector<FramePassContext> _listPassContext;
         /// @brief 그래프 실행 상태(이름별 리소스 상태 추적)입니다. 디바이스가 바뀌면 버린다(`clearDevice`).
         RenderGraphExecutionContext _graphContext;
-        /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
-        GPUNanCheck                 _nanCheck;
-        unique_ptr<IRHICommandList> _nanCheckCommandList;
         /// @brief 프레임 끝 타임스탬프(`GPUFrameClock::writeFrameEnd`)만 기록하는 리스트입니다. 모든 뷰를 낸 뒤에 제출한다. 시계가 재지 않으면 만들지 않는다.
         unique_ptr<IRHICommandList> _frameEndCommandList;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.

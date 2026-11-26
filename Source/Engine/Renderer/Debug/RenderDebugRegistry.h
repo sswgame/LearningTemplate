@@ -33,11 +33,14 @@ namespace sw
     class RenderDebugRegistry;
     class RenderPSOCache;
     class ShaderBindingLayout;
+    class TransientAttachmentPool;
+    struct ComputePipeline;
     struct RenderGraphExecutionContext;
+    struct RenderGraphPassDesc;
 
     /**
      * @class IRenderDebugChecks
-     * @brief 우편함 요청을 렌더 스레드에서 처리하는 개발 검사(메시 정점 대조 · RHI 계약 · 그래프 밖 버퍼 읽기)를 주 렌더러의 실행기에 붙이는 창구입니다.
+     * @brief 렌더 스레드의 개발 검사(패스 출력 NaN 감시, 주 렌더러는 우편함 요청의 메시 정점 대조 · RHI 계약 · 그래프 밖 버퍼 읽기)를 실행기에 붙이는 창구입니다.
      * @details 구현은 개발 도구(`DevTools/Client/Render`)가 정적 등록자(`Registrar`)로 만들기 함수를 건다. 배포 구성 · 전용 서버는 그 소스를 짓지 않아 `create` 가 nullptr 이고,
      *          실행기는 아무것도 부르지 않는다. 실행기 하나가 하나를 만들어 든다(장치 자원을 렌더러 수명에 맞춘다). 언리얼 Gameplay Debugger 처럼 디버그 구현이 따로 된 모듈에 있다.
      */
@@ -51,6 +54,17 @@ namespace sw
         /** @brief 프레임 그래프를 다 기록한 뒤입니다. 버퍼 보기가 그래프가 둔 접근에서 읽고 되돌린다. */
         virtual void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
                                             RenderDebugRegistry& registry ) = 0;
+        /**
+         * @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`, 언리얼 `r.CheckNaN`)의 카운터 · 되읽기를 만듭니다(렌더러가 장치 자원을 만들 때). 정책이 끄면 아무것도 하지 않고 true 다.
+         * @return 켜졌고 쓸 수 있는 백엔드인데 만들지 못하면 false 입니다(이유는 로그).
+         */
+        [[nodiscard]] virtual bool initializeNanCheck( IRHIDevice* pDevice ) = 0;
+        /** @brief NaN 감시가 켜져 카운터가 갖춰졌는가. */
+        [[nodiscard]] virtual bool isNanCheckActive() const = 0;
+        /** @brief 그래프가 끝난 뒤 @p listPass 의 부동소수 컬러 출력(@p pool 의 첨부)을 @p pipeline(`RenderPassKind::NanCheck`)으로 훑고 카운터 되읽기를 요청합니다. 자기 명령 리스트로 낸다. */
+        virtual void recordNanCheck( IRHIDevice& device, const vector<RenderGraphPassDesc>& listPass, const TransientAttachmentPool& pool, const ComputePipeline& pipeline ) = 0;
+        /** @brief 도착한 NaN 카운터 사본을 읽어 늘어난 출력을 로그로 냅니다(프레임 그래프 앞). */
+        virtual void pollNanCheck() = 0;
         /** @brief 장치 자원을 놓습니다(렌더러가 장치 자원을 놓을 때). 여러 번 불러도 된다. */
         virtual void release( IRHIDevice* pDevice ) = 0;
 

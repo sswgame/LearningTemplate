@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Debug/GPUNanCheck.h"
+#include "DevTools/Client/Render/GPUNanCheck.h"
 
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"

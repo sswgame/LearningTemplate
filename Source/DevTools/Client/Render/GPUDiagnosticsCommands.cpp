@@ -7,12 +7,16 @@
  */
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "DevTools/Client/Render/GPUNanCheck.h"
 #include "DevTools/Client/Render/MeshVertexCheck.h"
 #include "DevTools/Client/Render/RHIContractCheck.h"
 #include "DevTools/Client/Render/RenderBufferInspector.h"
@@ -20,9 +24,14 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/Shader/Binding/ComputeShaderParameters.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
+#include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimingRow.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw
 {
@@ -153,17 +162,63 @@ namespace sw
             {
                 _bufferInspector.service( cmd, pDevice, table, context, psoCache, registry );
             }
+            bool initializeNanCheck( IRHIDevice* pDevice ) override { return _nanCheck.initialize( pDevice ); }
+            bool isNanCheckActive() const override { return _nanCheck.isActive(); }
+            void pollNanCheck() override { _nanCheck.poll(); }
+
+            void recordNanCheck( IRHIDevice& device, const vector<RenderGraphPassDesc>& listPass, const TransientAttachmentPool& pool, const ComputePipeline& pipeline ) override
+            {
+                if ( pipeline.isValid() == false )
+                {
+                    SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
+                    return;
+                }
+                if ( _nanCheckCommandList == nullptr )
+                    _nanCheckCommandList = device.createCommandList();
+                IRHICommandList* const pCmd = _nanCheckCommandList.get();
+                if ( pCmd == nullptr )
+                    return;
+
+                pCmd->beginCommandList();
+                _listScannedTexture.clear(); // 같은 텍스처를 가리키는 출력은 한 번만 훑는다
+                for ( const RenderGraphPassDesc& pass : listPass )
+                {
+                    for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+                    {
+                        const TransientAttachmentPool::Attachment attachment = pool.find( output._attachment );
+                        const bool                                bScannable = attachment._texture != 0 && attachment._srv != kInvalidDescriptorIndex && GPUNanCheck::isScannableFormat( attachment._format );
+                        if ( bScannable == false || VectorUtil::contains( _listScannedTexture, attachment._texture ) )
+                            continue;
+                        _listScannedTexture.push_back( attachment._texture );
+
+                        utf8 arrName[constant::buffer::kMax64];
+                        formatstring( arrName, sizeof( arrName ), "%#:%#", pass._name, output._attachment.view() );
+                        // 컴퓨트가 엔진 텍스처로 읽도록 셰이더 읽기 상태로 옮기고, 다음 프레임의 패스가 쓰도록 렌더 타깃 상태로 돌려 둔다.
+                        pCmd->prepareTextureForShaderRead( attachment._texture );
+                        _nanCheck.scan( *pCmd, pipeline, arrName, attachment._srv, attachment._width, attachment._height );
+                        pCmd->prepareTextureForRenderTarget( attachment._texture );
+                    }
+                }
+                _nanCheck.requestReadback( *pCmd );
+                device.executeCommandList( pCmd->closeCommandList() );
+            }
+
             void release( IRHIDevice* pDevice ) override
             {
                 _bufferInspector.release();
                 _meshVertexCheck.release( pDevice );
                 _rhiContractCheck.release( pDevice );
+                _nanCheckCommandList.reset();
+                _nanCheck.shutdown();
             }
 
         private:
-            MeshVertexCheck       _meshVertexCheck;
-            RHIContractCheck      _rhiContractCheck;
-            RenderBufferInspector _bufferInspector;
+            MeshVertexCheck             _meshVertexCheck;
+            RHIContractCheck            _rhiContractCheck;
+            RenderBufferInspector       _bufferInspector;
+            GPUNanCheck                 _nanCheck;
+            unique_ptr<IRHICommandList> _nanCheckCommandList;
+            vector<RHITextureHandle>    _listScannedTexture; ///< 이번 프레임에 훑은 텍스처(용량을 프레임 사이에 다시 쓴다)
         };
 
         const IRenderDebugChecks::Factory   s_renderDebugChecksFactory{ &RenderDebugChecks::create };

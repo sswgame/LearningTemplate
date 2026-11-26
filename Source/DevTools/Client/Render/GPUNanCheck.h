@@ -1,11 +1,11 @@
 /**
  * @file GPUNanCheck.h
  * @brief 패스 출력 텍스처의 NaN · Inf 감시입니다 — 컴퓨트가 부동소수 출력 텍스처를 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더하고, CPU 가 몇 프레임 뒤 되읽어 패스 이름과 함께 로그로 냅니다.
- * @details 언리얼 `r.CheckNaN`(패스마다 출력의 NaN · Inf 를 잡는다)과 같은 선이다. 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bNanCheck`, 개발 도구의 `-gv_nanCheck=1`, 기본 끔)이다(Shipping 은 늘 꺼진다 — PSO 도 디스패치도 없다).
+ * @details 언리얼 `r.CheckNaN`(패스마다 출력의 NaN · Inf 를 잡는다)과 같은 선이다. 실행기가 `IRenderDebugChecks` 로 부른다(배포 구성은 짓지 않는다). 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bNanCheck`, 개발 도구의 `-gv_nanCheck=1`, 기본 끔)이다(Shipping 은 늘 꺼진다 — PSO 도 디스패치도 없다).
  *          카운터는 지우지 않는 누적 값이라 클리어 패스가 필요 없다: CPU 가 지난번 읽은 값과의 차가 이번 구간의 수다. 슬롯은 이름으로 정해진다(패스 이름 + 첨부 이름 — 같은 이름은 늘 같은 슬롯).
  *
  *          네이티브 bindless(DX12 · Vulkan)만 쓴다. 컴퓨트가 엔진 텍스처를 읽어야 하는데 DX11 · GL 의 컴퓨트는 샘플 텍스처를 못 읽는다(binding.hlsli). 그 백엔드에서는 `initialize` 가 이유를 경고로 남기고
- *          꺼 둔다(능력 선언 분기, 다른 길로 대신 읽지 않는다). 스캔은 그래프가 끝난 뒤의 내용을 본다(`FramePassExecutor::scanPassOutputsForNan`) — 같은 프레임 안에서 첨부를 재사용하는 패스가 있으면
+ *          꺼 둔다(능력 선언 분기, 다른 길로 대신 읽지 않는다). 스캔은 그래프가 끝난 뒤의 내용을 본다(`IRenderDebugChecks::recordNanCheck`) — 같은 프레임 안에서 첨부를 재사용하는 패스가 있으면
  *          마지막 쓴 패스의 출력이다.
  */
 #pragma once
@@ -25,9 +25,9 @@ namespace sw
 
     /**
      * @class GPUNanCheck
-     * @brief NaN · Inf 카운터 버퍼 하나와 그 되읽기 · 로그입니다. 렌더 스레드 하나가 쓴다(`FrameRenderer` 가 갖는다).
+     * @brief NaN · Inf 카운터 버퍼 하나와 그 되읽기 · 로그입니다. 렌더 스레드 하나가 쓴다(실행기의 개발 검사 셋이 갖는다).
      */
-    class SW_API GPUNanCheck
+    class GPUNanCheck
     {
     public:
         /// @brief 감시할 수 있는 출력의 수입니다(슬롯 하나가 카운터 둘 — NaN · Inf).

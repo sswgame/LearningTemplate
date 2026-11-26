@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Graphics/Debug/GPUMessage.h"
-#include "Engine/Graphics/Debug/GPUNanCheck.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
@@ -821,7 +821,7 @@ namespace sw
         switch ( type )
         {
             case RenderPassKind::NanCheck:
-                return GPUNanCheck::isRequested();
+                return RenderDiagnostics::get()._bNanCheck != SW_FALSE; // 배포본은 정책 기본값(끔)이라 PSO 도 디스패치도 없다
             default:
                 return false;
         }
