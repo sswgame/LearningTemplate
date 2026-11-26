@@ -600,8 +600,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, PipelineChoiceEndsAtTheQualityTier )
 }
 
 /**
- * @brief [RenderPipelineAssetTest] 첨부의 고정 크기는 가로 · 세로를 함께 적고 배율 규칙과 섞지 않는다. 기록(`_bHistory`)은 시간 누적 패스의 출력만 적고, 그 출력은 꼭 적는다
- * @details 변이: 고정 크기 검사를 지우면 한 변만 적은 첨부가 읽혀 둘째 묶음이 진다. 기록 검사를 지우면 컴퓨트 출력의 기록 선언이 읽혀(실행이 읽지 않는 값) 마지막 단언이 진다.
+ * @brief [RenderPipelineAssetTest] 첨부의 고정 크기는 가로 · 세로를 함께 적고 배율 규칙과 섞지 않는다. 기록(`_bHistory`)은 어느 패스의 출력에도 칸 하나로 붙고, 쓰는 패스는 하나다
+ * @details 변이: 고정 크기 검사를 지우면 한 변만 적은 첨부가 읽혀 둘째 묶음이 진다. 기록 자원 이름을 풀지 않으면 컴퓨트 출력의 기록 이름 단언이 진다. 쓰는 패스 검사를 지우면 마지막 단언이 진다.
  */
 SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
 {
@@ -630,14 +630,73 @@ SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
     SW_REQUIRE_TRUE( pTAA != nullptr );
     SW_EXPECT_TRUE( pTAA->_bHistory != SW_FALSE );
 
+    // 사용자 컴퓨트 패스의 출력도 칸 하나로 기록이 붙는다(코드가 종류를 보지 않는다)
+    RenderPipelineAsset history;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( history, makeXML( "_bHistory=\"true\"" ) ) );
+    SW_EXPECT_TRUE( history.getGraphPass()[0]._listResolvedColorOutput[0]._historyResource == hashed_string( "LutHistory" ) );
+
     SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentFixedSizeInvalid" );
-    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryUnread" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryTwoWriters" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
     RenderPipelineAsset rejected;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\"" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\" _height=\"32\" _resolutionDivisor=\"2\"" ) ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_bHistory=\"true\"" ) ) );
+    const string      twoWritersSource = makeXML( "_bHistory=\"true\"" );
+    const string      secondPass       = "<RenderGraphPassDesc _name=\"Second\" _type=\"Compute\" _shaderPath=\"game/playground/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" "
+                                         "_bEnableDepthWrite=\"false\"><_listInput><item>A</item></_listInput><_listOutput><item>Lut</item></_listOutput></RenderGraphPassDesc>";
+    const string_view whole            = twoWritersSource;
+    const size_t      listEnd          = whole.find( "</_listPass>" );
+    SW_REQUIRE_TRUE( listEnd != string_view::npos );
+    StringBuilder<constant::buffer::kMax2048> twoWriters;
+    twoWriters.append( whole.substr( 0, listEnd ) );
+    twoWriters.append( string_view( secondPass ) );
+    twoWriters.append( whole.substr( listEnd ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, string( twoWriters.view() ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 이름 바인딩 컴퓨트 패스는 입력 둘 · 깊이 형식 제한이 없고 값(`_listValue`)을 루트 상수로 받는다 — 칸 수는 루트 상수가 정한다
+ * @details 변이: 이름 바인딩에도 입력 상한을 걸면 셋째 입력에서 첫 단언이 진다. 칸 수 검사를 지우면 값 열넷인 패스가 읽혀 마지막 단언이 진다(루트 상수 밖에 쓴다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, NamedComputeBindingTakesValues )
+{
+    const auto makeXML = []( string_view binding, string_view inputs, uint32 valueCount, string_view type )
+    {
+        StringBuilder<constant::buffer::kMax4096> xml;
+        xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                    "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"C\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"D\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                    "<RenderPassAttachment _name=\"Out\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "</_listAttachment><_listPass>" );
+        xml.appendFormat( "<RenderGraphPassDesc _name=\"Pass\" _type=\"%#\" _inputBinding=\"%#\" %#><_listInput>%#</_listInput><_listOutput><item>Out</item></_listOutput><_listValue>", type, binding,
+                          ComputePassTestUtil::withShader(), inputs );
+        for ( uint32 index = 0; index < valueCount; ++index )
+            xml.appendFormat( "<RenderPassValue _name=\"g_Value%#\" _value=\"0.5\"/>", index );
+        xml.append( "</_listValue></RenderGraphPassDesc></_listPass></RenderPipelineDesc>" );
+        return string( xml.view() );
+    };
+    const string_view   threeInputs = "<item>A</item><item>B</item><item>D</item>";
+    RenderPipelineAsset named;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( named, makeXML( "Name", threeInputs, 2, "Compute" ) ) );
+    const RenderGraphPassDesc& pass = named.getGraphPass()[0];
+    SW_EXPECT_TRUE( pass._inputBinding == RenderPassInputBinding::Name );
+    SW_REQUIRE_EQUAL( size_t( 2 ), pass._listValue.size() );
+    SW_EXPECT_EQUAL( 0.5f, pass._listValue[1]._value );
+    SW_EXPECT_EQUAL( 8u, pass.countNamedRootConstants() ); // 크기 둘 + 출력 + 입력 셋 + 값 둘
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassValueNeedsNamedBinding" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassNamedRootConstantsFull" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeTooManyInputs" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeDepthInput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Role", "<item>A</item>", 1, "Compute" ) ) ); // 값은 이름 바인딩만
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Role", threeInputs, 0, "Compute" ) ) );      // RW 칸 바인딩은 입력 둘 · 깊이 없음
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Name", "<item>A</item>", 14, "Compute" ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

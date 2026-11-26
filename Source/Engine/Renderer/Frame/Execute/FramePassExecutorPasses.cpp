@@ -397,6 +397,32 @@ namespace sw
                 }
             }
         }
+        copyOutputHistories( context, passDesc );
+    }
+
+    void FramePassExecutor::copyOutputHistories( FramePassContext& context, const RenderGraphPassDesc& passDesc )
+    {
+        // 기록 첨부(`_bHistory`)를 쓴 패스는 끝에 출력을 기록으로 복사한다 — 패스 종류를 보지 않는다(다음 프레임의 이 패스 · 읽는 패스가 지난 내용으로 읽는다).
+        // 기록 텍스처는 셋업이 만들었고(`FrameViewResources::updateOutputHistory`), 이 패스가 복사 대상으로 선언했다(`appendEngineResourceAccesses`). 꺼져 원본을 가리키는 출력은 복사하지 않는다.
+        const FrameViewTarget& view = *_pActiveView;
+        for ( const RenderGraphPassDesc::ResolvedAttachment& output : passDesc._listResolvedColorOutput )
+        {
+            if ( output._historyResource.empty() || activePool().isForwarded( output._attachment ) )
+                continue;
+            const FrameViewHistory*          pHistory = view.findAttachmentHistory( output._attachment );
+            const RenderGraphTextureCopyDest historyResource{ output._historyResource };
+            const RHITextureHandle           texture = findTransient( output._attachment );
+            if ( pHistory == nullptr || texture == 0 || context._pGraphPass->isRegistered( historyResource ) == false )
+                continue;
+            context._pCmd->blitTexture( texture, pHistory->getCurrent()._texture );
+            context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다 — 다음 프레임이 그대로 샘플하지 않게
+        }
+    }
+
+    const FrameViewHistory* FramePassExecutor::findPassHistory( const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const
+    {
+        // 시간 누적 패스(TAA · 볼륨 구름)가 읽는 자기 기록 — 첫 컬러 출력의 기록이다(로드 검증이 그 출력에 `_bHistory` 를 요구한다).
+        return passDesc._listResolvedColorOutput.empty() ? nullptr : view.findAttachmentHistory( passDesc._listResolvedColorOutput[0]._attachment );
     }
 
     RHIRenderPassLoadOp FramePassExecutor::getColorLoadFor( const hashed_string& name )
@@ -634,6 +660,11 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassNotReady", "Compute pass '%#' has no PSO or no RW output - it does not run", passDesc._name );
             return;
         }
+        if ( passDesc._inputBinding == RenderPassInputBinding::Name )
+        {
+            executeNamedComputePass( input, pipeline, output );
+            return;
+        }
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 서수로 고른다(Bindless::storeRwTexture2D). 슬롯 0 이 출력, 그 뒤가 입력이다.
         const bool    bNative = _pDevice->supportsNativeBindlessSampling();
         RootConstants constants{};
@@ -663,6 +694,61 @@ namespace sw
         context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
+    }
+
+    void FramePassExecutor::executeNamedComputePass( const PassExecuteInput& input, const ComputePipeline& pipeline, const TransientAttachmentPool::Attachment& output )
+    {
+        // 루트 상수를 선언 차례로 채운다(`RenderPassInputBinding::Name` — 셰이더의 SwRootConstants 가 같은 차례다): 크기 둘 · 출력 RW · 출력 기록 · 입력 · 값.
+        // 입력은 셰이더 읽기 번호라 네이티브 bindless 에서만 돈다 — 에뮬 백엔드는 RW 칸이 셋뿐이고 컴퓨트가 샘플 텍스처를 읽지 못한다.
+        FramePassContext&          context  = input._context;
+        const RenderGraphPassDesc& passDesc = input._passDesc;
+        if ( _pDevice->supportsNativeBindlessSampling() == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.NamedComputeNeedsBindless", "Compute pass '%#' binds by name - it needs native bindless (DX12, Vulkan) and does not run on this backend", passDesc._name );
+            return;
+        }
+        uint32     arrWord[shaderslot::kRootConstantDwords]{};
+        uint32     wordCount = 0;
+        const auto push      = [&arrWord, &wordCount]( uint32 word )
+        {
+            if ( wordCount < shaderslot::kRootConstantDwords ) // 로드 검증이 칸 수를 봤다(`countNamedRootConstants`)
+                arrWord[wordCount++] = word;
+        };
+        const uint32 width  = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
+        const uint32 height = _pActiveView->scaleToRect( output, false );
+        push( width );
+        push( height );
+        push( static_cast<uint32>( output._uav ) );
+        const RenderGraphPassDesc::ResolvedAttachment& target = input._declaredColor[0];
+        if ( target._historyResource.empty() == false )
+        {
+            // 출력의 지난 프레임 기록 — 이 패스가 복사 대상으로 쥔다(끝의 `copyOutputHistories`). 버리는 프레임은 무효 번호라 셰이더가 기록 없이 시작한다.
+            const FrameViewHistory*          pHistory = findPassHistory( *_pActiveView, passDesc );
+            const RenderGraphTextureCopyDest historyResource{ target._historyResource };
+            const bool                       bReadable = pHistory != nullptr && pHistory->isReset() == false && pHistory->isValid() && context._pGraphPass->isRegistered( historyResource );
+            if ( bReadable )
+                context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
+            push( bReadable ? static_cast<uint32>( pHistory->getPrevious()._srv ) : kInvalidDescriptorIndex );
+        }
+        for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : passDesc._listResolvedInput )
+        {
+            // 이 뷰에서 빠진 패스의 출력은 무효 번호다(`registerPassTexture` 와 같은 규칙 — 셰이더가 기본값을 쓴다).
+            const TransientAttachmentPool::Attachment source = activePool().find( sourceInput._attachment );
+            push( source._texture != 0 ? static_cast<uint32>( source._srv ) : kInvalidDescriptorIndex );
+        }
+        for ( const RenderPassValue& value : passDesc._listValue )
+        {
+            uint32 bits = 0;
+            Memory::copy( &bits, &value._value, sizeof( bits ) );
+            push( bits );
+        }
+        ComputeShaderParameters<ComputePassShader> parameters;
+        parameters.set( ComputePassShader::Output, output._uav );
+        if ( parameters.apply( *context._pCmd, pipeline ) == false )
+            return;
+        context._pCmd->setComputeRootConstants( wordCount, arrWord );
+        context._pCmd->dispatchThreads( width, height, 1 );
+        (void)markAttachmentCleared( target._attachment ); // 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다
     }
 
     void FramePassExecutor::executeForwardOpaquePass( const PassExecuteInput& input )
@@ -885,13 +971,15 @@ namespace sw
         const hashed_string&   target  = input._declaredColor[0]._attachment;
         const FrameViewTarget& view    = *_pActiveView;
         registerDeclaredInputs( context, input._passDesc );
-        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다 — 읽기 앞에 셰이더 읽기로 옮긴다. 버리는 프레임(처음 · 컷 · 지난 프레임에 구름이 없음)은 읽지 않고 새로 채우기만 한다.
-        const bool bHistory  = context._pGraphPass->isRegistered( ViewGraphResource::skyCloudHistory() );
-        const bool bReadable = bHistory && view._skyCloudHistory.isReset() == false;
+        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(출력의 `_bHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다. 버리는 프레임(처음 · 컷 · 지난 프레임에 구름이 없음)은 읽지 않고 새로 채우기만 한다.
+        const FrameViewHistory*          pHistory = findPassHistory( view, input._passDesc );
+        const RenderGraphTextureCopyDest historyResource{ input._declaredColor[0]._historyResource };
+        const bool                       bHistory  = pHistory != nullptr && context._pGraphPass->isRegistered( historyResource );
+        const bool                       bReadable = bHistory && pHistory->isReset() == false;
         if ( bReadable )
         {
-            context._pGraphPass->transition( ViewGraphResource::skyCloudHistory(), RenderGraphAccess::ShaderRead );
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, view._skyCloudHistory.getPrevious()._texture, view._skyCloudHistory.getPrevious()._srv );
+            context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, pHistory->getPrevious()._texture, pHistory->getPrevious()._srv );
         }
         float4 volume = _state._frameSky._cloudVolume;
         volume._z     = bReadable ? volume._z : 0.0f;
@@ -904,10 +992,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyCloudVolume, volume );
         context._passValues.setFloat4( passConstantNames()._skyCloudSample, float4{ offset._x, offset._y, stepPhase - MathUtil::floor( stepPhase ), divisor } );
         executeFullscreenInto( context, _psoManager.getPassPSO( input._passDesc ), target, getTargetClearColor( target ) );
-        if ( output._texture == 0 || bHistory == false )
-            return;
-        context._pCmd->blitTexture( output._texture, view._skyCloudHistory.getCurrent()._texture );
-        context._pGraphPass->transition( ViewGraphResource::skyCloudHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다(TAA 와 같다)
+        // 기록 복사는 패스 끝의 공통 단계다(`copyOutputHistories`).
     }
 
     bool FramePassExecutor::isPassDisabledInView( uint32 passIndex ) const
@@ -1215,17 +1300,19 @@ namespace sw
         // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewHistory::isReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 이번 원본을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const bool bCut = activeView._taaHistory.isReset() && pSrcName != nullptr;
-        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(`ViewGraphResource::taaHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
-        const bool bHistory = context._pGraphPass->isRegistered( ViewGraphResource::taaHistory() );
+        const FrameViewHistory* pHistory = findPassHistory( activeView, input._passDesc );
+        const bool              bCut     = pHistory != nullptr && pHistory->isReset() && pSrcName != nullptr;
+        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(출력의 `_bHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
+        const RenderGraphTextureCopyDest historyResource{ input._declaredColor[0]._historyResource };
+        const bool                       bHistory = pHistory != nullptr && context._pGraphPass->isRegistered( historyResource );
         if ( bCut )
         {
             registerPassTexture( context, names._gbufferAlbedo, *pSrcName );
         }
         else if ( bHistory )
         {
-            context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead );
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory.getPrevious()._texture, activeView._taaHistory.getPrevious()._srv );
+            context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, pHistory->getPrevious()._texture, pHistory->getPrevious()._srv );
         }
         if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
@@ -1233,12 +1320,7 @@ namespace sw
             drawFullscreen( context, _psoManager.getPassPSO( input._passDesc ) );
             context._pCmd->endRenderPass();
         }
-
-        const RHITextureHandle taaOut = findTransient( taaTarget );
-        if ( taaOut == 0 || bHistory == false )
-            return;
-        context._pCmd->blitTexture( taaOut, activeView._taaHistory.getCurrent()._texture );
-        context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다 — 다음 프레임이 그대로 샘플하지 않게
+        // 기록 복사는 패스 끝의 공통 단계다(`copyOutputHistories`).
     }
 
     void FramePassExecutor::executePresentPass( const PassExecuteInput& input )

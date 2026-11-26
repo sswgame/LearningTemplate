@@ -13,18 +13,20 @@ using namespace sw;
 SW_TEST_CASE( FrameViewTargetTest, SkippedFrameResetsHistory )
 {
     FrameViewTarget view;
+    view._listAttachmentHistory.emplace_back()._attachment = hashed_string( "TAAColor" );
+    FrameViewHistory& taaHistory                           = *view.findAttachmentHistory( hashed_string( "TAAColor" ) );
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE ); // 처음 그린다
-    view._taaHistory.markWritten();
+    taaHistory.markWritten();
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_FALSE );
-    SW_EXPECT_FALSE( view._taaHistory.isReset() );
+    SW_EXPECT_FALSE( taaHistory.isReset() );
 
     view.markFrameSkipped(); // 10 Hz 뷰 — 다음 몇 프레임은 그리지 않는다
     view.markFrameSkipped();
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE );
-    SW_EXPECT_TRUE( view._taaHistory.isReset() );
+    SW_EXPECT_TRUE( taaHistory.isReset() );
 
     view.beginViewHistory(); // 다시 이어 그리면 기록을 쓴다
     SW_EXPECT_TRUE( view._bHistoryReset == SW_FALSE );
@@ -34,17 +36,19 @@ SW_TEST_CASE( FrameViewTargetTest, SkippedFrameResetsHistory )
 SW_TEST_CASE( FrameViewTargetTest, SkyCloudHistoryResetsWhenCloudsDidNotRun )
 {
     FrameViewTarget view;
+    view._listAttachmentHistory.emplace_back()._attachment = hashed_string( "SkyCloudColor" );
+    FrameViewHistory& cloudHistory                         = *view.findAttachmentHistory( hashed_string( "SkyCloudColor" ) );
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._skyCloudHistory.isReset() ); // 처음 그린다
-    view._skyCloudHistory.markWritten();
+    SW_EXPECT_TRUE( cloudHistory.isReset() ); // 처음 그린다
+    cloudHistory.markWritten();
     view.beginViewHistory();
-    SW_EXPECT_FALSE( view._skyCloudHistory.isReset() ); // 이번 프레임은 구름이 없다(쓰지 않는다)
+    SW_EXPECT_FALSE( cloudHistory.isReset() ); // 이번 프레임은 구름이 없다(쓰지 않는다)
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._skyCloudHistory.isReset() );
-    view._skyCloudHistory.markWritten();
+    SW_EXPECT_TRUE( cloudHistory.isReset() );
+    cloudHistory.markWritten();
     view.markFrameSkipped();
     view.beginViewHistory();
-    SW_EXPECT_TRUE( view._skyCloudHistory.isReset() );
+    SW_EXPECT_TRUE( cloudHistory.isReset() );
 }
 
 /** @brief [FrameViewTargetTest] 쉰 프레임 뒤에도 잇는 기록(자동 노출)은 컷 · 새 텍스처에서만 버리고, 번갈아 쓰는 두 칸은 쓴 프레임마다 바뀐다 */
@@ -81,4 +85,19 @@ SW_TEST_CASE( FrameViewTargetTest, CutResetsHistory )
     view._settings._bCut = SW_TRUE;
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE );
+}
+
+/**
+ * @brief [FrameViewTargetTest] 기록은 첨부 이름으로 찾고, 하나라도 쌓이면 시간 누적이다 — 패스 종류를 보지 않으므로 XML 이 더한 기록 첨부도 같은 길이다
+ * @details 변이: 시간 누적 판정이 첫 칸만 보면 둘째 칸(사용자 기록)만 쌓인 프레임에서 마지막 단언이 진다.
+ */
+SW_TEST_CASE( FrameViewTargetTest, AttachmentHistoriesAreFoundByName )
+{
+    FrameViewTarget view;
+    view._listAttachmentHistory.emplace_back()._attachment = hashed_string( "TAAColor" );
+    view._listAttachmentHistory.emplace_back()._attachment = hashed_string( "UserTrail" );
+    SW_EXPECT_TRUE( view.findAttachmentHistory( hashed_string( "SceneColor" ) ) == nullptr );
+    SW_EXPECT_FALSE( view.hasWrittenAttachmentHistory() );
+    view.findAttachmentHistory( hashed_string( "UserTrail" ) )->markWritten();
+    SW_EXPECT_TRUE( view.hasWrittenAttachmentHistory() );
 }

@@ -344,6 +344,12 @@ namespace sw
          *          "선언은 했는데 바인딩되지 않는 입력" 이 생기지 않는다. 쇼 플래그로 끈 역할은 건너뛴다.
          */
         void registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc );
+        /** @brief 패스 @p passDesc 가 쓴 기록 첨부(`_bHistory` 출력)를 기록 텍스처로 복사합니다 — 패스 종류와 상관없는 패스 끝 단계입니다(`executePass`). */
+        void copyOutputHistories( FramePassContext& context, const RenderGraphPassDesc& passDesc );
+        /** @brief 이름 바인딩 컴퓨트 패스(`RenderPassInputBinding::Name`)를 돌립니다 — 루트 상수를 선언 차례로 채워 출력 크기만큼 디스패치한다(`executeComputePass` 가 부른다). */
+        void executeNamedComputePass( const PassExecuteInput& input, const ComputePipeline& pipeline, const TransientAttachmentPool::Attachment& output );
+        /** @brief 패스 @p passDesc 의 첫 컬러 출력의 기록입니다(시간 누적 패스가 자기 지난 출력을 읽는다). 기록이 없으면 nullptr 입니다. */
+        const FrameViewHistory* findPassHistory( const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const;
         /** @brief 역할의 셰이더 이름입니다. intern 된 hashed_string 입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /**

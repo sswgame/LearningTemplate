@@ -3,6 +3,9 @@
 // GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로, 이 파일을 include 하기 전에 슬롯 포맷을 적는다:
 //     #define SW_RW_SLOT0_GL_FORMAT "rgba16f"
 // 디스패치는 출력 크기만큼의 스레드다 — 그룹 크기는 이 셰이더의 numthreads 를 리플렉션으로 읽는다.
+// 이름 바인딩(`_inputBinding="Name"`, 네이티브 bindless)은 이 파일 대신 셰이더가 루트 상수를 선언 차례로 적는다:
+//     SW_ROOT_CONSTANTS_BEGIN { uint g_ComputeWidth; uint g_ComputeHeight; uint g_<출력>Index; [uint g_<출력>HistoryIndex;] uint g_<입력>Index ...; float g_<값> ...; }; SW_ROOT_CONSTANTS_END
+// 출력은 RW 번호, 기록 · 입력은 셰이더 읽기 번호다(빠진 입력 · 버린 기록은 kInvalidIndex).
 #ifndef SW_COMPUTE_PASS_HLSLI
 #define SW_COMPUTE_PASS_HLSLI
 

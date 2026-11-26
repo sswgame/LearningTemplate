@@ -103,6 +103,8 @@ namespace sw
          * @details 패스 콜백은 병렬 기록에서 태스크 스레드가 실행하므로, 콜백 안에서 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
          */
         void updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, const utf8* pDebugName, FrameViewHistory& history );
+        /** @brief 뷰의 기록 목록(`FrameViewTarget::_listAttachmentHistory`)을 파이프라인의 기록 첨부(`_bHistory` 출력) 차례에 맞춥니다. 어긋난 칸부터 놓고 다시 더한다. */
+        void syncAttachmentHistories( FrameViewTarget& view );
         /** @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 풀 크기로 만들어 둡니다. 장면 깊이 첨부가 없으면(2D 파이프라인) 만들지 않는다. */
         void ensureDepthHistory( FrameViewTarget& view );
         /**

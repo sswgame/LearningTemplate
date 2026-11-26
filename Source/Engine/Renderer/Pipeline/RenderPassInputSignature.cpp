@@ -47,8 +47,6 @@ namespace sw
             {      "GBufferNormal",       RenderPassInputRole::GBufferNormal},
             {    "GBufferMaterial",     RenderPassInputRole::GBufferMaterial},
             {  "GBufferCustomData",   RenderPassInputRole::GBufferCustomData},
-            {          "ShadowMap",           RenderPassInputRole::ShadowMap},
-            {     "LocalShadowMap",      RenderPassInputRole::LocalShadowMap},
             {            "AOColor",    RenderPassInputRole::AmbientOcclusion},
             {        "BloomBright",         RenderPassInputRole::BloomBright},
             {     "SceneColorCopy",      RenderPassInputRole::SceneColorCopy},
