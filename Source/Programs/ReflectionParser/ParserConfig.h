@@ -68,5 +68,12 @@ namespace sw
         [[nodiscard]] bool isNameFieldCheckSkipped( string_view headerPath ) const;
         /** @brief 헤더 경로 @p headerPath 가 멤버의 상태 선언을 묻지 않는 경로 조각(`_listStateSkipPath`)을 가졌는지 봅니다. */
         [[nodiscard]] bool isStateDeclarationSkipped( string_view headerPath ) const;
+
+    private:
+        /**
+         * @brief LLVM 내장 헤더 자리(`-resource-dir` · 그 include)와, 대상이 Windows 면 MSVC · Windows SDK(ucrt) 시스템 헤더 자리를 기본 인자에 더합니다.
+         * @details 설정 문서를 읽고 합치는 일(`load`)과 갈라 둔 툴체인 찾기다(ParserConfigToolchain.cpp). LLVM 경로가 비면 환경 변수에서 찾는다.
+         */
+        void appendToolchainIncludes( string llvmPath, const string& msvcToolsDir, const string& winSdkDir, const string& winSdkVer, string_view platformParserKey );
     };
 } // namespace sw
