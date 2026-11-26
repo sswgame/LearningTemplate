@@ -9,6 +9,7 @@
 #   // EXPECT-NOT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 그 줄이 없다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
 #   // EXPECT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 `<이름>\t<대상>` 줄이 있다.
+#   // TARGET-DEFINE: <이름>=<값>  파서에 `-D<이름>=<값>` 을 대상 인자로 넘긴다(그 타깃의 컴파일 정의).
 # 사례가 .cpp 면 산출물은 `<이름>.cpp.gen.inl` 하나라 EXPECT-GEN · EXPECT-NOT-GEN · EXPECT-META 가 모두 그 파일을 본다.
 # 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX · GEN_INLINE_SUFFIX
 foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX GEN_INLINE_SUFFIX)
@@ -71,6 +72,12 @@ string(REPLACE "|" ";" list_target_arg_value "${TARGET_ARGS}")
 set(list_target_arg "")
 foreach(target_arg IN LISTS list_target_arg_value)
 	list(APPEND list_target_arg --target-arg "${target_arg}")
+endforeach()
+# 사례의 대상 정의(`// TARGET-DEFINE: <이름>=<값>`). 빌드가 그 타깃의 COMPILE_DEFINITIONS 를 넘기는 자리(ReflectionParser.definitions.rsp)를 흉내 낸다.
+file(STRINGS "${FIXTURE}" list_define_line REGEX "^// TARGET-DEFINE: ")
+foreach(line IN LISTS list_define_line)
+	string(REGEX MATCH "^// TARGET-DEFINE: (.+)$" matched "${line}")
+	list(APPEND list_target_arg --target-arg "-D${CMAKE_MATCH_1}")
 endforeach()
 
 # 빌드의 인자(`sw_make_reflection_parser_args`)와 같은 모양이다. 파서 로그 파일이 소스 트리에 남지 않게 작업 폴더를 옮긴다.

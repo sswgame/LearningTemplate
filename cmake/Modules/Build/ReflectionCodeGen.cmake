@@ -340,7 +340,7 @@ endfunction()
 # CONTENT_OWNER: 콘텐츠 모듈 검사(`sw_add_content_module_check`)에서 이 타입들의 주인 — 비우면 모든 호스트가 가진 것(엔진 · 실행 파일), 게임은 `game:<폴더>`.
 # ------------------------------------------------------------------------------
 function(sw_add_reflection_step TARGET_NAME)
-	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES;DEFINES" ${ARGN})
+	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES" ${ARGN})
 
 	sw_skip_without_reflection_parser(${TARGET_NAME} skip)
 	if(skip)
@@ -385,10 +385,6 @@ function(sw_add_reflection_step TARGET_NAME)
 	set(emit_templates_dir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
 	file(GLOB emit_tpls "${emit_templates_dir}/*${SW_EXT_REFLECTION_TEMPLATE}")
 	sw_make_reflection_parser_args(parser_args ${TARGET_NAME})
-	# 그 모듈의 컴파일이 정의하는 매크로(내보내기 매크로 등) — 헤더가 그것을 요구하면(DevToolsAPI.h) 파서도 같은 매크로로 읽는다.
-	foreach(def IN LISTS ARG_DEFINES)
-		list(APPEND parser_args "--target-arg" "-D${def}")
-	endforeach()
 
 	# 파서가 런타임에 읽는 설정. 바뀌면 clang 인자/SDK 경로가 달라지므로 재생성해야 함.
 	set(parser_configs "")
@@ -437,13 +433,21 @@ function(sw_add_reflection_step TARGET_NAME)
 	set(reflect_response_args ${parser_args} "--depfile" "${reflect_depfile}")
 	string(REPLACE ";" "\n" reflect_response_text "${reflect_response_args}")
 	sw_write_if_changed("${reflect_response_file}" "${reflect_response_text}")
+	# 그 타깃의 컴파일 정의 전부(자기 것 + 링크한 타깃의 INTERFACE — 내보내기 매크로 · SW_REGISTRAR_MODULE · SW_LOG_TAG)를 파서도 같은 값으로 받는다.
+	# .cpp 입력은 그 타깃의 TU 그대로라 정의가 없으면 파싱되지 않는다(`GlobalVariableManager.h` 가 SW_REGISTRAR_MODULE 을 쓴다). 매크로를 하나씩 손으로 적지 않는다.
+	# 정의는 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
+	set(reflect_definition_file "${ARG_OUTPUT_DIR}/ReflectionParser.definitions.rsp")
+	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
+	file(GENERATE OUTPUT "${reflect_definition_file}"
+		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>"
+		TARGET ${TARGET_NAME})
 
 	add_custom_command(
 		OUTPUT ${generated_files}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
-		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}"
+		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}" "@${reflect_definition_file}"
 		DEPFILE "${reflect_depfile}"
-		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
+		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" "${reflect_definition_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
 		"${reflect_builtins}" ${emit_tpls}
 		${parser_configs}
 		COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"

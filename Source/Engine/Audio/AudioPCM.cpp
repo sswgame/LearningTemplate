@@ -110,12 +110,12 @@ namespace sw
 
     bool AudioPCM::isSupportedExtension( string_view path )
     {
-        return AudioClipData::findFileFormat( path ) != AudioFileFormat::Other;
+        return AudioClipAssetKind::isDecodable( path );
     }
 
     bool AudioPCM::decode( string_view path, const uint8* pBytes, size_t byteCount, AudioPCM& outPCM )
     {
-        switch ( AudioClipData::findFileFormat( path ) ) // 코덱은 접미사 칸이 정한다(`AudioClipData::kArrAssetSuffix`)
+        switch ( AudioClipAssetKind::findFileFormat( path ) ) // 코덱은 접미사 칸이 정한다(`AudioClipAssetKind::kArrAssetSuffix`)
         {
             case AudioFileFormat::WAV:
                 return decodeWAV( pBytes, byteCount, outPCM );
