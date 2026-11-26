@@ -27,7 +27,7 @@
 | w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
 | w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
-| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 4 개(7cd17031ac · 432e884715 · 7049625e66 끝), 리플렉션 형식 단일 .cpp 헤더 약 45 개, VulkanRHISamplerPreset |
+| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
 | w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조(끝), 나머지 sw_* CMake 함수 구성 경로 테스트 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
