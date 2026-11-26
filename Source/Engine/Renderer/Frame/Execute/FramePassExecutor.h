@@ -61,6 +61,9 @@ namespace sw
     class SW_API FramePassExecutor
     {
     public:
+        /** @brief 개발 검사 셋입니다(렌더 타깃 목록 공개 · 렌더 스레드 프레임 끝). 개발 도구가 없는 구성은 nullptr 입니다. */
+        [[nodiscard]] IRenderDebugChecks* findDebugChecks() const { return _pDebugChecks.get(); }
+
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                            FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
                            const FrameScreenRotation& screenRotation, const FrameDisplayEncode& displayEncode );

@@ -30,7 +30,10 @@ namespace sw
     class GPUScene;
     class IRHICommandList;
     class IRHIDevice;
+    class IRHIResourceFactory;
     class RenderDebugRegistry;
+    class RenderTargetRegistry;
+    struct RenderTargetInfo;
     class RenderPSOCache;
     class ShaderBindingLayout;
     class TransientAttachmentPool;
@@ -65,6 +68,20 @@ namespace sw
         virtual void recordNanCheck( IRHIDevice& device, const vector<RenderGraphPassDesc>& listPass, const TransientAttachmentPool& pool, const ComputePipeline& pipeline ) = 0;
         /** @brief 도착한 NaN 카운터 사본을 읽어 늘어난 출력을 로그로 냅니다(프레임 그래프 앞). */
         virtual void pollNanCheck() = 0;
+        /**
+         * @brief 주 시점 첨부 목록을 렌더 타깃 창 우편함(@p registry)에 싣습니다 — 패스의 생산자 · 소비자 · 수명을 붙이고 이름순으로 정렬한다. 첨부를 만들거나 다시 가리킬 때만 부른다.
+         * @param presented 화면에 나가는 첨부(꺼진 효과의 출력이면 그 원본으로 푼 이름)
+         * @param listExtraTarget 패스가 아닌 그래프 밖 출력(HDR 표시 인코딩의 장면 · UI RT) — 그대로 싣는다
+         */
+        virtual void publishRenderTargets( RenderTargetRegistry& registry, const TransientAttachmentPool& pool, const vector<RenderGraphPassDesc>& listPass, hashed_string presented,
+                                           vector<RenderTargetInfo> listExtraTarget ) = 0;
+        /**
+         * @brief 렌더 스레드 프레임 끝(endFrame 뒤 — 그 프레임이 그린 내용이 들어 있다)입니다. 렌더 타깃 창의 CPU 읽기 요청과 `gpu.inspect` 의 첨부 값 덤프를 처리한다.
+         * @details 렌더 타깃 읽기는 기다리지 않는 전송(다음 프레임들이 폴링), 픽셀 덤프는 개발 명령 한 번에 한 번 GPU 를 기다린다.
+         */
+        virtual void serviceAfterFrameEnd( IRHIResourceFactory& factory ) = 0;
+        /** @brief 진행 중인 렌더 타깃 읽기의 전송 티켓을 버립니다 — 팩토리보다 오래 살지 않게 렌더 스레드를 멈출 때 부른다. */
+        virtual void discardRenderTargetRead() = 0;
         /** @brief 장치 자원을 놓습니다(렌더러가 장치 자원을 놓을 때). 여러 번 불러도 된다. */
         virtual void release( IRHIDevice* pDevice ) = 0;
 
