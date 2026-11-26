@@ -106,8 +106,6 @@ namespace sw
         void validateBarSortingLayer( ValidationContext& context ) const;
 
     private:
-        /** @brief 카메라 출력의 정수 업스케일 배율을 바꿉니다. 같으면 아무것도 하지 않습니다. */
-        static void applyUpscaleZoom( CameraComponent& camera, uint32 upscaleZoom );
         /** @brief 스냅 단위를 레지스트리와 씬의 메시에 알립니다. 값이 그대로면 아무것도 하지 않습니다. 틱 중이면 틱 뒤로 미룹니다. */
         void publishSnapUnit( float32 unit );
         /** @brief 레터박스 띠 넷을 눈 둘레에 놓습니다(자르지 않는 축의 띠는 숨깁니다). */

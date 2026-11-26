@@ -173,10 +173,6 @@ namespace sw
         LocalContentHashCacheScope& operator=( const LocalContentHashCacheScope& ) = delete;
 
     private:
-        /** @brief 로컬 캐시 파일을 싣습니다. 못 읽으면 경고합니다. */
-        static void loadLocalCache();
-
-    private:
         const LocalContentHashCacheUse _use;
     };
 } // namespace sw

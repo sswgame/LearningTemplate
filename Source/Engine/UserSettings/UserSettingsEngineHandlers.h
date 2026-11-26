@@ -105,14 +105,9 @@ namespace sw
         [[nodiscard]] bool applyWindowMode( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyResolution( const UserSettingApplyParams& context );
         [[nodiscard]] bool applyVSync( const UserSettingApplyParams& context );
-        /** @brief 값을 리소스 태그 축 `param` 의 값으로 넣습니다(`ResourceTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
-        [[nodiscard]] static bool applyResourceTag( const UserSettingApplyParams& context );
-        void                      collectLanguages( vector<UserSettingOption>& outListOption );
-        void                      collectResolutions( vector<UserSettingOption>& outListOption );
-        /** @brief `1920x1080` 형식의 글을 만듭니다. */
-        static string formatResolution( int32 width, int32 height );
+        void               collectLanguages( vector<UserSettingOption>& outListOption );
+        void               collectResolutions( vector<UserSettingOption>& outListOption );
 
-        static bool isToggleModeName( string_view value );
         static bool isWindowModeName( string_view value );
         static bool isResolutionText( string_view value );
 

@@ -163,6 +163,12 @@ namespace sw
                     return 0u;
                 return collision._mode == VFXCollisionMode::Kill ? SW_VFX_FLAG_COLLIDE_KILL : SW_VFX_FLAG_COLLIDE_BOUNCE;
             }
+
+            /** @brief 풀이 커서 단계마다 디스패치 셋으로 도는 방출기입니다(`SW_VFX_MULTI_GROUP_MIN_POOL` — 두 경로는 같은 결과다). */
+            static bool usesMultiGroup( const VFXEmitterDef& def )
+            {
+                return def._maxParticles >= SW_VFX_MULTI_GROUP_MIN_POOL;
+            }
         };
     } // namespace
 } // namespace sw
@@ -495,7 +501,7 @@ namespace sw
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
         // 고정 단어 뒤에 빈 인스턴스 칸 스택 · 살아 있는 칸 목록(풀 크기씩 — 셰이더가 재생 시작에 채운다), 다중 그룹 경로는 그 뒤에 그룹마다 한 칸(생존 수 · 시작 위치)이 더 든다.
-        const uint32   argsWordCount = SW_VFX_ARGS_WORD_GROUP_FIRST( def._maxParticles ) + ( usesMultiGroup( def ) ? getGroupCount( def ) : 0u );
+        const uint32   argsWordCount = SW_VFX_ARGS_WORD_GROUP_FIRST( def._maxParticles ) + ( VFXGPUSimulationInternal::usesMultiGroup( def ) ? getGroupCount( def ) : 0u );
         vector<uint32> listInitialArgs( argsWordCount, 0u );
         listInitialArgs[0]       = GPUParticle::kVertexCount;
         const uint32 stateCount  = def._maxParticles * Internal::kStateHalfCount;
@@ -677,11 +683,6 @@ namespace sw
         }
     }
 
-    bool VFXGPUSimulation::usesMultiGroup( const VFXEmitterDef& def )
-    {
-        return def._maxParticles >= SW_VFX_MULTI_GROUP_MIN_POOL;
-    }
-
     uint32 VFXGPUSimulation::getGroupCount( const VFXEmitterDef& def )
     {
         return ( def._maxParticles + SW_VFX_SIMULATE_THREAD_COUNT - 1u ) / SW_VFX_SIMULATE_THREAD_COUNT;
@@ -770,7 +771,7 @@ namespace sw
             cmd.setComputeRootConstants( 2, arrRoot );
             cmd.dispatchCompute( groupCount, 1, 1 );
         };
-        if ( usesMultiGroup( state._clock.getDef() ) == false )
+        if ( VFXGPUSimulationInternal::usesMultiGroup( state._clock.getDef() ) == false )
         {
             recordPass( SW_VFX_PASS_SINGLE, 0u, 1u );
             return;

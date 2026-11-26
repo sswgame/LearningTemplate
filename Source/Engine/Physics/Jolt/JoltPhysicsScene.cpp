@@ -317,6 +317,28 @@ namespace sw
                 }
                 return pConstraint;
             }
+
+            /** @brief 캐릭터 캡슐 셰이프입니다(바닥이 원점 — 발). 지을 수 없으면 오류를 남기고 nullptr 입니다. */
+            static JPH::RefConst<JPH::Shape> createCharacterShape( float32 radius, float32 halfHeight )
+            {
+                // 캡슐 바닥이 캐릭터 원점(발)에 오도록 올려 둔다.
+                JPH::RefConst<JPH::Shape> pResult;
+                JPH::CapsuleShapeSettings capsule{ halfHeight, radius };
+                capsule.SetEmbedded();
+                JPH::RotatedTranslatedShapeSettings offset{
+                    JPH::Vec3{ 0.0f, halfHeight + radius, 0.0f },
+                    JPH::Quat::sIdentity(), &capsule
+                };
+                offset.SetEmbedded();
+                const JPH::Shape::ShapeResult result = offset.Create();
+                if ( result.HasError() )
+                {
+                    SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCharacter", "createCharacter: %#", result.GetError().c_str() );
+                    return pResult;
+                }
+                pResult = result.Get();
+                return pResult;
+            }
         };
     } // namespace
 } // namespace sw
@@ -1817,27 +1839,6 @@ namespace sw
 
     // --- 캐릭터 -----------------------------------------------------------------------------------------------------------
 
-    JPH::RefConst<JPH::Shape> JoltPhysicsScene::createCharacterShape( float32 radius, float32 halfHeight )
-    {
-        // 캡슐 바닥이 캐릭터 원점(발)에 오도록 올려 둔다.
-        JPH::RefConst<JPH::Shape> pResult;
-        JPH::CapsuleShapeSettings capsule{ halfHeight, radius };
-        capsule.SetEmbedded();
-        JPH::RotatedTranslatedShapeSettings offset{
-            JPH::Vec3{ 0.0f, halfHeight + radius, 0.0f },
-            JPH::Quat::sIdentity(), &capsule
-        };
-        offset.SetEmbedded();
-        const JPH::Shape::ShapeResult result = offset.Create();
-        if ( result.HasError() )
-        {
-            SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCharacter", "createCharacter: %#", result.GetError().c_str() );
-            return pResult;
-        }
-        pResult = result.Get();
-        return pResult;
-    }
-
     PhysicsShapeDesc3D JoltPhysicsScene::makeCharacterShapeDesc( float32 radius, float32 halfHeight )
     {
         PhysicsShapeDesc3D capsuleDesc;
@@ -1850,7 +1851,7 @@ namespace sw
 
     PhysicsCharacterHandle JoltPhysicsScene::createCharacter( const PhysicsCharacterDesc3D& desc )
     {
-        const JPH::RefConst<JPH::Shape> pShape = createCharacterShape( desc._radius, desc._halfHeight );
+        const JPH::RefConst<JPH::Shape> pShape = JoltPhysicsSceneInternal::createCharacterShape( desc._radius, desc._halfHeight );
         if ( pShape == nullptr )
             return PhysicsCharacterHandle{};
 
@@ -2104,7 +2105,7 @@ namespace sw
             SW_LOG_ERROR_ID( "JoltPhysicsScene.SetCharacterSizeStaleCharacter", "setCharacterSize: the character handle is stale" );
             return false;
         }
-        const JPH::RefConst<JPH::Shape> pShape = createCharacterShape( radius, halfHeight );
+        const JPH::RefConst<JPH::Shape> pShape = JoltPhysicsSceneInternal::createCharacterShape( radius, halfHeight );
         if ( pShape == nullptr )
             return false;
         // 겹침 한도 없이 바꾼다(FLT_MAX) — 커진 캡슐이 벽에 묻혀도 다음 이동이 밀어낸다(언리얼 `SetCapsuleSize` 도 막지 않는다).

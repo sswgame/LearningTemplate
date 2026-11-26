@@ -26,6 +26,16 @@ namespace sw
             static constexpr float32 kBarNearPlaneScale = 2.0f;
             /** @brief 띠를 바깥쪽으로 더 덮는 화면 픽셀 수(가장자리 반올림 틈을 막는다). */
             static constexpr float32 kBarOverlapPixels = 2.0f;
+
+            /** @brief 카메라 출력의 정수 업스케일 배율을 바꿉니다. 같으면 아무것도 하지 않습니다. */
+            static void applyUpscaleZoom( CameraComponent& camera, uint32 upscaleZoom )
+            {
+                if ( camera.getRenderOutput()._upscaleZoom == upscaleZoom )
+                    return;
+                CameraRenderOutput output = camera.getRenderOutput();
+                output._upscaleZoom       = upscaleZoom;
+                camera.setRenderOutput( output );
+            }
         };
     } // namespace
 
@@ -65,7 +75,7 @@ namespace sw
         {
             pCamera->setViewOffset( float3{ 0.0f, 0.0f, 0.0f } );
             if ( _bUpscaleRenderTexture )
-                applyUpscaleZoom( *pCamera, 0u );
+                PixelPerfectCameraComponentInternal::applyUpscaleZoom( *pCamera, 0u );
         }
         _barBatch.shutdown();
         Component::onEndPlay();
@@ -150,7 +160,7 @@ namespace sw
         const float32 eyeUnit     = upscaleZoom > 0 ? _layout._assetPixelUnit : _layout._screenPixelUnit;
         pCamera->setOrthographic( true );
         pCamera->setOrthoHeight( orthoHeight );
-        applyUpscaleZoom( *pCamera, upscaleZoom );
+        PixelPerfectCameraComponentInternal::applyUpscaleZoom( *pCamera, upscaleZoom );
         // 그리는 눈만 격자에 붙인다(트랜스폼은 그대로 — 감쇠로 따라가는 카메라가 반 픽셀 아래의 움직임을 잃지 않게).
         const float3 world = pCamera->getWorldPosition();
         const float3 offset{ snapToGrid( world._x, eyeUnit ) - world._x, snapToGrid( world._y, eyeUnit ) - world._y, 0.0f };
@@ -159,15 +169,6 @@ namespace sw
         publishSnapUnit( _bPixelSnapping ? _layout._assetPixelUnit : 0.0f );
         layoutBars( pCamera->getCameraPosition(), viewportWidth, viewportHeight );
         return _layout;
-    }
-
-    void PixelPerfectCameraComponent::applyUpscaleZoom( CameraComponent& camera, uint32 upscaleZoom )
-    {
-        if ( camera.getRenderOutput()._upscaleZoom == upscaleZoom )
-            return;
-        CameraRenderOutput output = camera.getRenderOutput();
-        output._upscaleZoom       = upscaleZoom;
-        camera.setRenderOutput( output );
     }
 
     void PixelPerfectCameraComponent::publishSnapUnit( float32 unit )

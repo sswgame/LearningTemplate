@@ -230,8 +230,6 @@ namespace sw
             uint32              _firstInstanceSlot{ constant::invalid_index::kUint32 }; ///< 실린 첫 GPUScene 칸(`collectMeshProbeSources`)
         };
 
-        /** @brief 풀이 커서 단계마다 디스패치 셋으로 도는 방출기입니다(`SW_VFX_MULTI_GROUP_MIN_POOL` — 두 경로는 같은 결과다). */
-        static bool usesMultiGroup( const VFXEmitterDef& def );
         /** @brief 다중 그룹 경로가 한 패스에 거는 그룹 수입니다(풀 / 스레드 수 올림). */
         static uint32 getGroupCount( const VFXEmitterDef& def );
         /** @brief 방출기 하나의 시뮬레이션 패스들을 기록합니다(그룹 하나 경로는 디스패치 하나, 다중 그룹은 패스마다 하나와 선언한 UAV 핸들의 장벽). */

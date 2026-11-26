@@ -101,6 +101,20 @@ namespace sw
                 }
                 return bClean;
             }
+
+            /**
+             * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인 종류(`engine`, `common` 순)를 돌려줍니다(`<도메인>/shaders`).
+             * @return @p listPriority 에 두 종류 중 하나라도 없으면 오류를 남기고 false 입니다.
+             */
+            static bool collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain )
+            {
+                outListDomain.clear();
+                if ( ShaderSourceInternal::validatePriority( listPriority ) == false )
+                    return false;
+                outListDomain.emplace_back( constant::path::kEnginePack );
+                outListDomain.emplace_back( constant::path::kCommonPack );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -246,20 +260,10 @@ namespace sw
     {
     }
 
-    bool ShaderSourceResolver::collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain )
-    {
-        outListDomain.clear();
-        if ( ShaderSourceInternal::validatePriority( listPriority ) == false )
-            return false;
-        outListDomain.emplace_back( constant::path::kEnginePack );
-        outListDomain.emplace_back( constant::path::kCommonPack );
-        return true;
-    }
-
     optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths, shared_ptr<ShaderIncludeCache> pCache )
     {
         vector<string> listDomain;
-        if ( collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
+        if ( ShaderSourceInternal::collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
             return nullopt; // 오류는 위 함수가 남겼다
         vector<ShaderIncludeRootDomain> listRootDomain;
         for ( string& domain : listDomain )
