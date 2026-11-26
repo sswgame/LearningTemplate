@@ -1,6 +1,6 @@
 /**
  * @file DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h
- * @brief 모듈 원본을 읽어 검사하고, 세대 이름을 붙인 섀도 복사본 파일을 씁니다. 복사본을 지우는 일도 여기서 합니다.
+ * @brief 모듈 원본을 읽어 검사하고, 세대 이름을 붙인 섀도 복사본 파일을 씁니다. 복사본의 자리 · 이름과 지우기 · 치우기도 여기서 합니다.
  *
  * @note 파일과 라이브러리 바이트만 다룹니다. 복사본을 로드하고 교체하는 순서(정적 등록 헤드 · `RegistrationReloadScope` · 라이브러리 검사 콜백)는
  *       `LiveReloadManager` 가 정합니다. 핫 리로드만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
@@ -35,7 +35,7 @@ namespace sw
      */
     struct ShadowCopySerials
     {
-        uint32 _reloadCount{ 0 };           ///< 복사본 이름의 일련번호(`ShadowCopyName::make`)
+        uint32 _reloadCount{ 0 };           ///< 복사본 이름의 일련번호(`ModuleShadowCopy::makeCopyName`)
         uint32 _libraryNameGeneration{ 0 }; ///< 라이브러리 이름 세대 — 모듈과 무관하게 하나씩 오르므로 앞부분이 같은 두 모듈도 같은 이름을 받지 않는다
     };
 
@@ -66,13 +66,30 @@ namespace sw
 {
     /**
      * @struct ModuleShadowCopy
-     * @brief 섀도 복사본 파일을 만들고 지웁니다.
-     * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ShadowCopyName::getDirectory`)에 씁니다.
+     * @brief 섀도 복사본 파일을 만들고 지웁니다. 복사본은 실행 뿌리 아래 이 프로세스의 폴더(`getCopyDirectory`)에 `<모듈>_<번호>` 이름으로 둡니다.
+     * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ModuleShadowCopy::getCopyDirectory`)에 씁니다.
      *          Windows 는 복사본마다 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_<번호>.so`)입니다.
      *          복사본 이름의 일련번호와 세대 번호는 프로세스 하나에 하나씩 오릅니다.
      */
     struct ModuleShadowCopy
     {
+        /** @brief 확장자 없는 복사본 이름을 만듭니다(예: `SWGame_3`). 경로를 짧게 두려고 원본 시각 같은 칸은 넣지 않는다 — Windows 복사본 경로가 실행 뿌리 아래라 길다. */
+        static string makeCopyName( string_view moduleName, uint32 serial );
+
+        /**
+         * @brief 이 프로세스의 섀도 복사본 폴더 `<실행 뿌리>/ModuleShadow/<pid>` 입니다. 쓰는 쪽이 처음 쓸 때 만듭니다.
+         * @details pid 칸은 실행 뿌리를 물려받은 손자(`kRunRootVariable`)와 같은 이름의 복사본이 겹치지 않게 할 뿐이다 — 이름을 읽어 거두는 코드는 없다.
+         *          같은 뿌리에서 pid 가 다시 쓰여도 겹치지 않는다: 동시에 살아 있는 두 프로세스는 pid 가 다르고, 앞 프로세스는 이미 끝나 사본이 매핑돼 있지 않으므로
+         *          새 프로세스의 매니저가 시작할 때 `removeCopies` 로 지우고(못 지워도 쓰기가 덮는다) 번호를 1 부터 다시 쓴다.
+         */
+        static AbsolutePath getCopyDirectory();
+
+        /**
+         * @brief @p directoryPath 아래의 복사본(파일 · Windows 의 복사본 폴더 · 디버그 심볼 · 쓰다 만 임시 파일)을 지우고, 지운 수를 반환합니다.
+         * @details 아직 올라와 있는 복사본은 OS 가 지우기를 거절하므로(Windows) 남는다 — 실행 뿌리째 주인이 거둔다.
+         */
+        static uint32 removeCopies( const AbsolutePath& directoryPath );
+
         /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
         [[nodiscard]] static bool readModuleFile( const AbsolutePath& path, vector<uint8>& outBytes );
 
@@ -96,7 +113,7 @@ namespace sw
 
         /**
          * @brief 섀도 복사본과 그 디버그 심볼을 지웁니다(Windows 는 비었으면 복사본 폴더까지). 경로가 비면 아무것도 하지 않습니다.
-         * @details 아직 매핑된 복사본은 지금 지울 수 없다. 남은 것은 종료의 `ShadowCopyName::removeCopies`, 그래도 남으면 실행 뿌리째 주인 정리가 거둔다.
+         * @details 아직 매핑된 복사본은 지금 지울 수 없다. 남은 것은 종료의 `ModuleShadowCopy::removeCopies`, 그래도 남으면 실행 뿌리째 주인 정리가 거둔다.
          */
         static void removeArtifacts( const AbsolutePath& shadowPath );
     };

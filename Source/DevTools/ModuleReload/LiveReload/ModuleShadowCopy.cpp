@@ -4,12 +4,14 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
-#include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
 #include "Engine/Module/EngineABIStamp.h"
 
@@ -21,7 +23,7 @@ namespace sw
         {
             static void tryDeleteFile( const AbsolutePath& path )
             {
-                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 종료의 ShadowCopyName::removeCopies, 그다음은 실행 뿌리째 주인 정리가 거둔다.
+                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 종료의 ModuleShadowCopy::removeCopies, 그다음은 실행 뿌리째 주인 정리가 거둔다.
                 (void)FileUtil::tryRemoveFile( path );
             }
 
@@ -163,8 +165,8 @@ namespace sw
     bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, AbsolutePath& outShadowPath )
     {
         ++inoutSerials._reloadCount;
-        const string       tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount );
-        const AbsolutePath shadowDir = ShadowCopyName::getDirectory();
+        const string       tempName  = makeCopyName( params._moduleName, inoutSerials._reloadCount );
+        const AbsolutePath shadowDir = getCopyDirectory();
 
         // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
         vector<uint8> bytes;
@@ -227,8 +229,56 @@ namespace sw
         // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
         const AbsolutePath   directoryPath = shadowPath.getParent();
         vector<AbsolutePath> listLeftFile;
-        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory().str(), directoryPath.str() ) && FileUtil::collectFiles( directoryPath, "", listLeftFile, false ) && listLeftFile.empty() )
+        if ( FileUtil::isPathUnderRoot( getCopyDirectory().str(), directoryPath.str() ) && FileUtil::collectFiles( directoryPath, "", listLeftFile, false ) && listLeftFile.empty() )
             (void)FileUtil::removeDirectory( directoryPath );
 #endif
+    }
+
+    string ModuleShadowCopy::makeCopyName( string_view moduleName, uint32 serial )
+    {
+        StringBuilder<constant::file::kMaxPathSize> nameBuilder;
+        nameBuilder.append( moduleName ).append( '_' ).append( serial );
+        return string{ nameBuilder.c_str() };
+    }
+
+    AbsolutePath ModuleShadowCopy::getCopyDirectory()
+    {
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.append( "ModuleShadow/" ).append( Process::getCurrentProcessID() );
+        return ProcessRoots::get()._run.join( textBuilder.view() );
+    }
+
+    uint32 ModuleShadowCopy::removeCopies( const AbsolutePath& directoryPath )
+    {
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( directoryPath, "", listFile, false ) == false )
+            return 0; // 아직 아무것도 쓰지 않았다
+        vector<AbsolutePath> listFolder;
+        (void)FileUtil::collectFolders( directoryPath, listFolder, false ); // 폴더가 없는 자리(리눅스)도 있다 — 파일 정리는 그대로 한다
+
+        uint32 removedCount{ 0 };
+        for ( const AbsolutePath& filePath : listFile )
+        {
+            // 아직 올려 둔 사본은 지워지지 않는다(예상된 실패 — 알리지 않는다).
+            if ( FileUtil::tryRemoveFile( filePath ) )
+                ++removedCount;
+        }
+
+        // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 안의 파일을 다 지웠을 때만 폴더를 지운다(아직 매핑된 사본은 남는다).
+        for ( const AbsolutePath& folderPath : listFolder )
+        {
+            vector<AbsolutePath> listCopyFile;
+            if ( FileUtil::collectFiles( folderPath, "", listCopyFile, false ) == false )
+                continue;
+            bool bEmptied{ true };
+            for ( const AbsolutePath& copyFilePath : listCopyFile )
+            {
+                if ( FileUtil::tryRemoveFile( copyFilePath ) == false )
+                    bEmptied = false;
+            }
+            if ( bEmptied && FileUtil::removeDirectory( folderPath ) )
+                ++removedCount;
+        }
+        return removedCount;
     }
 } // namespace sw

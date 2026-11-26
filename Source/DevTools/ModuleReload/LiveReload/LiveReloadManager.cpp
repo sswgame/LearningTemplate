@@ -21,7 +21,6 @@
 #include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
-#include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/EngineABIStamp.h"
@@ -145,7 +144,7 @@ namespace sw
         , _reserved{ 0 }
     {
         // 지운 수일 뿐이다. 실행 뿌리를 물려받은 앞 프로세스가 같은 pid 로 남긴 사본이 있으면 여기서 지운다.
-        (void)ShadowCopyName::removeCopies( ShadowCopyName::getDirectory() );
+        (void)ModuleShadowCopy::removeCopies( ModuleShadowCopy::getCopyDirectory() );
     }
 
     LiveReloadManager::~LiveReloadManager()
@@ -167,7 +166,7 @@ namespace sw
         _reloadHolds.removeAll();
 
         // 지운 수일 뿐이다. 아직 매핑된 사본은 남고, 실행 뿌리째 주인 정리(`SavedCleanup`)가 거둔다.
-        (void)ShadowCopyName::removeCopies( ShadowCopyName::getDirectory() );
+        (void)ModuleShadowCopy::removeCopies( ModuleShadowCopy::getCopyDirectory() );
 
         _moduleFolderWatch.reset();
 
