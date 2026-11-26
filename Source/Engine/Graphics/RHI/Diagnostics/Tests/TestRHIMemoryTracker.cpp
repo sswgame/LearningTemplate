@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
+#include "Engine/Reflection/EnumName.h"
 
 using namespace sw;
 
@@ -116,15 +117,15 @@ SW_TEST_CASE( RHIMemoryTrackerTest, TextureDescPicksTheKindAndLogicalSize )
 }
 
 /**
- * @brief [RHIMemoryTrackerTest] 줄 이름은 enum 값마다 하나이고, 정렬은 바이트가 큰 줄부터다(같으면 enum 순서)
+ * @brief [RHIMemoryTrackerTest] 줄 이름은 enum 값마다 열거자 이름이고, 정렬은 바이트가 큰 줄부터다(같으면 enum 순서)
  */
 SW_TEST_CASE( RHIMemoryTrackerTest, KindNamesAndOrderByLiveBytes )
 {
     for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
     {
-        SW_EXPECT_TRUE( string_view( RHIMemoryTracker::getKindName( static_cast<RHIMemoryKind>( kindIndex ) ) ) != "Invalid" );
+        SW_EXPECT_TRUE( string_view( getEnumName( static_cast<RHIMemoryKind>( kindIndex ) ) ) != EnumNameCache::kUnknownName );
     }
-    SW_EXPECT_EQUAL( string( "Invalid" ), string( RHIMemoryTracker::getKindName( RHIMemoryKind::MaxKinds ) ) );
+    SW_EXPECT_EQUAL( string( "RenderTarget" ), string( getEnumName( RHIMemoryKind::RenderTarget ) ) );
 
     RHIMemoryTracker tracker;
     tracker.recordAllocation( RHIMemoryKey::makeBuffer( RHIBufferHandle{ 1 } ), RHIMemoryKind::Buffer, 10 );
@@ -228,7 +229,7 @@ SW_TEST_CASE( RHIMemoryTrackerTest, ReportPrintsUsedKindsAndUnknownDriverValues 
         joined += '\n';
     }
     const string_view text{ joined.c_str(), joined.size() };
-    SW_EXPECT_TRUE_MSG( text.find( "GPU memory by kind (live, FakeBackend · allocation size)  3.0 MB in 1 resources  + 1 of unknown size" ) != string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "GPU memory by kind (live, FakeBackend · Allocation size)  3.0 MB in 1 resources  + 1 of unknown size" ) != string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "TransientPool  3.0 MB  100.0%  1 resources" ) != string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "Descriptor  0.0 MB  0.0%  0 resources  + 1 of unknown size" ) != string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "Buffer" ) == string_view::npos, joined.c_str() );

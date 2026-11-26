@@ -20,6 +20,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -36,21 +37,6 @@ namespace sw
             static MemoryCell number( uint64 value ) { return MemoryCell{ string{}, value }; }
 
             /** @brief 키 공간의 표시 이름입니다(GPU 자원 줄의 정체 글). */
-            static const utf8* getKeySpaceName( RHIMemoryKeySpace space )
-            {
-                switch ( space )
-                {
-                    case RHIMemoryKeySpace::Buffer:
-                        return "Buffer";
-                    case RHIMemoryKeySpace::Texture:
-                        return "Texture";
-                    case RHIMemoryKeySpace::DeviceObject:
-                        return "Device";
-                    case RHIMemoryKeySpace::MaxSpaces:
-                        break;
-                }
-                return "Invalid";
-            }
 
             /** @brief 기호를 푼 콜스택 여러 줄을 한 줄로 접습니다(표 칸 · CSV 칸 하나). 빈 줄과 앞뒤 공백은 버린다. */
             static string foldStackText( string_view stackText )
@@ -128,7 +114,7 @@ namespace sw
         if ( _pGPUTracker != nullptr )
         {
             StringBuilder<constant::buffer::kMax256> description;
-            description.appendFormat( "%# (%# size)", _gpuBackendName, RHIMemoryTracker::getSizeBasisName( _pGPUTracker->getSizeBasis() ) );
+            description.appendFormat( "%# (%# size)", _gpuBackendName, getEnumName( _pGPUTracker->getSizeBasis() ) );
             snapshot._gpuDescription = string( description.view() );
         }
         return snapshot;
@@ -209,13 +195,13 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax64> resource;
             if ( entry._key._space == RHIMemoryKeySpace::DeviceObject )
-                resource.appendFormat( "%# %llx", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
+                resource.appendFormat( "%# %llx", getEnumName( entry._key._space ), entry._key._id );
             else
-                resource.appendFormat( "%# %#", Internal::getKeySpaceName( entry._key._space ), entry._key._id );
+                resource.appendFormat( "%# %#", getEnumName( entry._key._space ), entry._key._id );
             const bool        bTexture = entry._key._space == RHIMemoryKeySpace::Texture;
             const string_view format   = bTexture ? string_view{ RHIFormatUtil::getName( entry._shape._format ) } : string_view{};
             outSheet._listRow.push_back( MemoryRow{
-                { Internal::text( resource.view() ), Internal::text( entry._label ), Internal::text( RHIMemoryTracker::getKindName( entry._kind ) ),
+                { Internal::text( resource.view() ), Internal::text( entry._label ), Internal::text( getEnumName( entry._kind ) ),
                  Internal::text( format ), Internal::number( entry._shape._width ), Internal::number( entry._shape._height ),
                  Internal::number( entry._shape._arraySize ), Internal::number( entry._shape._mipLevels ), Internal::number( entry._bytes ) }
             } );

@@ -89,11 +89,10 @@ namespace sw
                 return ops.pRead != nullptr ? &ops : nullptr;
             }
 
-            /** @brief 종류 하나의 이름과 경로 필드 읽기 · 쓰기입니다. @p owner 는 잎 프로퍼티를 가진 객체, @p value 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
+            /** @brief 종류 하나의 경로 필드 읽기 · 쓰기입니다(종류 이름은 `getEnumName`). @p owner 는 잎 프로퍼티를 가진 객체, @p value 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
             struct KindOps
             {
                 UIBindingValueKind kind; ///< 이 줄의 종류입니다. 줄 위치가 이 값과 같은지 static_assert 로 본다
-                const utf8*        pName;
                 UIBindingValue ( *pRead )( const PropertyInfo& leaf, ObjectAddress owner, ValueAddress value, ReflectBuiltinIndex builtinIndex );
                 bool ( *pWrite )( const PropertyInfo& leaf, MutableObjectAddress owner, MutableValueAddress value, ReflectBuiltinIndex builtinIndex, const UIBindingValue& newValue ); ///< 바뀌었으면 true 입니다.
             };
@@ -208,11 +207,11 @@ namespace sw
         static_assert( SW_COUNT_OF( UIBindingValueInternal::kArrNumberOps ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "number table must have one row per ReflectBuiltins.xxx type" );
 
         constexpr UIBindingValueInternal::KindOps UIBindingValueInternal::kArrKindOps[] = {
-            {  UIBindingValueKind::None,   "none",       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone},
-            {  UIBindingValueKind::Bool,   "bool",       &UIBindingValueInternal::readBool,       &UIBindingValueInternal::writeBool},
-            {UIBindingValueKind::Number, "number", &UIBindingValueInternal::readNumberKind, &UIBindingValueInternal::writeNumberKind},
-            {  UIBindingValueKind::Text,   "text",       &UIBindingValueInternal::readText,       &UIBindingValueInternal::writeText},
-            { UIBindingValueKind::Other, "struct",      &UIBindingValueInternal::readOther,      &UIBindingValueInternal::writeOther},
+            {  UIBindingValueKind::None,       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone},
+            {  UIBindingValueKind::Bool,       &UIBindingValueInternal::readBool,       &UIBindingValueInternal::writeBool},
+            {UIBindingValueKind::Number, &UIBindingValueInternal::readNumberKind, &UIBindingValueInternal::writeNumberKind},
+            {  UIBindingValueKind::Text,       &UIBindingValueInternal::readText,       &UIBindingValueInternal::writeText},
+            { UIBindingValueKind::Other,      &UIBindingValueInternal::readOther,      &UIBindingValueInternal::writeOther},
         };
         static_assert( SW_COUNT_OF( UIBindingValueInternal::kArrKindOps ) == kUIBindingValueKindCount, "kind table must have one row per UIBindingValueKind" );
 
@@ -402,11 +401,6 @@ namespace sw
         const bool bFromScalar = from == UIBindingValueKind::Bool || from == UIBindingValueKind::Number;
         const bool bToScalar   = to == UIBindingValueKind::Bool || to == UIBindingValueKind::Number;
         return bFromScalar && bToScalar;
-    }
-
-    const utf8* UIBindingValue::getKindName( UIBindingValueKind kind )
-    {
-        return UIBindingValueInternal::getKindOps( kind ).pName;
     }
 
     expected<void> UIBindingValue::resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath )
