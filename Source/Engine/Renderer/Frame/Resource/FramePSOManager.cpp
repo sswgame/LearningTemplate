@@ -248,9 +248,8 @@ namespace sw
          *          엔진 PassCB 는 모든 역할의 인덱스 칸을 가지므로 칸이 있는 것이 아니라 읽는 것을 본다. 쓰임을 모르는 리플렉션(SPIR-V · GLSL · 쿠킹 매니페스트)은 건너뛴다 —
          *          DX 백엔드의 개발 실행 · 시나리오가 잡는다(언리얼 RDG 가 패스 파라미터 밖 자원 접근을 검증 단계에서 잡는 자리).
          */
-        bool validatePassInputContract( RenderPassKind passType, const ShaderBindingLayout& layout )
+        bool validatePassInputContract( RenderPassKind passType, uint64 readableRoleMask, const ShaderBindingLayout& layout )
         {
-            const uint64 readableRoleMask = getRenderPassKindInfo( passType ).getReadableRoleMask();
             if ( readableRoleMask == RenderPassKindInfo::kAnyRoleMask )
                 return true;
             bool bInside = true;
@@ -339,7 +338,8 @@ namespace sw
             if ( bGraphics )
             {
                 PassPSOJob job;
-                job._passType = passType;
+                job._passType         = passType;
+                job._readableRoleMask = info.getReadableRoleMask();
                 if ( makePassPSODesc( passType, nullptr, nullptr, job._desc ) )
                     listJob.push_back( std::move( job ) );
                 else
@@ -377,7 +377,8 @@ namespace sw
             if ( bSkipped )
                 continue;
             PassPSOJob job;
-            job._passType = pass._type;
+            job._passType         = pass._type;
+            job._readableRoleMask = info.getReadableRoleMask( pass ); // 서술이 덮은 기록 칸(`_historyRole`)도 읽는다
             if ( makePassPSODesc( pass._type, &pass, nullptr, job._desc ) == false )
             {
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", pass._type,
@@ -525,7 +526,7 @@ namespace sw
             registerLayout( pso._handle, job._desc );
             const ShaderBindingLayout* const pLayout = pso.isValid() ? findLayout( pso._handle ) : nullptr;
             if ( pLayout != nullptr )
-                (void)validatePassInputContract( job._passType, *pLayout ); // 오류는 남겼다 — 그래도 그린다(다른 패스로 대신하지 않는다)
+                (void)validatePassInputContract( job._passType, job._readableRoleMask, *pLayout ); // 오류는 남겼다 — 그래도 그린다(다른 패스로 대신하지 않는다)
             if ( job._outputFormat != RHIFormat::Unknown )
             {
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
@@ -828,6 +829,7 @@ namespace sw
                 PassPSOJob job;
                 job._passType                  = passType;
                 job._outputFormat              = format;
+                job._readableRoleMask          = getRenderPassKindInfo( passType ).getReadableRoleMask();
                 const RHIFormat arrRTVFormat[] = { format };
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
                 if ( makePassPSODesc( passType, _pipeline.findUniquePass( passType ), arrRTVFormat, job._desc ) == false )

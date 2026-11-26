@@ -116,6 +116,12 @@ namespace sw
         { return passAppliesTonemap( pass ); }, "tonemapping pass" );
     }
 
+    const RenderGraphPassDesc* RenderPipelineAsset::findTemporalJitterPass() const
+    {
+        return findSinglePass( _desc._listPass, []( const RenderGraphPassDesc& pass )
+        { return pass._bTemporalJitter != SW_FALSE; }, "temporal jitter pass" );
+    }
+
     vector<RenderGraphResourceAccess> RenderPipelineAsset::buildFramePassAccesses( const RenderGraphPassDesc& pass ) const
     {
         // 규칙은 여기 한 곳이다 — 입력은 읽기(SRV), 출력은 버퍼면 UAV · 텍스처면 렌더 타깃(깊이 히스토리 복사 같은 그리기), 규칙 밖은 세 목록(언리얼 RDG 패스 파라미터의 접근 하나).
@@ -145,7 +151,11 @@ namespace sw
         return listAccess;
     }
 
-    RenderGraphPassDesc::RenderGraphPassDesc() = default;
+    RenderGraphPassDesc::RenderGraphPassDesc()
+        : _bTemporalJitter{ SW_FALSE }
+        , _reservedPassFlags{ 0 }
+    {
+    }
 
     bool RenderPipelineAsset::mergeRenderPassRefs( string_view sourcePath )
     {
@@ -681,17 +691,57 @@ namespace sw
             }
 
             /**
-             * @brief 2-0d) 시간 누적 패스(TAA · 볼륨 구름)의 첫 출력은 기록(`_bHistory`)을 적어야 하고, 기록 첨부는 쓰는 패스가 하나다 — 기록은 그 패스가 끝에 출력을 복사한 것이다.
-             * @details 기록은 패스 종류가 아니라 첨부 칸 하나로 붙는다(`FrameViewResources` · `FramePassExecutor` 의 복사) — XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
+             * @brief 2-0d) 시간 누적 패스(기록 칸 `_historyRole` 이나 지터 `_bTemporalJitter` 를 가진 패스)의 첫 출력은 기록(`_bHistory`)을 적어야 하고, 기록 첨부는 쓰는 패스가 하나다.
+             *        기록은 그 패스가 끝에 출력을 복사한 것이다.
+             * @details 기록 · 기록 칸 · 지터는 패스 종류가 아니라 서술 칸으로 붙는다(`FrameViewResources` · `FramePassExecutor` 의 공통 단계). XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
+             *          기록 칸은 아는 역할이고 이 패스의 입력 역할과 겹치지 않으며, 레지스트리로 거는 그래픽스 패스(역할 바인딩)만 적는다. 지터 패스는 하나이고 TAA 는 지터를 적는다.
              */
             static uint32 validateAttachmentHistories( const RenderPipelineDesc& desc, string_view sourcePath )
             {
-                uint32     issueCount{ 0 };
+                uint32 issueCount{ 0 };
+                uint32 jitterPassCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const RenderPassInputRole historyRole = static_cast<RenderPassInputRole>( pass._resolvedHistoryRole );
+                    if ( pass._historyRole.empty() == false && historyRole == RenderPassInputRole::Invalid )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassHistoryRoleUnknown", "[%#] pass '%#': unknown _historyRole '%#' - write an input role name (GBufferAlbedo for TAA and VolumetricClouds)",
+                                         sourcePath, pass._name, pass._historyRole );
+                        ++issueCount;
+                    }
+                    const bool bRegistryBinding = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) == false && pass._inputBinding == RenderPassInputBinding::Role;
+                    if ( pass._historyRole.empty() == false && bRegistryBinding == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassHistoryRoleNotBound", "[%#] pass '%#': _historyRole needs a graphics pass with _inputBinding=\"Role\" - a name-bound pass reads g_<output>HistoryIndex",
+                                         sourcePath, pass._name );
+                        ++issueCount;
+                    }
+                    const bool bInputRole = VectorUtil::containsIf( pass._listResolvedInput, [historyRole]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                    { return static_cast<RenderPassInputRole>( input._role ) == historyRole; } );
+                    if ( historyRole != RenderPassInputRole::Invalid && bInputRole )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassHistoryRoleIsInput", "[%#] pass '%#': history role %# is also an input role - the history would replace that input",
+                                         sourcePath, pass._name, getRenderPassInputRoleName( historyRole ) );
+                        ++issueCount;
+                    }
+                    if ( pass._type == RenderPassKind::TAA && pass._bTemporalJitter == SW_FALSE )
+                    {
+                        // 지터 없는 TAA 는 픽셀 안의 다른 자리를 모으지 못하고 흐리게만 한다(언리얼 · 유니티 · Godot 의 TAA 는 모두 투영을 지터한다)
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassTemporalJitterMissing", "[%#] TAA pass '%#': declare _bTemporalJitter=\"true\" - TAA accumulates jittered frames", sourcePath, pass._name );
+                        ++issueCount;
+                    }
+                    jitterPassCount += pass._bTemporalJitter != SW_FALSE ? 1u : 0u;
+                }
+                if ( jitterPassCount > 1 )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassTemporalJitterTwice", "[%#] %# passes declare _bTemporalJitter - the view projection has one jitter, so one pass owns it", sourcePath, jitterPassCount );
+                    ++issueCount;
+                }
                 const auto isHistoryOutput = [&desc]( const RenderPassAttachment& attachment )
                 {
                     return VectorUtil::containsIf( desc._listPass, [&attachment]( const RenderGraphPassDesc& pass )
                     {
-                        const bool bTemporalPass = pass._type == RenderPassKind::TAA || pass._type == RenderPassKind::VolumetricClouds;
+                        const bool bTemporalPass = pass._resolvedHistoryRole != static_cast<uint8>( RenderPassInputRole::Invalid ) || pass._bTemporalJitter != SW_FALSE;
                         return bTemporalPass && pass._listResolvedColorOutput.empty() == false && pass._listResolvedColorOutput[0]._attachment.view() == string_view( attachment._name );
                     } );
                 };
@@ -700,7 +750,7 @@ namespace sw
                     const bool bHistoryOutput = isHistoryOutput( attachment );
                     if ( bHistoryOutput && attachment._bHistory == SW_FALSE )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryMissing", "[%#] attachment '%#' is the output of a temporal pass (TAA, VolumetricClouds) - declare _bHistory=\"true\" (its copy lives across frames)",
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryMissing", "[%#] attachment '%#' is the first output of a temporal pass (history role or _bTemporalJitter) - declare _bHistory=\"true\" (its copy lives across frames)",
                                          sourcePath, attachment._name );
                         ++issueCount;
                     }
@@ -848,6 +898,11 @@ namespace sw
                     constantName.appendFormat( "g_%#", value._name );
                     value._resolvedConstant = hashed_string( string( constantName.view() ).c_str() );
                 }
+                // 기록 칸은 서술이 적은 역할이 표의 기본값을 덮는다. 모르는 글은 Invalid 로 두고 검증(`validateAttachmentHistories`)이 알린다.
+                RenderPassInputRole historyRole = getRenderPassKindInfo( pass._type )._defaultHistoryRole;
+                if ( pass._historyRole.empty() == false && tryParseRenderPassInputRole( pass._historyRole, historyRole ) == false )
+                    historyRole = RenderPassInputRole::Invalid;
+                pass._resolvedHistoryRole = static_cast<uint8>( historyRole );
             }
 
             /** @brief 2-1) 패스 하나의 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가. */

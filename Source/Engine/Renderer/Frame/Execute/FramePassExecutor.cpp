@@ -602,13 +602,13 @@ namespace sw
 
     void FramePassExecutor::applyViewProjection( FramePassContext& context, FrameViewTarget& view, const float4x4& viewProj )
     {
-        // TAA 가 도는 뷰만 서브픽셀 지터를 래스터 행렬에 싣는다(언리얼 TAA · 유니티 URP/HDRP · Godot 의 Halton 지터). 지터 든 행렬은 이 함수 안에만 있다 —
+        // 지터 패스(`_bTemporalJitter` — TAA)가 도는 뷰만 서브픽셀 지터를 래스터 행렬에 싣는다(언리얼 TAA · 유니티 URP/HDRP · Godot 의 Halton 지터). 지터 든 행렬은 이 함수 안에만 있다 —
         // 컬링 · 지난 뷰-투영(속도 기준)은 받은 @p viewProj(지터 없음)를 쓰고, 화면 속도는 셰이더가 `g_TemporalJitter` 를 빼서 물체 · 카메라 움직임만 남긴다.
         const TransientAttachmentPool& pool = view._transientPool;
         // 기록을 버리는 프레임(처음 · 컷 · 건너뛴 프레임 뒤)은 이번 원본만 남으므로 지터하지 않는다 — 한 장짜리 그림이 흔들리기만 한다.
-        const RenderGraphPassDesc* pTAAPass    = _pipelineResource.findUniquePass<RenderPassKind::TAA>();
-        const FrameViewHistory*    pTAAHistory = pTAAPass != nullptr ? findPassHistory( view, *pTAAPass ) : nullptr;
-        const bool                 bJitter     = pTAAHistory != nullptr && pTAAHistory->isWritten() && pTAAHistory->isReset() == false;
+        const RenderGraphPassDesc* pJitterPass    = _pipelineResource.findTemporalJitterPass();
+        const FrameViewHistory*    pJitterHistory = pJitterPass != nullptr ? findPassHistory( view, *pJitterPass ) : nullptr;
+        const bool                 bJitter        = pJitterHistory != nullptr && pJitterHistory->isWritten() && pJitterHistory->isReset() == false;
         if ( bJitter == false )
             view._temporalJitter.restart(); // 기록이 새로 시작하면 지터도 첫 표본부터 — 그 전에 흐른 프레임 수(앞 씬 · 대기)가 그림을 바꾸지 않는다
         // 지터는 렌더 공간 픽셀이다. 시간 업스케일이면 출력 픽셀마다 표본이 모이게 바퀴를 늘린다(`TemporalJitterSequence::computePhaseCount`).

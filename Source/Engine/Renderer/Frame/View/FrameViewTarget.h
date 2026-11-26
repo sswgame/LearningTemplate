@@ -44,6 +44,7 @@ namespace sw
         hashed_string    _attachment; ///< 기록 첨부 이름
         hashed_string    _resource;   ///< 그래프 자원 이름(`RenderGraphPassDesc::ResolvedAttachment::_historyResource` — `<첨부>History`)
         FrameViewHistory _history{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard };
+        uint32           _sampleIndex{ 0 }; ///< 시간 표본 번호. 쌓인 프레임마다 하나 늘고 기록을 버린 프레임에 0 부터 센다(`g_TemporalSample`, `FramePassExecutor::bindOutputHistory`)
     };
 
     /**
@@ -131,7 +132,7 @@ namespace sw
         uint32     _lightGridIndex{ constant::invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 지터 없는 것이다. 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
         float4x4 _prevViewProj{};
-        /// @brief TAA 서브픽셀 지터 순서입니다. TAA 가 도는 프레임(TAA 출력의 기록 `_listAttachmentHistory` 를 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
+        /// @brief TAA 서브픽셀 지터 순서입니다. 지터 패스(`_bTemporalJitter`)가 도는 프레임(그 출력의 기록을 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
         /// 순번은 뷰 대상과 함께 처음부터 시작한다 — 자동화 단계마다 뷰 대상을 새로 만든다(`FrameRenderer::discardViewTargets`).
         TemporalJitterSequence _temporalJitter{};
         /**
@@ -139,8 +140,6 @@ namespace sw
          * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
          */
         FrameViewHistory _autoExposureHistory{ FrameViewHistoryLayout::PingPong, FrameViewHistoryIdleRule::Keep };
-        /// @brief 볼륨 구름의 시간 표본 번호입니다 — 구름 기록을 버린 프레임에 0 부터 다시 센다(텍셀 안 자리 · 걸음 시작, `FramePassExecutor::executeVolumetricCloudsPass`).
-        uint32 _skyCloudSample{ 0 };
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
         float32 _autoExposureClock{ 0.0f };    ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)

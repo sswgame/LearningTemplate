@@ -323,12 +323,13 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_SkyCloudWind;
     float4 g_SkyCloudColor;
     // 볼륨 구름(volumetric_clouds.hlsl, C++ SkyClouds) — (층 두께 km, 소멸 계수 1/km, 기록 비율 — 기록이 없으면 0, 걸음 수) · (해 복사휘도에 곱할 배율 rgb — 투과율 · 대기 모드의 해 배율, 산란 옥타브 수) ·
-    // (구름이 받는 하늘빛 rgb, 층 바닥에서 가리는 비율) · (땅에서 반사해 올라오는 빛 rgb, 산란 옥타브마다 이어지는 몫) · (텍셀 안 자리 xy — 텍셀 단위 ±0.5, 걸음 시작 0..1, 첨부 나눗수). 마지막은 뷰마다 패스가 쓴다.
+    // (구름이 받는 하늘빛 rgb, 층 바닥에서 가리는 비율) · (땅에서 반사해 올라오는 빛 rgb, 산란 옥타브마다 이어지는 몫).
     float4 g_SkyCloudVolume;
     float4 g_SkyCloudSun;
     float4 g_SkyCloudAmbient;
     float4 g_SkyCloudGround;
-    float4 g_SkyCloudSample;
+    // 시간 누적 표본(기록 첨부를 첫 출력으로 쓰는 패스마다, C++ FramePassExecutor::bindOutputHistory) — (텍셀 안 자리 xy: 텍셀 단위 ±0.5, 걸음 시작 0..1, 첨부 나눗수). 기록을 버리면 0 번 표본부터.
+    float4 g_TemporalSample;
     // 스카이 라이트(lighting.hlsli SkyLight, C++ SkyLightData) — 하늘을 거칠기 단계마다 거른 환경광이 g_SwLightProbes(t13)에서 차지한 자리:
     // (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, 첫 원소 번호, 0). 씬에 하늘이 없으면 모두 0 이고 환경광은 앰비언트 색이다. 배치는 binding_slots.hlsli 8 절.
     float4 g_SkyLight;

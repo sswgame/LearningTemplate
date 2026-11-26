@@ -160,6 +160,11 @@ namespace sw
          */
         const RenderGraphPassDesc* findTonemapPass() const;
         /**
+         * @brief 시간 누적의 기준 패스(`RenderGraphPassDesc::_bTemporalJitter`) 하나입니다. 없으면 nullptr 이다. 둘이면 로드 오류(`PassTemporalJitterTwice`)이고 여기서도 nullptr 이다.
+         * @details 투영 지터와 TAA 기록 질의가 이 답을 본다(패스 종류를 보지 않는다).
+         */
+        const RenderGraphPassDesc* findTemporalJitterPass() const;
+        /**
          * @brief 프레임 패스 @p pass 의 접근 목록입니다(`RenderGraph::addPass` 의 접근 판). 규칙: 입력 = 읽기(SRV), 출력 = 버퍼면 UAV · 텍스처(`_viewable`)면 렌더 타깃,
          *        `_listIndirectArgs` · `_listCopySource` · `_listCopyDest` = 간접 인자 · 복사 원본 · 복사 대상. 한 이름이 두 번 오지 않음은 로드 검증이 보증한다.
          */

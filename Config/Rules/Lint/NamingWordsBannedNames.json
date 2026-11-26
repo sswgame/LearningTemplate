@@ -1,6 +1,9 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "_executionBoundRole": "RenderPassKindInfo::_defaultHistoryRole — 기록 칸은 패스 서술 _historyRole 이 덮는 표 기본값이다(2026-11-26)",
+    "_skyCloudSample": "FrameAttachmentHistory::_sampleIndex — 시간 표본은 기록마다 센다(2026-11-26)",
+    "g_SkyCloudSample": "g_TemporalSample — 기록 출력 패스가 모두 받는 시간 표본(FramePassExecutor::bindOutputHistory)(2026-11-26)",
     "bindProfileHook": "TaskProfileHook::bind — 태스크 프로파일 훅 자리는 훅 형식의 정적 멤버다(2026-11-26)",
     "copyTaskDebugName": "TaskProfileHook::copyName · TaskNode::setName · StageNode::setName(2026-11-26)",
     "kTaskDebugNameCapacity": "TaskProfileHook::kNameCapacity(2026-11-26)",

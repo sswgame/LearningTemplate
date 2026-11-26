@@ -171,7 +171,7 @@ namespace sw
                         // 일반 풀스크린 패스가 아니라 실행은 executeTAAPass 이고, 기록은 셋업이 출력 형식으로 만든다(FrameViewResources::updateOutputHistory).
                         info._pDefaultShader     = &EngineDefaultAssets::_shaderTAA;
                         info._inputContract      = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
-                        info._executionBoundRole = Role::GBufferAlbedo; // 기록(지난 출력)을 그 칸에 건다 — executeTAAPass
+                        info._defaultHistoryRole = Role::GBufferAlbedo; // 기록(지난 출력)을 거는 칸. 실행의 공통 단계가 건다(FramePassExecutor::bindOutputHistory)
                         info._flags              = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
@@ -372,11 +372,11 @@ namespace sw
                     }
                     case RenderPassKind::VolumetricClouds:
                     {
-                        // 저해상도 레이마치 + 시간 누적 — 일반 풀스크린 패스의 실행 안에서 기록을 걸고 출력을 기록에 복사한다(`FramePassExecutor::executeVolumetricCloudsPass`).
+                        // 저해상도 레이마치 + 시간 누적. 기록은 실행의 공통 단계가 걸고(`FramePassExecutor::bindOutputHistory`) 패스 끝에 출력을 기록에 복사한다.
                         // 볼륨 구름이 없는 뷰는 기록하지 않고 출력이 없다(kCullWhenUnconsumed 고르기 — FrameViewResources 의 isPassEnabledInView).
                         info._pDefaultShader     = &EngineDefaultAssets::_shaderVolumetricClouds;
                         info._inputContract      = makeContract( { Role::SceneDepth }, {} );
-                        info._executionBoundRole = Role::GBufferAlbedo; // 기록(지난 출력)을 그 칸에 건다 — TAA 와 같다
+                        info._defaultHistoryRole = Role::GBufferAlbedo; // TAA 와 같은 기록 칸
                         info._flags              = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kCullWhenUnconsumed;
                         break;
                     }

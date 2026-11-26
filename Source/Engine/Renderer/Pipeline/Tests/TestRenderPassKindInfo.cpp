@@ -25,8 +25,8 @@ SW_TEST_CASE( RenderPassKindInfoTest, BlendMatchesHowThePassDraws )
 }
 
 /**
- * @brief [RenderPassKindInfoTest] 패스 셰이더가 읽어도 되는 역할은 입력 계약(필수 · 선택)과 실행이 거는 역할이다 — 쿠커 · 런타임 PSO 검사가 이 값과 `g_<Role>Index` 해석 하나를 본다
- * @details 변이: 실행이 거는 역할(TAA 기록의 GBufferAlbedo 칸)을 빼면 TAA 셰이더가 계약 밖을 읽는다고 쿠킹이 멈춰 둘째 단언이 진다. 이름 해석이 앞뒤 꼴을 보지 않으면 마지막 두 단언이 진다.
+ * @brief [RenderPassKindInfoTest] 패스 셰이더가 읽어도 되는 역할은 입력 계약(필수 · 선택)과 기록 칸이다 — 쿠커 · 런타임 PSO 검사가 이 값과 `g_<Role>Index` 해석 하나를 본다
+ * @details 변이: 표의 기본 기록 칸(`_defaultHistoryRole`, TAA 의 GBufferAlbedo)을 빼면 TAA 셰이더가 계약 밖을 읽는다고 쿠킹이 멈춰 둘째 단언이 진다. 이름 해석이 앞뒤 꼴을 보지 않으면 마지막 두 단언이 진다.
  */
 SW_TEST_CASE( RenderPassKindInfoTest, ReadableRolesComeFromTheContract )
 {

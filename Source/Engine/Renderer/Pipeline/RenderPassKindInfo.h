@@ -279,11 +279,10 @@ namespace sw
         /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
         /**
-         * @brief 그래프가 아니라 이 패스의 전용 실행이 스스로 거는 엔진 칸의 역할입니다(Invalid 면 없음). 셰이더가 읽어도 계약 밖이 아니다(`FramePSOManager` 의 계약 검사).
-         * @details TAA 는 지난 출력(기록)을 `GBufferAlbedo` 칸에 건다(`FramePassExecutor::executeTAAPass` — 기록 전용 칸을 두면 에뮬 백엔드의 엔진 칸이 하나 는다). 숨은 재사용을
-         *          데이터로 적어 검사가 그것만 받게 한다.
+         * @brief 첫 출력의 지난 프레임 기록을 거는 엔진 칸의 기본 역할입니다(Invalid 면 없음). 패스 서술의 `_historyRole` 이 덮는다(`RenderGraphPassDesc::_resolvedHistoryRole`).
+         * @details TAA · 볼륨 구름은 `GBufferAlbedo` 칸에 건다. 기록 전용 칸을 두면 에뮬 백엔드의 엔진 칸이 하나 는다. 서술 없이 표만으로 만드는 PSO 의 계약 검사도 이 값을 본다.
          */
-        RenderPassInputRole _executionBoundRole{ RenderPassInputRole::Invalid };
+        RenderPassInputRole _defaultHistoryRole{ RenderPassInputRole::Invalid };
         /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */
         RenderPassKind _type{ RenderPassKind::Invalid };
         /**
@@ -362,22 +361,12 @@ namespace sw
         /// @brief `getReadableRoleMask` 가 "보지 않는다" 를 뜻하는 값입니다(입력 계약이 없는 종류 — 메시 패스 · Compute).
         static constexpr uint64 kAnyRoleMask = ~uint64{ 0 };
         /**
-         * @brief 이 종류의 셰이더가 읽어도 되는 엔진 역할(`g_<Role>Index`)의 비트 집합입니다(비트 번호 = `RenderPassInputRole` 값) — 입력 계약의 필수 · 선택 역할과 실행이 스스로 거는 역할(`_executionBoundRole`).
-         * @details 계약 밖 역할을 읽으면 그래프가 그 칸에 텍스처를 걸지 않아 셰이더가 무효 번호를 읽는다. 쿠커(쿠킹 오류)와 런타임 PSO 검사가 이 값 하나를 본다. 입력 계약이 없는 종류는 `kAnyRoleMask` 다.
+         * @brief 서술 없이 표만으로 만든 이 종류의 셰이더가 읽어도 되는 엔진 역할(`g_<Role>Index`)의 비트 집합입니다(비트 번호 = `RenderPassInputRole` 값). 입력 계약의 필수 · 선택 역할과 기본 기록 칸이다.
+         * @details 계약 밖 역할을 읽으면 그래프가 그 칸에 텍스처를 걸지 않아 셰이더가 무효 번호를 읽는다. 쿠커(쿠킹 오류)와 런타임 PSO 검사가 이 값을 본다. 입력 계약이 없는 종류는 `kAnyRoleMask` 다.
          */
-        constexpr uint64 getReadableRoleMask() const
-        {
-            if ( hasFlag( RenderPassTraitFlag::kHasInputContract ) == false )
-                return kAnyRoleMask;
-            uint64 mask = 0;
-            for ( uint32 index = 0; index < _inputContract._requiredCount; ++index )
-                mask |= uint64{ 1 } << static_cast<uint32>( _inputContract._arrRequired[index] );
-            for ( uint32 index = 0; index < _inputContract._optionalCount; ++index )
-                mask |= uint64{ 1 } << static_cast<uint32>( _inputContract._arrOptional[index] );
-            if ( _executionBoundRole != RenderPassInputRole::Invalid )
-                mask |= uint64{ 1 } << static_cast<uint32>( _executionBoundRole );
-            return mask;
-        }
+        constexpr uint64 getReadableRoleMask() const { return getReadableRoleMask( _defaultHistoryRole ); }
+        /** @brief 파이프라인 패스 @p pass 의 셰이더가 읽어도 되는 역할입니다. 기록 칸은 서술이 덮은 값(`_resolvedHistoryRole`)이다. */
+        constexpr uint64 getReadableRoleMask( const RenderGraphPassDesc& pass ) const { return getReadableRoleMask( static_cast<RenderPassInputRole>( pass._resolvedHistoryRole ) ); }
 
         /**
          * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 머티리얼의 셰이더로 그리는지 반환합니다.
@@ -446,6 +435,22 @@ namespace sw
                     return true;
             }
             return false;
+        }
+
+    private:
+        /** @brief 입력 계약의 역할에 기록 칸 @p historyRole(Invalid 면 없음)을 더한 집합입니다. 표의 기본값과 서술이 덮은 값을 같은 식으로 센다. */
+        constexpr uint64 getReadableRoleMask( RenderPassInputRole historyRole ) const
+        {
+            if ( hasFlag( RenderPassTraitFlag::kHasInputContract ) == false )
+                return kAnyRoleMask;
+            uint64 mask = 0;
+            for ( uint32 index = 0; index < _inputContract._requiredCount; ++index )
+                mask |= uint64{ 1 } << static_cast<uint32>( _inputContract._arrRequired[index] );
+            for ( uint32 index = 0; index < _inputContract._optionalCount; ++index )
+                mask |= uint64{ 1 } << static_cast<uint32>( _inputContract._arrOptional[index] );
+            if ( historyRole != RenderPassInputRole::Invalid )
+                mask |= uint64{ 1 } << static_cast<uint32>( historyRole );
+            return mask;
         }
     };
 } // namespace sw

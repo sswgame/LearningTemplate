@@ -573,7 +573,7 @@ namespace sw
     struct SW_API RenderGraphPassDesc : public FixedRenderState
     {
         REFLECT_BODY();
-        RenderGraphPassDesc(); // 셰이더 종류(`ShaderSourceAsset`)가 완전한 자리(.cpp)에서 짓는다
+        RenderGraphPassDesc(); // 셰이더 종류(`ShaderSourceAsset`)가 완전한 자리(.cpp)에서 짓는다(깃발 칸은 비트필드라 생성자가 정한다)
 
         PROPERTY( Required, InheritKey )
         string _name;
@@ -753,6 +753,25 @@ namespace sw
         /** @brief 이름 바인딩 패스의 값입니다 — 컴퓨트는 선언 차례로 입력 번호 뒤의 루트 상수, 풀스크린은 PassCB 칸 `g_<이름>` 이 된다. 이름이 열쇠라 `_base` 자식은 값 하나씩 고친다. 이름 바인딩 패스만 적는다(검증). */
         PROPERTY( SkipIfEmpty )
         vector<RenderPassValue> _listValue;
+
+        /**
+         * @brief 첫 컬러 출력의 지난 프레임 기록을 걸 엔진 역할 칸입니다(`RenderPassInputRole` 이름. TAA · 볼륨 구름은 `GBufferAlbedo`). 비면 종류 표의 기본값(`RenderPassKindInfo::_defaultHistoryRole`)이다.
+         * @details 실행의 공통 단계가 건다(`FramePassExecutor::bindOutputHistory`). 기록을 버리는 프레임은 그 칸에 이번 원본(SourceColor 입력)을 걸고, 원본 입력이 없으면 걸지 않는다.
+         *          첫 출력이 기록 첨부(`_bHistory`)여야 하고 역할 바인딩으로 그리는 그래픽스 패스만 적는다(검증). 이름 바인딩 패스는 `g_<출력>HistoryIndex` 로 받는다.
+         */
+        PROPERTY( SkipIfEmpty )
+        string _historyRole;
+
+        /** @brief `_historyRole`(비면 표 기본값)을 해석한 역할(`RenderPassInputRole` 정수)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). */
+        uint8 _resolvedHistoryRole{ 0 };
+
+        /**
+         * @brief 이 패스가 시간 누적의 기준이다. 첫 출력의 기록이 이어지는 동안 뷰-투영에 서브픽셀 지터를 싣는다(`FramePassExecutor::applyViewProjection`).
+         * @details 첫 출력이 기록 첨부여야 하고 파이프라인에 하나만 둔다. TAA 는 적어야 한다(검증). 패스 종류를 보지 않으므로 새 시간 누적 패스(Fullscreen)도 이 칸만 적으면 지터를 받는다.
+         */
+        PROPERTY()
+        uint8                  _bTemporalJitter   : 1;
+        [[maybe_unused]] uint8 _reservedPassFlags : 7;
 
         /**
          * @brief 이름 바인딩 컴퓨트 패스가 쓰는 루트 상수 칸 수입니다(크기 둘 + 출력 + 이름 칸). 로드 검증과 실행이 같은 차례를 이 값 하나로 본다.
