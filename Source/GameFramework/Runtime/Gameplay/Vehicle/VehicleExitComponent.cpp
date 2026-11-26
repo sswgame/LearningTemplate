@@ -1,19 +1,54 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Vehicle/VehicleExitComponent.h"
-
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
 {
+    /**
+     * @class VehicleExitComponent
+     * @brief 탈것 오브젝트(폰과 운전석)에 붙습니다. PrePhysics 틱에서 탈것 폰의 의도만 읽고, 내리기는 틱 뒤로 미룹니다.
+     */
+    REFLECT( Category = "Vehicle", DisplayName = "Vehicle Exit", Tooltip = "Vehicle side: the Exit intent button gets the driver off" )
+    class VehicleExitComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
+        VehicleExitComponent();
+        ~VehicleExitComponent() override = default;
+
+        /** @brief 버튼 이름의 인덱스를 찾고 PrePhysics 에서 틱합니다. */
+        void onBeginPlay() override;
+        void onTick( TickContext& context ) override;
+
+    private:
+        /** @brief 틱 뒤에 실행합니다. 운전석 탑승자를 내립니다. */
+        void exitDriver();
+
+    private:
+        PROPERTY( Required, Category = "Vehicle", DisplayName = "Exit Button", Tooltip = "Intent button of the vehicle pawn that gets the driver off" )
+        hashed_string _exitButton;
+
+        SW_TRANSIENT optional<int32> _exitIndex;
+    };
+
     VehicleExitComponent::VehicleExitComponent()
         : _exitButton{}
         , _exitIndex{}
@@ -61,3 +96,5 @@ namespace sw
         }
     }
 } // namespace sw
+
+#include "VehicleExitComponent.cpp.gen.inl"
