@@ -73,7 +73,7 @@ namespace sw
 
         /**
          * @brief 렌더러의 뷰 대상(풀 · TAA · 노출 · 깊이 기록 · 지터 순번)을 모두 버립니다 — 다음 프레임은 새 프로세스처럼 기록 없이 그린다(`FrameRenderer::discardViewTargets`).
-         * @details 자동화 체인의 단계 시작이 부른다 — 앞 단계가 그린 기록이 다음 단계의 그림을 체인 위치에 따라 바꾸지 않게. 이미 낸 패킷을 끝낸 뒤 렌더 스레드가 다음 프레임 앞에서 버린다.
+         * @details 시나리오 시작 프레임이 부른다(`AutomationSession::onFrameBegin`). 앞 단계 · 로딩 프레임이 그린 기록이 사진을 그 프레임 수에 따라 바꾸지 않게 한다. 이미 낸 패킷을 끝낸 뒤 렌더 스레드가 다음 프레임 앞에서 버린다.
          */
         virtual void discardViewTargets() = 0;
         /** @brief 시나리오 실행의 사진 준비를 켭니다(`RenderThread::setScenarioCaptureEnabled`). */
