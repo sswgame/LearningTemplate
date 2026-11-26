@@ -776,7 +776,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder.str() );
             return false;
         }
-        // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
+        // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 백엔드가 무엇을 하든
         // 이 락과 얽히지 않게 한다).
         State&       state = *_pState;
         AbsolutePath conflictFolder;

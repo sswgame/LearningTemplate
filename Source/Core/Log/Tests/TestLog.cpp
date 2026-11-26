@@ -9,13 +9,13 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/Output/ConsoleLogOutput.h"
+#include "Core/Log/Output/FileLogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
 #include "Core/Log/ScopedDeferredLog.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
-#include "Core/Log/Sink/ConsoleLogOutput.h"
-#include "Core/Log/Sink/FileLogOutput.h"
-#include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
@@ -31,10 +31,10 @@
 #include <cstdlib>
 #include <cstring>
 
-// 로그 — 전역 싱크 · 폴더, 레벨마다 리스너까지 닿기, 런타임 상세도, 컴파일 상한, id 로 찾기, 서식 치환, 잘못된 UTF-8, 호출자,
+// 로그 — 전역 백엔드 · 폴더, 레벨마다 리스너까지 닿기, 런타임 상세도, 컴파일 상한, id 로 찾기, 서식 치환, 잘못된 UTF-8, 호출자,
 // 여러 스레드 · 큰 묶음 · 리스너 붙였다 떼기, 출력 장치 상한, 잘못된 바이트만 바꾸기, 같은 이름 파일의 호출자, 시간별 파일 장치,
-// 자식 역할(`SW_TEST_CHILD_ROLE`)로 보는 교착 · 콘솔 · stderr · 싱크 없는 리스너, 크래시 flush 가 장치 락에서 기다리지 않기, 큐가 찬 줄의 순서.
-// 옛 `ReleaseListenerCodeWithinDropsOnlyThatRange` 는 옮기지 않았다 — `removeListenerCodeWithin` 이 지금 싱크에 없다.
+// 자식 역할(`SW_TEST_CHILD_ROLE`)로 보는 교착 · 콘솔 · stderr · 백엔드 없는 리스너, 크래시 flush 가 장치 락에서 기다리지 않기, 큐가 찬 줄의 순서.
+// 옛 `ReleaseListenerCodeWithinDropsOnlyThatRange` 는 옮기지 않았다 — `removeListenerCodeWithin` 이 지금 백엔드에 없다.
 // 케이스가 일부러 내는 Warning · Error 는 테스트 id(`Test.Log*`)를 붙이고 `SW_EXPECT_LOG` 로 적는다(실행기가 그 밖의 Warning · Error 를 실패로 센다).
 
 namespace
@@ -45,13 +45,13 @@ namespace
 
     /**
      * @class LogCapture
-     * @brief 전역 싱크에 리스너를 붙여 접두사가 맞는 LogEntry만 모으는 테스트 싱크
+     * @brief 전역 백엔드에 리스너를 붙여 접두사가 맞는 LogEntry만 모으는 테스트 백엔드
      * @note 접두사로 걸러 다른 스레드/서브시스템의 로그가 섞이지 않게 합니다.
      */
     class LogCapture
     {
     public:
-        /** @brief 전역 싱크에 리스너를 등록합니다. */
+        /** @brief 전역 백엔드에 리스너를 등록합니다. */
         LogCapture()
         {
             _subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
@@ -103,7 +103,7 @@ namespace
 
     /**
      * @class ThreadSafeLogCapture
-     * @brief 멀티스레드 동시 로깅 테스트용 스레드 안전 로그 캡처 싱크
+     * @brief 멀티스레드 동시 로깅 테스트용 스레드 안전 로그 캡처 백엔드
      */
     class ThreadSafeLogCapture
     {
@@ -204,7 +204,7 @@ namespace
             (void)record;
             _mutex.unlock();
         }
-        /** @brief 받은 번호들입니다(싱크를 내린 뒤 읽는다). */
+        /** @brief 받은 번호들입니다(백엔드를 내린 뒤 읽는다). */
         sw::vector<uint32> takeOrder()
         {
             sw::ScopedLock<sw::mutex> lock{ _mutex };
@@ -223,7 +223,7 @@ namespace
  */
 SW_TEST_CASE( LogTest, LoggerInitialized )
 {
-    const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
+    const sw::string_view folderPath = sw::Logger::getGlobalBackend()->getLogFolderPath();
     SW_EXPECT_FALSE( folderPath.empty() );
 }
 
@@ -232,13 +232,13 @@ SW_TEST_CASE( LogTest, LoggerInitialized )
  */
 SW_TEST_CASE( LogTest, LogFolderExists )
 {
-    const sw::AbsolutePath folderPath = sw::FileUtil::toDiskPath( sw::Logger::getGlobalSink()->getLogFolderPath() );
+    const sw::AbsolutePath folderPath = sw::FileUtil::toDiskPath( sw::Logger::getGlobalBackend()->getLogFolderPath() );
     if ( folderPath.empty() == false )
         SW_EXPECT_TRUE( sw::FileUtil::isDirectory( folderPath ) );
 }
 
 /**
- * @brief [LogTest] 각 레벨의 로그가 싱크까지 전달됨
+ * @brief [LogTest] 각 레벨의 로그가 백엔드까지 전달됨
  */
 SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
 {
@@ -553,11 +553,11 @@ SW_TEST_CASE( LogTest, CrashFlushWritesDeferredLinesWithTheirOwnMoment )
 }
 
 /**
- * @brief [LogTest] 싱크는 받은 사건의 값만 쓴다 — 리스너 · 비동기 큐를 지난 텍스트 줄이 쓰는 순간의 시계 · 시각을 다시 재지 않는다
+ * @brief [LogTest] 백엔드는 받은 사건의 값만 쓴다 — 리스너 · 비동기 큐를 지난 텍스트 줄이 쓰는 순간의 시계 · 시각을 다시 재지 않는다
  */
-SW_TEST_CASE( LogTest, SinkWritesTheMomentOfTheEvent )
+SW_TEST_CASE( LogTest, BackendWritesTheMomentOfTheEvent )
 {
-    sw::AsyncLogSink                   logger( sw::test::makeScratchPath( "sink.log" ) );
+    sw::AsyncLogBackend                logger( sw::test::makeScratchPath( "backend.log" ) );
     sw::unique_ptr<CapturingLogOutput> output     = sw::make_unique<CapturingLogOutput>();
     CapturingLogOutput* const          pCapturing = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
@@ -710,7 +710,7 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
  */
 SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
 {
-    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    sw::AsyncLogBackend logger( sw::test::makeScratchPath( "backend.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();
 
     // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 테스트용 장치로 채우고, 한 개 더 시도한다.
@@ -728,7 +728,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
         }
     }
 
-    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ } ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ } ); // 지역 백엔드의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
     logger.shutdown();
 
     // 거절되지 않고 달린 장치는 전부 그 줄을 받아야 한다.
@@ -753,13 +753,13 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
  */
 SW_TEST_CASE( LogTest, InvalidUTF8ByteIsEscapedNotTheWholeLine )
 {
-    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    sw::AsyncLogBackend logger( sw::test::makeScratchPath( "backend.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();
     sw::unique_ptr<CapturingLogOutput> output   = sw::make_unique<CapturingLogOutput>();
     CapturingLogOutput*                pCapture = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
 
-    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ } ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ } ); // "한글 <FF> end" - 지역 백엔드의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
@@ -830,7 +830,7 @@ SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
 }
 
 // ------------------------------------------------------------------------------
-// 자식 역할 — 교착(같은 프로세스에서 돌면 실행 전체가 멈춘다) · 표준 출력 · 표준 에러 · 전역 싱크 떼기(프로세스 전역)를 자식 프로세스에서 본다.
+// 자식 역할 — 교착(같은 프로세스에서 돌면 실행 전체가 멈춘다) · 표준 출력 · 표준 에러 · 전역 백엔드 떼기(프로세스 전역)를 자식 프로세스에서 본다.
 // 자식 App 기동이 Debug 에서 몇 초라 부모 케이스의 시한을 넉넉히 둔다.
 // ------------------------------------------------------------------------------
 namespace
@@ -893,22 +893,22 @@ namespace
         }
     };
 
-    /** @brief 스코프 동안 전역 싱크를 @p pSink 로 바꿉니다 — `SW_LOG_*` 가 그 싱크로 들어가 싱크가 자기 로그를 받는 길을 만든다. 싱크보다 나중에 만든다(소멸이 거꾸로). */
-    class GlobalSinkSwap
+    /** @brief 스코프 동안 전역 백엔드를 @p pBackend 로 바꿉니다 — `SW_LOG_*` 가 그 백엔드로 들어가 백엔드가 자기 로그를 받는 길을 만든다. 백엔드보다 나중에 만든다(소멸이 거꾸로). */
+    class GlobalLogBackendSwap
     {
     public:
-        explicit GlobalSinkSwap( sw::ILogSink* pSink )
-            : _pPrevious{ sw::Logger::getGlobalSink() }
+        explicit GlobalLogBackendSwap( sw::ILogBackend* pBackend )
+            : _pPrevious{ sw::Logger::getGlobalBackend() }
         {
-            sw::Logger::setGlobalSink( pSink );
+            sw::Logger::setGlobalBackend( pBackend );
         }
-        ~GlobalSinkSwap() { sw::Logger::setGlobalSink( _pPrevious ); }
+        ~GlobalLogBackendSwap() { sw::Logger::setGlobalBackend( _pPrevious ); }
 
-        GlobalSinkSwap( const GlobalSinkSwap& )            = delete;
-        GlobalSinkSwap& operator=( const GlobalSinkSwap& ) = delete;
+        GlobalLogBackendSwap( const GlobalLogBackendSwap& )            = delete;
+        GlobalLogBackendSwap& operator=( const GlobalLogBackendSwap& ) = delete;
 
     private:
-        sw::ILogSink* _pPrevious;
+        sw::ILogBackend* _pPrevious;
     };
 
     /** @brief 교착 시나리오 하나를 자식으로 돌린다 — 교착이면 시한에 자식이 죽고 `runChildRole` 이 실패를 적는다. */
@@ -921,14 +921,14 @@ namespace
 /**
  * @brief [LogTest] 자식 역할: 교착 시나리오 하나(인자가 이름)를 돌린다.
  * @details 로거의 락을 쥔 채 로그를 부르면 그 로그가 같은 락으로 되돌아와 같은 스레드가 영구 정지한다 — 그래서 부모가 시한을 걸고 띄운다.
- *          시나리오마다 싱크를 전역 싱크로 만들어 `SW_LOG_*` 가 그 싱크 자신으로 들어오게 한다(전역 싱크가 따로 있으면 되돌아오는 길이 없다).
- *          그동안 실행기의 로그 감시는 바꾼 싱크를 보지 않는다 — 시나리오가 일부러 내는 경고는 지역 싱크에서 센다.
+ *          시나리오마다 백엔드를 전역 백엔드로 만들어 `SW_LOG_*` 가 그 백엔드 자신으로 들어오게 한다(전역 백엔드가 따로 있으면 되돌아오는 길이 없다).
+ *          그동안 실행기의 로그 감시는 바꾼 백엔드를 보지 않는다 — 시나리오가 일부러 내는 경고는 지역 백엔드에서 센다.
  */
 SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
 {
-    const sw::string scenario = sw::test::getChildRoleArgument();
-    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) );
-    GlobalSinkSwap   globalSinkSwap{ &logger };
+    const sw::string     scenario = sw::test::getChildRoleArgument();
+    sw::AsyncLogBackend  logger( sw::test::makeScratchPath( "backend.log" ) );
+    GlobalLogBackendSwap globalBackendSwap{ &logger };
 
     if ( scenario == "initialize" )
     {
@@ -951,7 +951,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
             openFailedCount += sw::StringUtil::contains( line, "could not be opened" ) ? 1u : 0u;
         }
         SW_EXPECT_EQUAL( 1u, createFailedCount ); // 열다가 남긴 오류가 장치까지 왔다
-        SW_EXPECT_EQUAL( 1u, openFailedCount );   // 열지 못한 장치가 있다고 싱크가 알렸다
+        SW_EXPECT_EQUAL( 1u, openFailedCount );   // 열지 못한 장치가 있다고 백엔드가 알렸다
         logger.shutdown();
     }
     else if ( scenario == "addOutput" )
@@ -1052,19 +1052,19 @@ SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput, ._tags = "slow", .
 }
 
 /**
- * @brief [LogTest] 자식 역할: 전역 싱크를 뗀 채 로그 줄을 남기거나(`nosink`), `SW_LOG_ASSERT` 를 실패시킨다(`assert`, 가로채서 멈추지 않는다).
- * @details 싱크를 떼는 동안은 실행기의 로그 감시도 줄을 보지 못한다 — 판정은 부모가 자식의 출력으로 한다. 끝나면 싱크를 되돌린다(자식의 나머지 종료 길).
+ * @brief [LogTest] 자식 역할: 전역 백엔드를 뗀 채 로그 줄을 남기거나(`nobackend`), `SW_LOG_ASSERT` 를 실패시킨다(`assert`, 가로채서 멈추지 않는다).
+ * @details 백엔드를 떼는 동안은 실행기의 로그 감시도 줄을 보지 못한다 — 판정은 부모가 자식의 출력으로 한다. 끝나면 백엔드를 되돌린다(자식의 나머지 종료 길).
  */
 SW_TEST_CHILD_ROLE( LogTest, StderrChildWritesMarkers )
 {
     const sw::string role = sw::test::getChildRoleArgument();
-    if ( role == "nosink" )
+    if ( role == "nobackend" )
     {
-        sw::ILogSink* pSink = sw::Logger::getGlobalSink();
-        sw::Logger::setGlobalSink( nullptr );
-        SW_EXPECT_NULL( sw::Logger::getGlobalSink() );
-        SW_LOG_ERROR_ID( "Test.LogNoSinkProbe", "SW_NOSINK_PROBE error line" );
-        sw::Logger::setGlobalSink( pSink );
+        sw::ILogBackend* pBackend = sw::Logger::getGlobalBackend();
+        sw::Logger::setGlobalBackend( nullptr );
+        SW_EXPECT_NULL( sw::Logger::getGlobalBackend() );
+        SW_LOG_ERROR_ID( "Test.LogNoBackendProbe", "SW_NOBACKEND_PROBE error line" );
+        sw::Logger::setGlobalBackend( pBackend );
     }
     else if ( role == "assert" )
     {
@@ -1082,13 +1082,13 @@ SW_TEST_CHILD_ROLE( LogTest, StderrChildWritesMarkers )
 }
 
 /**
- * @brief [LogTest] 싱크가 없을 때 `SW_LOG_*` 줄은 버려지지 않고 stderr 로 나간다
+ * @brief [LogTest] 백엔드가 없을 때 `SW_LOG_*` 줄은 버려지지 않고 stderr 로 나간다
  */
-SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._timeoutSeconds = 180.0f )
+SW_TEST_CASE( LogTest, LineWithoutABackendReachesStandardError, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
-    const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.StderrChildWritesMarkers", "nosink", kLogChildTimeoutSeconds );
+    const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.StderrChildWritesMarkers", "nobackend", kLogChildTimeoutSeconds );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
-    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_NOSINK_PROBE error line" ), child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_NOBACKEND_PROBE error line" ), child.getOutputTail() );
 }
 
 #if defined( SW_DO_CHECKS )
@@ -1105,29 +1105,29 @@ SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping, ._tags 
 #endif
 
 /**
- * @brief [LogTest] 자식 역할: 싱크가 없을 때 리스너를 붙이면 순서 위반으로 보고하고 빈 구독을 돌려준다(조용히 무시하지 않는다).
- * @details 전역 싱크를 떼는 일이라 자식에서 한다 — 같은 프로세스면 그동안 다른 스레드의 로그가 실행기의 감시를 비켜 간다.
+ * @brief [LogTest] 자식 역할: 백엔드가 없을 때 리스너를 붙이면 순서 위반으로 보고하고 빈 구독을 돌려준다(조용히 무시하지 않는다).
+ * @details 전역 백엔드를 떼는 일이라 자식에서 한다 — 같은 프로세스면 그동안 다른 스레드의 로그가 실행기의 감시를 비켜 간다.
  */
-SW_TEST_CHILD_ROLE( LogTest, ListenerWithoutASinkChild )
+SW_TEST_CHILD_ROLE( LogTest, ListenerWithoutABackendChild )
 {
     sw::test::ScopedAssertCapture capture;
-    sw::ILogSink*                 pSink = sw::Logger::getGlobalSink();
-    sw::Logger::setGlobalSink( nullptr ); // 싱크 자체를 비운다 — 단언의 Error 로그는 stderr 로 간다(실행기가 보지 못한다)
+    sw::ILogBackend*              pBackend = sw::Logger::getGlobalBackend();
+    sw::Logger::setGlobalBackend( nullptr ); // 백엔드 자체를 비운다 — 단언의 Error 로그는 stderr 로 간다(실행기가 보지 못한다)
     sw::Subscription subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, []( const sw::LogEntry& ) {} ) );
-    sw::Logger::setGlobalSink( pSink );
+    sw::Logger::setGlobalBackend( pBackend );
     SW_EXPECT_FALSE( subscription.isActive() );
     if constexpr ( sw::test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 1u, capture.getCount() );
 }
 
 /**
- * @brief [LogTest] 싱크가 없을 때 리스너를 붙이면 순서 위반으로 보고된다 — 자식이 판정하고 stderr 에 단언 줄이 남는다
+ * @brief [LogTest] 백엔드가 없을 때 리스너를 붙이면 순서 위반으로 보고된다 — 자식이 판정하고 stderr 에 단언 줄이 남는다
  */
-SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slow", ._timeoutSeconds = 180.0f )
+SW_TEST_CASE( LogTest, RegisteringAListenerWithoutABackendIsReported, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
-    const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ListenerWithoutASinkChild", {}, kLogChildTimeoutSeconds );
+    const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ListenerWithoutABackendChild", {}, kLogChildTimeoutSeconds );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
-    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "needs a global log sink" ), child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "needs a global log backend" ), child.getOutputTail() );
 }
 
 /**
@@ -1136,7 +1136,7 @@ SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slo
  */
 SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
 {
-    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "crash.log" ) );
+    sw::AsyncLogBackend               logger( sw::test::makeScratchPath( "crash.log" ) );
     sw::unique_ptr<BlockingLogOutput> output    = sw::make_unique<BlockingLogOutput>();
     BlockingLogOutput* const          pBlocking = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
@@ -1163,7 +1163,7 @@ SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
 SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
 {
     sw::ConsoleLogOutput::setMuted( true ); // 5000 줄을 테스트 출력에 쏟지 않는다
-    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "order.log" ) );
+    sw::AsyncLogBackend               logger( sw::test::makeScratchPath( "order.log" ) );
     sw::unique_ptr<BlockingLogOutput> output    = sw::make_unique<BlockingLogOutput>();
     BlockingLogOutput* const          pBlocking = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );

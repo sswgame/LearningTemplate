@@ -2,21 +2,21 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Log/LogTypes.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
-#include "Core/Log/Sink/ILogOutput.h"
-#include "Core/Log/Sink/JSONLinesLogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
+#include "Core/Log/Output/JSONLinesLogOutput.h"
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
-// JSON lines 로그 — 칸과 이스케이프, 문맥의 추적 id, 장치가 달렸을 때만 싱크가 줄마다 JSON 을 만든다.
+// JSON lines 로그 — 칸과 이스케이프, 문맥의 추적 id, 장치가 달렸을 때만 백엔드가 줄마다 JSON 을 만든다.
 
 using namespace sw;
 
 namespace
 {
-    /** @brief 구조화 칸을 읽는 장치입니다 — 달리면 싱크가 줄마다 `_json` 을 채웁니다. */
+    /** @brief 구조화 칸을 읽는 장치입니다 — 달리면 백엔드가 줄마다 `_json` 을 채웁니다. */
     class JSONCaptureOutput final : public ILogOutput
     {
     public:
@@ -32,7 +32,7 @@ namespace
         }
     };
 
-    /** @brief 구조화 칸을 읽지 않는 장치입니다 — 달려도 싱크가 JSON 을 만들지 않습니다. */
+    /** @brief 구조화 칸을 읽지 않는 장치입니다 — 달려도 백엔드가 JSON 을 만들지 않습니다. */
     class PlainCaptureOutput final : public ILogOutput
     {
     public:
@@ -59,7 +59,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, EscapesQuotesBackslashesAndControlCharacte
     string invalid;
     StringUtil::appendJSONEscaped( invalid, "a\xFF"
                                             "b\b" );
-    SW_EXPECT_TRUE_MSG( invalid == "a\\ufffdb\\b", invalid.c_str() ); // 줄이 늘 올바른 JSON 이다 — 예전 싱크는 잘못된 바이트를 그대로 흘렸다
+    SW_EXPECT_TRUE_MSG( invalid == "a\\ufffdb\\b", invalid.c_str() ); // 줄이 늘 올바른 JSON 이다 — 예전 백엔드는 잘못된 바이트를 그대로 흘렸다
 }
 
 SW_TEST_CASE( JSONLinesLogOutputTest, LineHasThePropertiesThatArePresent )
@@ -92,9 +92,9 @@ SW_TEST_CASE( JSONLinesLogOutputTest, LineHasThePropertiesThatArePresent )
     SW_EXPECT_TRUE( line.back() == '\n' );
 }
 
-SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsAttached )
+SW_TEST_CASE( JSONLinesLogOutputTest, BackendBuildsJSONOnlyWhenAStructuredOutputIsAttached )
 {
-    AsyncLogSink logger( test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    AsyncLogBackend logger( test::makeScratchPath( "backend.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();
     unique_ptr<PlainCaptureOutput> plain  = make_unique<PlainCaptureOutput>();
     PlainCaptureOutput*            pPlain = plain.get();
@@ -114,7 +114,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsA
 
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( pPlain->_listJSON.size() ) );
     SW_EXPECT_TRUE( pPlain->_listJSON[0].empty() ); // 장치가 달리기 전의 줄은 JSON 을 만들지 않았다
-    // 비동기 싱크라 "before" 가 JSON 장치를 붙인 뒤에 나갈 수 있다 — 그래도 그 줄은 JSON 없이 쓴 줄이다(만드는 때는 쓰기 때다)
+    // 비동기 백엔드라 "before" 가 JSON 장치를 붙인 뒤에 나갈 수 있다 — 그래도 그 줄은 JSON 없이 쓴 줄이다(만드는 때는 쓰기 때다)
     SW_REQUIRE_TRUE( pJSON->_listJSON.empty() == false && pJSON->_listJSON.size() <= 2 );
     if ( pJSON->_listJSON.size() == 2 )
         SW_EXPECT_TRUE( pJSON->_listJSON[0].empty() );

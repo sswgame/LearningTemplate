@@ -656,13 +656,13 @@ namespace sw::editor
 
     void ConsolePanel::showLogFileInExplorer()
     {
-        ILogSink* pSink = Logger::getGlobalSink();
+        ILogBackend* pSink = Logger::getGlobalBackend();
         if ( pSink == nullptr || pSink->getLogFolderPath().empty() )
         {
             SW_LOG_WARNING_ID( "ConsolePanel.NoLogFileFolder", "No log file folder (the log sink writes no file)" );
             return;
         }
-        // 이번 실행의 파일은 싱크만 안다 — 폴더의 "가장 새 파일" 은 같은 폴더를 쓰는 다른 프로세스의 것일 수 있다.
+        // 이번 실행의 파일은 백엔드만 안다 — 폴더의 "가장 새 파일" 은 같은 폴더를 쓰는 다른 프로세스의 것일 수 있다.
         const string logFilePath = pSink->getLogFilePath();
         (void)ConsoleViewModel::showInFileExplorer( logFilePath.empty() ? string( pSink->getLogFolderPath() ) : logFilePath );
     }

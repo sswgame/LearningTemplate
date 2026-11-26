@@ -30,7 +30,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
-#include "Core/Log/Sink/ConsoleLogOutput.h"
+#include "Core/Log/Output/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Process/Process.h"
@@ -621,10 +621,10 @@ namespace sw
         if ( _pServerConfig->_bJSONLogs )
         {
             // 로거는 엔진 기동에서 이미 섰다. 설정을 읽은 지금부터 줄이 JSON 한 줄로 나간다(콘솔 장치는 꺼진다). 켰는데 못 켜면 수집기가 못 읽는 줄을 내는 서버가 되므로 기동을 멈춘다.
-            ILogSink* pLogSink = Logger::getGlobalSink();
-            if ( pLogSink == nullptr || pLogSink->enableJSONLinesOutput() == false )
+            ILogBackend* pLogBackend = Logger::getGlobalBackend();
+            if ( pLogBackend == nullptr || pLogBackend->enableJSONLinesOutput() == false )
             {
-                SW_LOG_ERROR_ID( "Server.ServerConfigBJSONLogsBut", "Server config _bJSONLogs is on but the log sink could not add the JSON lines output" );
+                SW_LOG_ERROR_ID( "Server.ServerConfigBJSONLogsBut", "Server config _bJSONLogs is on but the log backend could not add the JSON lines output" );
                 return false;
             }
         }

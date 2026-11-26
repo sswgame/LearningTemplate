@@ -3,7 +3,7 @@
 #include "Engine/CoreSubsystems/LoggerSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 
 #include "Engine/CoreSubsystems/CommandLineSubsystem.h"
 
@@ -23,7 +23,7 @@ namespace sw
         {
             AbsolutePath logFilePath; // 비면 기본 폴더(Saved/Logs)다
             (void)_commandLine.getCommandLine().getArgument( CommandLineArgument::LOG_FILE, logFilePath );
-            _logger = make_unique<AsyncLogSink>( logFilePath ); // 명령줄이 받을 때 절대로 올렸다(`CommandLineDiskPath`)
+            _logger = make_unique<AsyncLogBackend>( logFilePath ); // 명령줄이 받을 때 절대로 올렸다(`CommandLineDiskPath`)
             _logger->initialize();
         }
         return SubsystemInitResult::Succeeded;

@@ -35,7 +35,7 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 2) 티어 표 — 폴더 목록을 CMake 에 또 적지 않고 `Config/Rules/Layers/CoreLayers.toml` 의 `[tier]`(폴더 = 숫자)와 `[subtier]`("폴더/하위" = 숫자)를
-#    그대로 읽는다. 파일의 티어는 그 폴더 경로의 가장 긴 표 키가 정한다(`Log/Sink/X.cpp` 는 `Log/Sink`). 표에 없는 폴더는 구성이 선다.
+#    그대로 읽는다. 파일의 티어는 그 폴더 경로의 가장 긴 표 키가 정한다(`Log/Backend/X.cpp` 는 `Log/Backend`). 표에 없는 폴더는 구성이 선다.
 # ------------------------------------------------------------------------------
 set(core_tier_table "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/CoreLayers.toml")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${core_tier_table}")

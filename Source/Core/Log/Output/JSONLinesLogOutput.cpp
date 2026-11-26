@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Log/Sink/JSONLinesLogOutput.h"
+#include "Core/Log/Output/JSONLinesLogOutput.h"
 
 #include "Core/Container/EnumArray.h"
 #include "Core/Encoding/HexUtil.h"
@@ -44,7 +44,7 @@ namespace sw
     void JSONLinesLogOutput::write( const LogRecord& record )
     {
         if ( record._json.empty() )
-            return; // 싱크가 이 장치를 알기 전에 만든 줄이다
+            return; // 백엔드가 이 장치를 알기 전에 만든 줄이다
         ScopedLock<mutex> lock{ _mutex };
         std::fputs( record._json.c_str(), stdout );
         // 수집기가 줄을 바로 봐야 한다 — 서버는 어차피 줄마다 비운다(`ConsoleLogOutput::setFlushEveryLine`). 여기서는 오류만 확실히 비운다.

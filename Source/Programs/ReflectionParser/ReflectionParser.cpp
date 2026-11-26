@@ -3,8 +3,8 @@
 #include "Core/Diagnostics/DataRaceReporter.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 #include "Core/Log/Logger.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Programs/ReflectionParser/ParserDefines.h"
@@ -26,7 +26,7 @@ namespace sw
         {
         public:
             LoggerScope()
-                : _logger{ sw::make_unique<sw::AsyncLogSink>() }
+                : _logger{ sw::make_unique<sw::AsyncLogBackend>() }
             {
                 _logger->initialize();
             }
@@ -36,7 +36,7 @@ namespace sw
             LoggerScope& operator=( const LoggerScope& ) = delete;
 
         private:
-            sw::unique_ptr<sw::AsyncLogSink> _logger;
+            sw::unique_ptr<sw::AsyncLogBackend> _logger;
         };
 
         struct ReflectionParserInternal

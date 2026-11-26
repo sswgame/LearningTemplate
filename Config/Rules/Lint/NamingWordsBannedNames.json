@@ -2523,6 +2523,17 @@
     "ServerServiceRegistrar": "SW_MODULE_SUBSYSTEM( Engine, Process, X, IServerService ) — 서버 서비스는 모듈 서브시스템(호스트 kServer)이 IServerService 로 공개하고 서버가 범위에서 찾는다 — 등록 목록 · 수명 관리자를 없앴다(2026-11-26)",
     "ServerServiceRegistration": "SW_MODULE_SUBSYSTEM( Engine, Process, X, IServerService ) — 서버 서비스는 모듈 서브시스템(호스트 kServer)이 IServerService 로 공개하고 서버가 범위에서 찾는다 — 등록 목록 · 수명 관리자를 없앴다(2026-11-26)",
     "SW_REGISTER_SERVER_SERVICE": "SW_MODULE_SUBSYSTEM( Engine, Process, X, IServerService ) — 서버 서비스는 모듈 서브시스템(호스트 kServer)이 IServerService 로 공개하고 서버가 범위에서 찾는다 — 등록 목록 · 수명 관리자를 없앴다(2026-11-26)",
-    "isRawShaderSource": "ShaderSourceAsset::isRawSource — 원본 · include 조각 판정은 셰이더 종류의 접미사 표가 한다(2026-11-26)"
+    "isRawShaderSource": "ShaderSourceAsset::isRawSource — 원본 · include 조각 판정은 셰이더 종류의 접미사 표가 한다(2026-11-26)",
+    "ILogSink": "ILogBackend — 로거 전체를 바꿔 끼우는 자리는 Backend, 한 줄이 나가는 장치는 ILogOutput(spdlog sink = 출력 장치, MS ILoggerProvider = 뒷단)(2026-11-27)",
+    "AsyncLogSink": "AsyncLogBackend — 기본 로그 뒷단(비동기 큐 · 출력 장치 묶음) — Sink 는 출력 장치 뜻이라 Backend(2026-11-27)",
+    "AsyncLogSinkInternal": "AsyncLogBackendInternal — AsyncLogBackend 의 .cpp 내부 이름공간(2026-11-27)",
+    "OverflowingLogSink": "OverflowingLogBackend — 테스트용 로그 뒷단 — ILogBackend 구현(2026-11-27)",
+    "GlobalSinkSwap": "GlobalLogBackendSwap — 테스트 동안 전역 로그 뒷단을 바꿔 끼운다(2026-11-27)",
+    "ScopedGlobalLogSinkInternal": "ScopedGlobalLogBackendInternal — 테스트 동안 전역 로그 뒷단을 바꿔 끼운다(2026-11-27)",
+    "setGlobalSink": "setGlobalBackend — 전역 로그 뒷단(ILogBackend) 설정(2026-11-27)",
+    "getGlobalSink": "getGlobalBackend — 전역 로그 뒷단(ILogBackend) 읽기(2026-11-27)",
+    "registerGlobalSink": "registerGlobalBackend — 전역 로그 뒷단(ILogBackend) 등록(2026-11-27)",
+    "unregisterGlobalSink": "unregisterGlobalBackend — 전역 로그 뒷단(ILogBackend) 해제(2026-11-27)",
+    "s_globalSink": "s_globalBackend — 전역 로그 뒷단(ILogBackend) 칸(2026-11-27)"
   }
 }

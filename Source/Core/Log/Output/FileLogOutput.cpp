@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Log/Sink/FileLogOutput.h"
+#include "Core/Log/Output/FileLogOutput.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -49,7 +49,7 @@ namespace sw
                 return true;
         }
 
-        // 폴더를 알아내고 만드는 호출(`getCurrentPath` · `ensureDirectoryExists`)은 실패하면 로그를 남기고, 그 로그는 싱크를 거쳐 이 장치의 `write` 로 들어온다.
+        // 폴더를 알아내고 만드는 호출(`getCurrentPath` · `ensureDirectoryExists`)은 실패하면 로그를 남기고, 그 로그는 백엔드를 거쳐 이 장치의 `write` 로 들어온다.
         // `write` 가 `_mutex` 를 잡으므로 `_mutex` 를 쥔 채 부르면 같은 스레드가 영구 정지한다 — 락 밖에서 하고, 결과만 락 안에서 넣는다.
         AbsolutePath logFolderPath;
         AbsolutePath fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다

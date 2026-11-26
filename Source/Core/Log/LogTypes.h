@@ -41,7 +41,7 @@ namespace sw
 
     /**
      * @brief 텍스트 로그 줄에서 id 가 든 줄의 본문 앞에 붙는 꼬리표 `[id:영역.사건] ` 의 모양입니다.
-     * @details 쓰는 쪽(`AsyncLogSink`)과 읽는 쪽(자식 프로세스 출력만 보는 백엔드마다 시나리오 실행 `AutomationPerBackend`)이 같은 정의를 쓴다.
+     * @details 쓰는 쪽(`AsyncLogBackend`)과 읽는 쪽(자식 프로세스 출력만 보는 백엔드마다 시나리오 실행 `AutomationPerBackend`)이 같은 정의를 쓴다.
      */
     struct LogIDTag
     {
@@ -56,7 +56,7 @@ namespace sw
 {
     /**
      * @brief 줄을 남긴 순간의 시각 · 순번 · 시계 · 스레드 · 문맥입니다. 재는 곳은 `LogEvent` 의 생성자 하나다(`captureNow` 는 비공개).
-     * @details 미룬 줄(`ScopedDeferredLog`) · 싱크 앞의 backlog · 비동기 큐가 모두 이 값을 나른다 — 쓰는 순간에 다시 재면 늦게 쓴 줄의 시각 · 프레임이 틀린다.
+     * @details 미룬 줄(`ScopedDeferredLog`) · 백엔드 앞의 backlog · 비동기 큐가 모두 이 값을 나른다 — 쓰는 순간에 다시 재면 늦게 쓴 줄의 시각 · 프레임이 틀린다.
      *          spdlog `log_msg`(시각 · 스레드를 부른 자리에서 담는다) · 언리얼 `FOutputDevice::Serialize` 의 `Time` 인자와 같은 자리다.
      */
     struct SW_API LogStamp
@@ -79,7 +79,7 @@ namespace sw
     };
 
     /**
-     * @brief 로그 사건 하나입니다. 남기는 순간에 만들어지고, 싱크는 이 값을 쓰기만 합니다(`ILogSink::writeEvent`).
+     * @brief 로그 사건 하나입니다. 남기는 순간에 만들어지고, 백엔드는 이 값을 쓰기만 합니다(`ILogBackend::writeEvent`).
      * @details 글은 빌린다 — 태그 · 파일 · id 는 글자 상수, 본문은 부르는 동안만 산다. 나중에 쓸 줄은 본문을 따로 들고 `withMessage` 로 잇는다(시각 · 순번은 그대로).
      */
     struct SW_API LogEvent
@@ -109,7 +109,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 싱크 · 리스너에 넘기는 로그 한 줄입니다. */
+    /** @brief 백엔드 · 리스너에 넘기는 로그 한 줄입니다. */
     struct LogEntry
     {
         string      _tag;
@@ -134,7 +134,7 @@ namespace sw
 {
     /**
      * @brief 로그 한 줄의 완성된 글입니다. 짧은 줄(대부분)은 레코드 안 고정 칸에, 칸을 넘는 긴 줄만 힙 글에 둡니다.
-     * @details 줄마다 `string` 을 할당하면 로그 한 줄이 힙 할당 하나였고, 크래시 처리기가 큐를 비울 때(`AsyncLogSink::waitUpToCrash`) 레코드 소멸이 힙을 불렀다 —
+     * @details 줄마다 `string` 을 할당하면 로그 한 줄이 힙 할당 하나였고, 크래시 처리기가 큐를 비울 때(`AsyncLogBackend::waitUpToCrash`) 레코드 소멸이 힙을 불렀다 —
      *          할당기 안에서 죽은 크래시면 거기서 멈출 수 있다. 고정 칸 줄은 할당도 해제도 없다(빈 힙 글은 할당하지 않는다).
      *          칸 크기 × 큐 칸(4096)이 상주 메모리다.
      */

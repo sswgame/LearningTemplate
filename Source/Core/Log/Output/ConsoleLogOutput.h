@@ -6,7 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Log/Sink/ILogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
 
 namespace sw
 {

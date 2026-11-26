@@ -17,11 +17,11 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 전역 활성 로그 싱크 포인터입니다. */
-        atomic<ILogSink*> s_globalSink{ nullptr };
+        /** @brief 프로세스 전역 활성 로그 백엔드 포인터입니다. */
+        atomic<ILogBackend*> s_globalBackend{ nullptr };
 
         /**
-         * @brief 싱크가 서기 전에 남은 줄 하나입니다(기동 초기 — 명령줄이 로거보다 먼저 선다). 싱크가 등록되면 넘긴다(`Logger::registerGlobalSink`).
+         * @brief 백엔드가 서기 전에 남은 줄 하나입니다(기동 초기 — 명령줄이 로거보다 먼저 선다). 백엔드가 등록되면 넘긴다(`Logger::registerGlobalBackend`).
          * @details 언리얼 FOutputDeviceRedirector 의 backlog 와 같다. 힙을 쓰지 않는다 — 메모리 계층이 서기 전일 수 있다. 본문만 사본을 두고, 사건(시각 · 순번 · 글자 상수 포인터)은 남긴 순간의 것을 넘긴다.
          */
         struct BacklogLine
@@ -53,12 +53,12 @@ namespace sw
         constexpr uint64 kClockNumberMask = kClockFrameBit - 1;
 
         /**
-         * @brief 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_*`)를 로그 줄로 넘깁니다. 싱크가 아직 없으면 false 를 돌려주어 stderr 로 가게 합니다(`reportLowLevel`).
+         * @brief 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_*`)를 로그 줄로 넘깁니다. 백엔드가 아직 없으면 false 를 돌려주어 stderr 로 가게 합니다(`reportLowLevel`).
          * @details 태그(`SW_LOG_TAG`)는 이 파일(Core)의 것, 곧 Engine 입니다. 보고한 곳은 줄의 파일 · 줄 번호가 가리킨다.
          */
         bool forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept
         {
-            if ( s_globalSink.load( std::memory_order_acquire ) == nullptr )
+            if ( s_globalBackend.load( std::memory_order_acquire ) == nullptr )
                 return false;
 
             const ScopedLeafLockExemption exemption; // 아래 티어의 보고는 부른 쪽이 잠금을 쥐었는지 모른다
@@ -66,7 +66,7 @@ namespace sw
             if ( Logger::shouldLog( logLevel ) )
                 Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pMessage, pFile, line, pID );
             if ( level == internal::LowLevelReportLevel::Fatal )
-                Logger::flushGlobalForCrash(); // 곧 멈춘다(`reportFatal`) — 비동기 싱크가 쥔 줄을 내보낸다
+                Logger::flushGlobalForCrash(); // 곧 멈춘다(`reportFatal`) — 비동기 백엔드가 쥔 줄을 내보낸다
             return true;
         }
 
@@ -80,9 +80,9 @@ namespace sw
     void Logger::flushGlobalForCrash()
     {
         ScopedDeferredLog::flushForCrash();
-        ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
-        if ( pSink != nullptr )
-            pSink->waitUpToCrash();
+        ILogBackend* pBackend = s_globalBackend.load( std::memory_order_acquire );
+        if ( pBackend != nullptr )
+            pBackend->waitUpToCrash();
     }
 
     void Logger::setRuntimeVerbosity( LogLevel level )
@@ -116,14 +116,14 @@ namespace sw
         return numberPlusOne != 0;
     }
 
-    void Logger::setGlobalSink( ILogSink* pSink )
+    void Logger::setGlobalBackend( ILogBackend* pBackend )
     {
-        s_globalSink.store( pSink, std::memory_order_release );
+        s_globalBackend.store( pBackend, std::memory_order_release );
     }
 
-    ILogSink* Logger::getGlobalSink()
+    ILogBackend* Logger::getGlobalBackend()
     {
-        return s_globalSink.load( std::memory_order_acquire );
+        return s_globalBackend.load( std::memory_order_acquire );
     }
 
     void Logger::printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, [[maybe_unused]] const utf8* pFunction ) noexcept
@@ -177,10 +177,10 @@ namespace sw
     {
         if ( ScopedDeferredLog::tryDefer( event ) )
             return;
-        ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
-        if ( pSink == nullptr )
+        ILogBackend* pBackend = s_globalBackend.load( std::memory_order_acquire );
+        if ( pBackend == nullptr )
         {
-            // 싱크가 없으면(기동 초기, 로거 없는 도구) 줄을 잃지 않게 stderr 에 남긴다. 상세도는 부르는 쪽이 이미 걸렀다.
+            // 백엔드가 없으면(기동 초기, 로거 없는 도구) 줄을 잃지 않게 stderr 에 남긴다. 상세도는 부르는 쪽이 이미 걸렀다.
             const utf8* pLevelName = event._level == LogLevel::Error ? "Error" : event._level == LogLevel::Warning ? "Warning"
                                                                            : event._level == LogLevel::Info        ? "Info"
                                                                                                                    : "Trace";
@@ -188,8 +188,8 @@ namespace sw
             std::fflush( stderr );
 
             ScopedLock<mutex> lock{ s_backlogMutex };
-            pSink = s_globalSink.load( std::memory_order_acquire );
-            if ( pSink == nullptr )
+            pBackend = s_globalBackend.load( std::memory_order_acquire );
+            if ( pBackend == nullptr )
             {
                 if ( s_backlogCount == kMaxBacklogLine )
                 {
@@ -201,26 +201,26 @@ namespace sw
                 copyTruncated( event._pMessage, backlog._arrMessage );
                 return;
             }
-            // stderr 에 쓰는 사이 싱크가 섰다 — 아래로 내려가 그 싱크에도 쓴다.
+            // stderr 에 쓰는 사이 백엔드가 섰다 — 아래로 내려가 그 백엔드에도 쓴다.
         }
 
-        pSink->writeEvent( event );
+        pBackend->writeEvent( event );
     }
 
     Subscription Logger::registerGlobalListener( const LogWrittenDelegate& listener )
     {
-        ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
+        ILogBackend* pBackend = s_globalBackend.load( std::memory_order_acquire );
         // 리스너를 붙일 곳이 없는데 조용히 빈 구독을 돌려주면 부르는 쪽은 줄이 오지 않는 이유를 알 길이 없다. 순서 위반을 보고하고(Debug 는 멈춘다) 빈 구독을 돌려준다.
-        SW_LOW_LEVEL_ASSERT( pSink != nullptr, "Logger::registerGlobalListener needs a global log sink - create the sink before attaching listeners" );
-        if ( pSink == nullptr )
+        SW_LOW_LEVEL_ASSERT( pBackend != nullptr, "Logger::registerGlobalListener needs a global log backend - create the backend before attaching listeners" );
+        if ( pBackend == nullptr )
             return Subscription{};
 
-        return pSink->registerLogWrittenListener( listener );
+        return pBackend->registerLogWrittenListener( listener );
     }
 
-    void Logger::registerGlobalSink( ILogSink* pSink )
+    void Logger::registerGlobalBackend( ILogBackend* pBackend )
     {
-        // 싱크가 서기 전에 쌓인 줄을 남은 순서대로 넘긴다 — 로그 파일에 기동 첫 줄부터 남는다. 쌓인 줄을 다 넘긴 뒤에야 싱크를 세우므로 새 줄이 앞지르지 않는다.
+        // 백엔드가 서기 전에 쌓인 줄을 남은 순서대로 넘긴다 — 로그 파일에 기동 첫 줄부터 남는다. 쌓인 줄을 다 넘긴 뒤에야 백엔드를 세우므로 새 줄이 앞지르지 않는다.
         // 넘기는 일은 잠금 밖에서 한다(잎 잠금).
         vector<BacklogLine> listTaken;
         uint32              droppedCount = 0;
@@ -228,13 +228,13 @@ namespace sw
         {
             {
                 ScopedLock<mutex> lock{ s_backlogMutex };
-                if ( s_globalSink.load( std::memory_order_acquire ) != nullptr )
+                if ( s_globalBackend.load( std::memory_order_acquire ) != nullptr )
                     return;
                 droppedCount += s_droppedBacklogCount;
                 s_droppedBacklogCount = 0;
                 if ( s_backlogCount == 0 )
                 {
-                    s_globalSink.store( pSink, std::memory_order_release );
+                    s_globalBackend.store( pBackend, std::memory_order_release );
                     break;
                 }
                 listTaken.assign( s_arrBacklog, s_arrBacklog + s_backlogCount );
@@ -242,16 +242,16 @@ namespace sw
             }
             for ( const BacklogLine& backlog : listTaken )
             {
-                pSink->writeEvent( backlog._event.withMessage( backlog._arrMessage ) );
+                pBackend->writeEvent( backlog._event.withMessage( backlog._arrMessage ) );
             }
         }
         if ( droppedCount > 0 )
-            pSink->writeEvent( LogEvent{ LogLevel::Warning, "Log", "Lines logged before the log sink existed overflowed the backlog - only the first ones were kept (raise kMaxBacklogLine)", __FILE__, __LINE__ } );
+            pBackend->writeEvent( LogEvent{ LogLevel::Warning, "Log", "Lines logged before the log backend existed overflowed the backlog - only the first ones were kept (raise kMaxBacklogLine)", __FILE__, __LINE__ } );
     }
 
-    void Logger::unregisterGlobalSink( ILogSink* pSink )
+    void Logger::unregisterGlobalBackend( ILogBackend* pBackend )
     {
-        ILogSink* pExpected = pSink;
-        s_globalSink.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+        ILogBackend* pExpected = pBackend;
+        s_globalBackend.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
     }
 } // namespace sw

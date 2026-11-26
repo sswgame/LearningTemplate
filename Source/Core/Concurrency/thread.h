@@ -26,7 +26,7 @@ namespace sw
 {
     // 스레드를 만들 수 있는 주인들 — `ThreadCreationKey` 의 친구다(OS 를 막고 기다려야 하는 곳만. 계산 · 짧은 IO 는 `engine::runParallelByCost` · 태스크 · 스테이지).
     class TaskManager;                  // 작업 풀의 워커 — 엔진의 나머지 병렬 일은 모두 여기로 간다
-    class AsyncLogSink;                 // 로그 쓰기 — 작업 풀이 막히거나 멈춘 때(교착 · 크래시 직전)에도 나가야 한다
+    class AsyncLogBackend;              // 로그 쓰기 — 작업 풀이 막히거나 멈춘 때(교착 · 크래시 직전)에도 나가야 한다
     class StandardInputReader;          // 표준 입력의 막히는 읽기
     class ScopedProgressReport;         // 느린 길(셰이더 컴파일 · 링크)을 막고 기다리는 동안 간격마다 한 줄 — 기다리는 쪽이 워커일 수 있다
     class ThreadPoolAsyncFileIOBackend; // 위치 지정 읽기가 OS 에서 막힌다(io_uring 없는 리눅스 · 기타). 수는 동시 요청 수다
@@ -75,7 +75,7 @@ namespace sw
     class ThreadCreationKey
     {
         friend class TaskManager;
-        friend class AsyncLogSink;
+        friend class AsyncLogBackend;
         friend class StandardInputReader;
         friend class ScopedProgressReport;
         friend class ThreadPoolAsyncFileIOBackend;

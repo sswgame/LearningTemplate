@@ -8,7 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
-#include "Core/Log/Sink/ILogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
      * @brief 줄마다 `{"time":…,"level":…,"tag":…,"msg":…}` 한 줄을 표준 출력에 씁니다.
      * @details 칸: `time` · `ts`(유닉스 밀리초) · `seq`(남긴 순번) · `thread`(남긴 스레드 번호) · `level`(`error` · `warning` · `info` · `trace`) · `tag` · `tick`/`frame` · `trace` · `acct` · `id` · `msg` · `file` · `line`.
      *          `trace` 는 로그 문맥의 요청 추적 id(16 진 32 자)라서 감사 줄과 요청을 한 값으로 묶는다. 표준 출력에는 이 장치 하나만 쓰도록 서버가 콘솔 장치를
-     *          끈다(`ConsoleLogOutput::setMuted`). 줄은 싱크가 만들어 `LogRecord::_json` 에 담아 오므로 이 장치는 쓰기만 한다.
+     *          끈다(`ConsoleLogOutput::setMuted`). 줄은 백엔드가 만들어 `LogRecord::_json` 에 담아 오므로 이 장치는 쓰기만 한다.
      */
     class SW_API JSONLinesLogOutput final : public ILogOutput
     {
@@ -51,7 +51,7 @@ namespace sw
         void               flushWithoutWaiting() override;
         bool               needsStructuredProperties() const override { return true; }
 
-        /** @brief @p params 를 JSON 한 줄(끝의 줄바꿈 포함)로 만들어 @p outLine 뒤에 붙입니다. 싱크와 테스트가 같이 씁니다. */
+        /** @brief @p params 를 JSON 한 줄(끝의 줄바꿈 포함)로 만들어 @p outLine 뒤에 붙입니다. 백엔드와 테스트가 같이 씁니다. */
         static void appendLine( string& outLine, const JSONLogFields& params );
 
     private:

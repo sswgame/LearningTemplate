@@ -4,7 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Log/Sink/ConsoleLogOutput.h"
+#include "Core/Log/Output/ConsoleLogOutput.h"
 #include "Core/String/string_splitter.h"
 
 #include "DevTools/Console/DevConsoleController.h"

@@ -1,16 +1,16 @@
 #include "pch.h"
 
-#include "Core/Log/Sink/AsyncLogSink.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Log/Output/ConsoleLogOutput.h"
+#include "Core/Log/Output/FileLogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
+#include "Core/Log/Output/JSONLinesLogOutput.h"
 #include "Core/Log/ParsedLogLine.h"
-#include "Core/Log/Sink/ConsoleLogOutput.h"
-#include "Core/Log/Sink/FileLogOutput.h"
-#include "Core/Log/Sink/ILogOutput.h"
-#include "Core/Log/Sink/JSONLinesLogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
@@ -24,14 +24,14 @@ namespace sw
     {
         /**
          * @struct LogReentryDepth
-         * @brief 이 스레드가 싱크 안에서 되돌아 들어온 깊이입니다. 스레드마다 다른 값이라 싱크 멤버로 둘 수 없어 한 `thread_local` 에 모읍니다.
+         * @brief 이 스레드가 백엔드 안에서 되돌아 들어온 깊이입니다. 스레드마다 다른 값이라 백엔드 멤버로 둘 수 없어 한 `thread_local` 에 모읍니다.
          */
         struct LogReentryDepth
         {
             /**
              * @brief 지금 출력 장치의 `write` 를 부르는 중인 깊이입니다(`dispatchToOutputs`).
-             * @details 안전망입니다. 이 싱크의 락은 로그를 부르는 구간에 쥐지 않게 짰지만(`snapshotOutputs`), 장치는 자기 락을 쥔 채 `write` 하고
-             *          그 안에서 남기는 로그를 싱크가 막을 형식이 없습니다. 그 로그가 같은 장치의 `write` 로 되돌아오면 장치 락에서 영구 정지하거나(재진입 불가)
+             * @details 안전망입니다. 이 백엔드의 락은 로그를 부르는 구간에 쥐지 않게 짰지만(`snapshotOutputs`), 장치는 자기 락을 쥔 채 `write` 하고
+             *          그 안에서 남기는 로그를 백엔드가 막을 형식이 없습니다. 그 로그가 같은 장치의 `write` 로 되돌아오면 장치 락에서 영구 정지하거나(재진입 불가)
              *          끝없이 되풀이합니다. 그래서 이 깊이가 0 이 아닐 때 들어온 로그는 큐에 넣지 않고 stderr 로 바로 씁니다(버리지 않는다).
              *          `open` · `close` 에는 걸지 않습니다 — 그 안의 로그는 정상 경로로 가야 하고, 장치가 락을 쥐지 않는 것이 계약입니다(`ILogOutput::open`).
              */
@@ -44,7 +44,7 @@ namespace sw
 
         /**
          * @brief 스레드마다 둔 날짜 문자열 캐시입니다. 같은 초 안의 줄은 달력 변환(`WallClock::toLocalCalendar`) · 포맷을 다시 하지 않습니다.
-         * @details 시각은 싱크와 상관없는 값이라 스레드마다 하나면 되고, 잠금이 필요 없습니다(전에는 싱크의 뮤텍스 하나를 모든 생산자가 줄마다 잡았다).
+         * @details 시각은 백엔드와 상관없는 값이라 스레드마다 하나면 되고, 잠금이 필요 없습니다(전에는 백엔드의 뮤텍스 하나를 모든 생산자가 줄마다 잡았다).
          */
         struct LogDateCache
         {
@@ -58,7 +58,7 @@ namespace sw
 
         thread_local LogDateCache t_logDateCache{};
 
-        struct AsyncLogSinkInternal
+        struct AsyncLogBackendInternal
         {
             /** @brief 로그 줄에 찍는 시각 문자열(밀리초까지)과, 레코드가 나르는 달력 값(로그 파일 이름용)입니다. */
             struct DateStamp
@@ -132,7 +132,7 @@ namespace sw
 
 namespace sw
 {
-    AsyncLogSink::AsyncLogSink( AbsolutePath fixedLogFilePath )
+    AsyncLogBackend::AsyncLogBackend( AbsolutePath fixedLogFilePath )
         : _onLogWritten{}
         , _listOutput{}
         , _pFileOutput{ nullptr }
@@ -153,23 +153,23 @@ namespace sw
         _listOutput.push_back( make_unique<ConsoleLogOutput>() );
         _listOutput.push_back( std::move( fileOutput ) );
 
-        Logger::registerGlobalSink( this );
+        Logger::registerGlobalBackend( this );
     }
 
-    AsyncLogSink::~AsyncLogSink()
+    AsyncLogBackend::~AsyncLogBackend()
     {
-        Logger::unregisterGlobalSink( this );
+        Logger::unregisterGlobalBackend( this );
     }
 
     /**
      * @brief 출력 장치를 열고(로그 폴더 생성 포함) 비동기 작업 스레드를 시작합니다.
      */
-    void AsyncLogSink::initialize()
+    void AsyncLogBackend::initialize()
     {
         if ( _bInitialized )
             return;
 
-        // 장치는 `_mutex` 밖에서 연다. 열다가 남기는 로그(로그 폴더를 못 만든 오류 등)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡는다 —
+        // 장치는 `_mutex` 밖에서 연다. 열다가 남기는 로그(로그 폴더를 못 만든 오류 등)는 이 백엔드로 되돌아와 같은 `_mutex` 를 잡는다 —
         // 락을 쥔 채 열면 같은 스레드가 영구 정지한다(재진입 불가).
         ILogOutput*  arrDevice[_s_kMaxOutput]{};
         const uint32 deviceCount = snapshotOutputs( arrDevice );
@@ -182,17 +182,17 @@ namespace sw
                 ++failedCount;
         }
         if ( failedCount > 0 )
-            SW_LOG_WARNING_ID( "AsyncLogSink.LogOutputsCouldNot", "%# of %# log outputs could not be opened - they drop every line", failedCount, deviceCount );
+            SW_LOG_WARNING_ID( "AsyncLogBackend.LogOutputsCouldNot", "%# of %# log outputs could not be opened - they drop every line", failedCount, deviceCount );
 
         _bIsRunning.store( true, std::memory_order_release );
-        _workerThread = sw::thread( ThreadCreationKey{}, &AsyncLogSink::workerLoop, this );
+        _workerThread = sw::thread( ThreadCreationKey{}, &AsyncLogBackend::workerLoop, this );
         _bInitialized = SW_TRUE;
     }
 
     /**
      * @brief 큐에 남은 로그를 모두 쓰고, 작업 스레드를 멈춘 뒤 출력 장치를 닫습니다.
      */
-    void AsyncLogSink::shutdown()
+    void AsyncLogBackend::shutdown()
     {
         if ( _bInitialized == false )
             return;
@@ -205,7 +205,7 @@ namespace sw
 
         flushQueue();
 
-        // 장치는 `_mutex` 밖에서 닫는다(`initialize` 와 같은 이유 — 장치가 닫다가 남기는 로그가 이 싱크의 `_mutex` 로 되돌아온다).
+        // 장치는 `_mutex` 밖에서 닫는다(`initialize` 와 같은 이유 — 장치가 닫다가 남기는 로그가 이 백엔드의 `_mutex` 로 되돌아온다).
         ILogOutput*  arrDevice[_s_kMaxOutput]{};
         const uint32 deviceCount = snapshotOutputs( arrDevice );
         for ( uint32 index = 0; index < deviceCount; ++index )
@@ -220,12 +220,12 @@ namespace sw
     /**
      * @brief 로그가 쓰일 때 알림을 받을 리스너를 등록합니다(예: ImGui 에디터 콘솔 창).
      */
-    Subscription AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
+    Subscription AsyncLogBackend::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
         return _onLogWritten.add( listener );
     }
 
-    void AsyncLogSink::waitUpToCrash()
+    void AsyncLogBackend::waitUpToCrash()
     {
         // 크래시 경로다. 로거 락을 쥔 채 죽은 스레드가 있으면 기다리지 않고 포기한다.
         ILogOutput* arrDevice[_s_kMaxOutput]{};
@@ -255,13 +255,13 @@ namespace sw
         }
     }
 
-    bool AsyncLogSink::addOutput( unique_ptr<ILogOutput> output )
+    bool AsyncLogBackend::addOutput( unique_ptr<ILogOutput> output )
     {
         if ( output == nullptr )
             return false;
         const bool bStructured = output->needsStructuredProperties();
 
-        // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`dispatchToOutputs`),
+        // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 백엔드로 되돌아와 같은 `_mutex` 를 잡고(`dispatchToOutputs`),
         // 리스너가 있으면 방송(`_onLogWritten`)까지 하므로 락 밖에서 남긴다.
         // 상한을 여기서 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
         // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
@@ -297,7 +297,7 @@ namespace sw
         return true;
     }
 
-    bool AsyncLogSink::enableJSONLinesOutput()
+    bool AsyncLogBackend::enableJSONLinesOutput()
     {
         if ( _bJSONLinesEnabled.exchange( true, std::memory_order_acq_rel ) )
             return true;
@@ -311,21 +311,21 @@ namespace sw
         return true;
     }
 
-    string_view AsyncLogSink::getLogFolderPath()
+    string_view AsyncLogBackend::getLogFolderPath()
     {
         if ( _pFileOutput == nullptr )
             return {};
         return _pFileOutput->getLogFolderPath().str();
     }
 
-    string AsyncLogSink::getLogFilePath()
+    string AsyncLogBackend::getLogFilePath()
     {
         if ( _pFileOutput == nullptr )
             return {};
         return _pFileOutput->getCurrentLogFilePath();
     }
 
-    void AsyncLogSink::workerLoop()
+    void AsyncLogBackend::workerLoop()
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
@@ -369,7 +369,7 @@ namespace sw
         }
     }
 
-    void AsyncLogSink::flushOutputs()
+    void AsyncLogBackend::flushOutputs()
     {
         ILogOutput*  arrDevice[_s_kMaxOutput]{};
         const uint32 deviceCount = snapshotOutputs( arrDevice );
@@ -379,7 +379,7 @@ namespace sw
         }
     }
 
-    void AsyncLogSink::flushQueue()
+    void AsyncLogBackend::flushQueue()
     {
         LogRecord record;
         while ( _pQueue->dequeue( record ) )
@@ -388,7 +388,7 @@ namespace sw
         }
     }
 
-    void AsyncLogSink::dispatchToOutputs( const LogRecord& record )
+    void AsyncLogBackend::dispatchToOutputs( const LogRecord& record )
     {
         // 목록만 잠깐 잠그고 쓰기는 락 밖에서 한다. 장치마다 자기 락이 있고, 느린 파일 I/O 가 콘솔을 막지 않게 하는
         // 것이 이렇게 나눈 목적이다.
@@ -403,9 +403,9 @@ namespace sw
         --t_reentryDepth.deviceWrite;
     }
 
-    uint32 AsyncLogSink::snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] )
+    uint32 AsyncLogBackend::snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] )
     {
-        // `_mutex` 는 잎 락이다 — 이 안에서는 목록과 리스너 사본만 만지고 로그 · 장치 · 리스너를 부르지 않는다. 부르면 그 로그가 이 싱크로
+        // `_mutex` 는 잎 락이다 — 이 안에서는 목록과 리스너 사본만 만지고 로그 · 장치 · 리스너를 부르지 않는다. 부르면 그 로그가 이 백엔드로
         // 되돌아와 같은 `_mutex` 를 잡는다(재진입 불가 → 같은 스레드가 영구 정지). 장치 포인터를 복사해 락 밖에서 부르는 것이 그 규칙의 모양이다.
         uint32            deviceCount{ 0 };
         ScopedLock<mutex> lock{ _mutex };
@@ -417,7 +417,7 @@ namespace sw
         return deviceCount;
     }
 
-    void AsyncLogSink::submitRecord( LogRecord&& record )
+    void AsyncLogBackend::submitRecord( LogRecord&& record )
     {
         // 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다.
         if ( _bInitialized == false || _bIsRunning.load( std::memory_order_relaxed ) == false )
@@ -448,7 +448,7 @@ namespace sw
             flushQueue();
     }
 
-    void AsyncLogSink::wakeWorker()
+    void AsyncLogBackend::wakeWorker()
     {
         // 작업 스레드가 잠들려 하거나 잠들어 있을 때만 깨운다(줄마다 조건 변수의 내부 잠금을 잡지 않는다). 넣기 → 펜스 → 확인이 작업 스레드의
         // 알리기 → 펜스 → 큐 확인과 짝을 이룬다. `_cvMutex` 를 한 번 잡았다 놓아, 작업 스레드가 큐 확인과 잠들기 사이에 있으면 잠든 뒤에 깨우게 한다.
@@ -462,9 +462,9 @@ namespace sw
         }
     }
 
-    void AsyncLogSink::writeEvent( const LogEvent& event )
+    void AsyncLogBackend::writeEvent( const LogEvent& event )
     {
-        using Internal = AsyncLogSinkInternal;
+        using Internal = AsyncLogBackendInternal;
         if ( t_reentryDepth.deviceWrite > 0 )
         {
             // 출력 장치가 `write` 안에서 로그를 남겼다 — 장치의 락과 이 줄이 되돌아갈 `write` 가 맞물려 멈추므로 장치를 거치지 않고 stderr 로 바로 쓴다.
@@ -479,7 +479,7 @@ namespace sw
             std::fputs( "\n", stderr );
             return;
         }
-        // 잠금은 잎 잠금이다(결정 5-3) — 쥔 채 남긴 로그는 그 잠금을 다시 잡는 싱크 · 장치 · 리스너와 맞물려 멈출 수 있다.
+        // 잠금은 잎 잠금이다(결정 5-3) — 쥔 채 남긴 로그는 그 잠금을 다시 잡는 백엔드 · 장치 · 리스너와 맞물려 멈출 수 있다.
         // 형식(-Wthread-safety)은 호출 그래프를 건너는 위반을 못 보므로 검사 구성에서 쥔 잠금 수를 센다. 줄은 그대로 남긴다.
         // 고치는 법: 로그를 잠금 밖으로 옮기거나, 잠금 안의 호출이 남기는 줄이면 가드 앞에 `ScopedDeferredLog` 을 둔다.
 #if defined( SW_DO_CHECKS )

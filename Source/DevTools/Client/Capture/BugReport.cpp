@@ -405,7 +405,7 @@ namespace sw
 
         // 로거는 비동기다 — 비우지 않으면 bugreport 직전 줄이 사본에 없다.
         Logger::flushGlobalForCrash();
-        if ( ILogSink* pSink = Logger::getGlobalSink(); pSink != nullptr )
+        if ( ILogBackend* pSink = Logger::getGlobalBackend(); pSink != nullptr )
             inputs._logFilePath = FileUtil::toDiskPath( pSink->getLogFilePath() );
 
         if ( engine::areEngineSubsystemsBound() == false )

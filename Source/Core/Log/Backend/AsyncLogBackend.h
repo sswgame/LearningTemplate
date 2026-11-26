@@ -1,6 +1,6 @@
 /**
- * @file AsyncLogSink.h
- * @brief 기본 로그 싱크입니다. 포맷 · 리스너 · 비동기 큐를 맡고, 한 줄은 출력 장치(`ILogOutput`)에 넘깁니다.
+ * @file AsyncLogBackend.h
+ * @brief 기본 로그 백엔드입니다. 포맷 · 리스너 · 비동기 큐를 맡고, 한 줄은 출력 장치(`ILogOutput`)에 넘깁니다.
  */
 #pragma once
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
@@ -28,30 +28,30 @@ namespace sw
     class ILogOutput;
 
     // ------------------------------------------------------------------------------
-    // 1) AsyncLogSink — 기본 싱크. 만들면 전역 싱크가 비어 있을 때 자신을 등록한다(`Logger::registerGlobalSink`)
+    // 1) AsyncLogBackend — 기본 백엔드. 만들면 전역 백엔드가 비어 있을 때 자신을 등록한다(`Logger::registerGlobalBackend`)
     // ------------------------------------------------------------------------------
     /**
-     * @class AsyncLogSink
-     * @brief 기본 로그 싱크입니다. 포맷 · 리스너 · 비동기 큐를 맡고, 출력은 `ILogOutput` 에 넘깁니다.
+     * @class AsyncLogBackend
+     * @brief 기본 로그 백엔드입니다. 포맷 · 리스너 · 비동기 큐를 맡고, 출력은 `ILogOutput` 에 넘깁니다.
      * @details 장치마다 자기 락을 가지므로 파일 I/O 가 느려도 콘솔이 멈추지 않습니다. 기본으로 콘솔 · 파일 출력을 하나씩 달고
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
-     *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
+     *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 백엔드는 파일 · 크래시 · 모듈을 알아야 해서 위층(Log/Backend)에 있습니다.
      */
-    class SW_API AsyncLogSink final : public ILogSink
+    class SW_API AsyncLogBackend final : public ILogBackend
     {
     public:
         /** @brief 로그 레코드 · 쓰기 스레드의 할당 태그입니다 — 부른 쪽이 아니라 로거의 몫이다(리스너는 자기 태그를 붙인다). */
         static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
         /**
-         * @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 싱크가 비어 있으면 자신을 등록합니다.
+         * @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 백엔드가 비어 있으면 자신을 등록합니다.
          * @param fixedLogFilePath 파일 장치가 쓸 파일 하나(`-log-file`). 비면 `Saved/Logs` 에 날짜 · 세션 이름으로 쓴다(`FileLogOutput`).
          */
-        explicit AsyncLogSink( AbsolutePath fixedLogFilePath = {} );
-        /** @brief 전역 싱크가 자신이면 등록을 해제합니다. 출력 장치를 닫는 일은 shutdown 이 합니다. */
-        virtual ~AsyncLogSink() override;
+        explicit AsyncLogBackend( AbsolutePath fixedLogFilePath = {} );
+        /** @brief 전역 백엔드가 자신이면 등록을 해제합니다. 출력 장치를 닫는 일은 shutdown 이 합니다. */
+        virtual ~AsyncLogBackend() override;
 
-        AsyncLogSink( const AsyncLogSink& )            = delete;
-        AsyncLogSink& operator=( const AsyncLogSink& ) = delete;
+        AsyncLogBackend( const AsyncLogBackend& )            = delete;
+        AsyncLogBackend& operator=( const AsyncLogBackend& ) = delete;
 
         /** @brief 출력 장치를 열고(로그 폴더 생성 포함) 비동기 I/O 작업 스레드를 시작합니다. */
         void initialize() override;
@@ -76,7 +76,7 @@ namespace sw
         string_view getLogFolderPath() override;
         string      getLogFilePath() override;
         /**
-         * @brief 큐에 남은 줄을 이 스레드에서 모두 쓰고 장치 버퍼를 내보냅니다. 싱크 락을 바로 잡지 못하면 포기합니다(기다리면 크래시가 멈춤이 된다).
+         * @brief 큐에 남은 줄을 이 스레드에서 모두 쓰고 장치 버퍼를 내보냅니다. 백엔드 락을 바로 잡지 못하면 포기합니다(기다리면 크래시가 멈춤이 된다).
          * @details 크래시 리포트 · "로그 + std::abort" 치명 경로가 부릅니다 — 큐에 넣기만 하고 프로세스가 끝나면 크래시 직전의 경고 · 정보
          *          줄과 파일의 stdio 버퍼가 사라집니다.
          */
@@ -106,21 +106,21 @@ namespace sw
 
         /**
          * @brief 달려 있는 출력 장치의 포인터를 @p outArrDevice 에 복사하고 개수를 돌려줍니다. 장치를 부르는 일(`open` · `close` · `write`)은 모두 이 복사본으로 락 밖에서 합니다.
-         * @details `_mutex` 는 잎 락입니다 — 락을 쥔 채 로그 · 장치 · 리스너를 부르지 않습니다. 그 호출이 남기는 로그가 이 싱크로 되돌아와 같은 `_mutex` 를 잡으면
+         * @details `_mutex` 는 잎 락입니다 — 락을 쥔 채 로그 · 장치 · 리스너를 부르지 않습니다. 그 호출이 남기는 로그가 이 백엔드로 되돌아와 같은 `_mutex` 를 잡으면
          *          재진입 불가라 같은 스레드가 영구 정지합니다(예: 로그 폴더를 못 만들어 남긴 오류가 `initialize` 를 멈춤). 장치는 `addOutput` 으로 붙기만 하고
-         *          떼지 않으므로(싱크가 소유) 복사한 포인터는 싱크 수명 동안 유효합니다.
+         *          떼지 않으므로(백엔드가 소유) 복사한 포인터는 백엔드 수명 동안 유효합니다.
          */
         uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
 
     private:
         /**
          * @brief 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)입니다. 방송은 잠금 밖에서 불변 사본을 부르고, 해제는 그 전에 시작한 방송이 끝나기를 기다린다
-         *        (콘솔 패널 파괴 · 모듈 언로드 뒤에 그 코드로 들어가지 않게). 이 싱크의 `_mutex` 와 따로인 잎 잠금이다.
+         *        (콘솔 패널 파괴 · 모듈 언로드 뒤에 그 코드로 들어가지 않게). 이 백엔드의 `_mutex` 와 따로인 잎 잠금이다.
          */
         LockedMulticastDelegate<void( const LogEntry& )> _onLogWritten;
         vector<unique_ptr<ILogOutput>> _listOutput       SW_GUARDED_BY( _mutex );
         FileLogOutput*                                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
-        unique_ptr<ConcurrentQueue<LogRecord, 4096>>     _pQueue;      ///< 힙에 둔다 — 레코드마다 인라인 줄 칸(256 B)이 있어 4096 칸이 1 MB 를 넘는다(싱크를 스택에 두면 넘친다)
+        unique_ptr<ConcurrentQueue<LogRecord, 4096>>     _pQueue;      ///< 힙에 둔다 — 레코드마다 인라인 줄 칸(256 B)이 있어 4096 칸이 1 MB 를 넘는다(백엔드를 스택에 두면 넘친다)
         sw::thread                                       _workerThread;
         std::condition_variable_any                      _cv;
         mutex                                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
