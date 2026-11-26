@@ -1,20 +1,83 @@
 #include "pch.h"
 
-#include "Games/Playground/FeatureDemo/SpawnDirectorDemoComponent.h"
-
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
+#include "Core/Time/TimeSeconds.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+
 namespace sw
 {
+    /**
+     * @class SpawnDirectorDemoComponent
+     * @brief 감독을 프레임마다 돌려 낸 것을 세우고, 파괴된 것을 감독에 알려 동시 상한의 자리를 돌려줍니다.
+     */
+    REFLECT( Category = "FeatureDemo", DisplayName = "Spawn Director Demo", Tooltip = "Spawns a prefab for every entry the budgeted spawn director releases" )
+    class SpawnDirectorDemoComponent : public GameModeComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        SpawnDirectorDemoComponent();
+        virtual ~SpawnDirectorDemoComponent() override;
+
+    protected:
+        void               serializeGameState( StateIO& io ) override;
+        [[nodiscard]] bool startGame() override;
+        void               updateGame( GameSeconds frameTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               onViewsDespawned() override;
+        bool               hasPendingSpawn() const override;
+
+    private:
+        /** @brief 세운 오브젝트 하나와 감독의 스폰 번호입니다. */
+        struct SpawnedView
+        {
+            GameObjectHandle _object{};
+            uint32           _spawnID{ 0 };
+        };
+
+        /** @brief 상태 칸(살아 있는 수 · 예산 · 다음 항목)을 감독에서 옮깁니다. */
+        void refreshState();
+
+    private:
+        PROPERTY( Category = "Data", DisplayName = "Spawn Table", Tooltip = "Budget and entries of the spawn director" )
+        AssetRef<SpawnTable> _spawnTable;
+        PROPERTY( Category = "Data", DisplayName = "Prefab", Tooltip = "Prefab spawned for every entry" )
+        AssetRef<PrefabAsset> _spawnPrefab;
+        PROPERTY( Category = "Data", DisplayName = "Seed", Min = 1 )
+        uint32 _seed;
+
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _spawnedTotal;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _despawnedTotal;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _aliveCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _budget;
+
+        BoundAssetRef<SpawnTable>    _pTable; ///< 감독이 빌려 쓴다
+        SW_CODEC_STATE SpawnDirector _director;
+        SW_TRANSIENT vector<SpawnedView> _listView;
+    };
+
     namespace
     {
         struct SpawnDirectorDemoComponentInternal
@@ -113,3 +176,5 @@ namespace sw
         } ); // 실패는 아카이브에 남는다
     }
 } // namespace sw
+
+#include "SpawnDirectorDemoComponent.cpp.gen.inl"
