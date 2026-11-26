@@ -5,6 +5,9 @@ CLAUDE.md 의 "보조 도구" 는 글로만 있어 세션마다 지켜지지 않
 
 PostToolUse 는 표지를 남긴다: `skill:<이름>`(Skill 도구), `graph`(graphify query · path · explain). 표지 `never` 는 남지 않아
 그것을 요구하는 규칙은 언제나 거절한다(금지 명령 · 손으로 고치지 않는 파일). 상태는 에이전트마다(하위 에이전트는 agent_id, 아니면 session_id) 임시 폴더의 JSON 에 둔다.
+
+경로 규칙은 `stemTables` 로 린트 표를 읽어 파일 줄기도 볼 수 있다(`newFileOnly` 면 아직 없는 파일만): 금지 낱말 목록을 훅에 다시 적지 않고 린트와 한 표를 쓴다.
+표는 이 훅과 같은 저장소의 것이다(규칙 표와 같은 판).
 """
 import json
 import os
@@ -16,6 +19,27 @@ import time
 STATE_DIR = os.path.join(tempfile.gettempdir(), "claude-toolgate")
 RULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ToolPolicyRules.json")
 GRAPH_COMMAND = re.compile(r"\bgraphify\s+(query|path|explain)\b")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")   # Scripts/lint/name_collection.py 의 ANY_WORD 와 같은 쪼개기
+
+
+def split_words(stem: str) -> list[str]:
+    return WORD.findall(stem)
+
+
+def find_stem_hit(path: str, stem_tables: list) -> str | None:
+    """파일 줄기가 린트 표의 금지 낱말에 걸리면 그 낱말 — `lastWord` 는 끝 낱말, `phrase` 는 이어 나오는 낱말들. 표 · 칸이 없으면 멈춘다(폴백 없음)."""
+    words = split_words(os.path.basename(path).split(".")[0])
+    for entry in stem_tables:
+        with open(os.path.join(PROJECT_ROOT, entry["table"]), encoding="utf-8") as stream:
+            keys = json.load(stream)[entry["key"]]
+        for key in keys:
+            key_words = split_words(key)
+            if entry["match"] == "lastWord" and words[-1:] == key_words:
+                return key
+            if entry["match"] == "phrase" and any(words[index:index + len(key_words)] == key_words for index in range(len(words))):
+                return key
+    return None
 
 
 class ToolPolicy:
@@ -61,7 +85,13 @@ class ToolPolicy:
         if self._tool_name in ("Bash", "PowerShell", "Monitor"):
             command = self.command()
             return bool(rule.get("shell")) and re.search(rule["shell"], command) is not None and not GRAPH_COMMAND.search(command)
-        return bool(rule.get("path")) and re.search(rule["path"], self.target_path()) is not None
+        if not rule.get("path") or re.search(rule["path"], self.target_path()) is None:
+            return False
+        if rule.get("exceptPath") and re.search(rule["exceptPath"], self.target_path()) is not None:
+            return False
+        if rule.get("newFileOnly") and os.path.exists(str(self._tool_input.get("file_path", ""))):
+            return False
+        return "stemTables" not in rule or find_stem_hit(self.target_path(), rule["stemTables"]) is not None
 
     def on_post_tool_use(self) -> None:
         marker = self.marker_for()

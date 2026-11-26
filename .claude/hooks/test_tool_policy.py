@@ -115,7 +115,9 @@ class ToolPolicyTest(unittest.TestCase):
             "no-hand-edit-generated": [("Edit", {"file_path": "D:/P/Content/game/playground/materials/matgraph/layered_stone.gen.material"}),
                                        ("Write", {"file_path": "D:/P/Content/shaders/matgraph/x_1a2b.hlsl"}),
                                        ("Edit", {"file_path": r"D:\P\Config\Dev\AssetReferenceFields.generated.json"})],
-            "no-hand-raise-magic-baseline": [("Edit", {"file_path": "D:/P/Config/Rules/Lint/MagicLiteralsBaseline.json"})],
+            "no-hand-edit-lint-baseline": [("Edit", {"file_path": "D:/P/Config/Rules/Lint/MagicLiteralsBaseline.json"}),
+                                           ("Write", {"file_path": "D:/P/Config/Rules/Lint/NamingWordsBaseline.json"})],
+            "no-banned-header-name": [("Write", {"file_path": "D:/P/Source/Engine/Audio/AudioTypes.h"}), ("Write", {"file_path": "D:/P/Source/Engine/X/LiveReloadWatch.h"})],
             "no-per-folder-constants-header": [("Write", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"})],
         }
         self.post("Skill", {"skill": "ponytail"})
@@ -123,11 +125,16 @@ class ToolPolicyTest(unittest.TestCase):
         for name, calls in refused.items():
             for tool, tool_input in calls:
                 self.assertIn(name, self.pre(tool, tool_input)["hookSpecificOutput"]["permissionDecisionReason"], (tool, tool_input))
+        self.post("Skill", {"skill": "security-and-hardening"})   # 온라인 키트 경로의 다른 규칙을 채운다
         for tool, tool_input in (("Bash", {"command": "git log --grep stash"}), ("Bash", {"command": "git mv docs/a.md docs/b.md"}),
                                  ("Edit", {"file_path": "D:/P/Content/game/playground/materials/matgraph/layered_stone.matgraph.xml"}),
                                  ("Edit", {"file_path": "D:/P/Config/Dev/AssetReferenceFields.json"}),
                                  ("Write", {"file_path": "D:/P/Source/Core/Foundation/Constants.h"}),
-                                 ("Edit", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"})):
+                                 ("Edit", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"}),
+                                 ("Write", {"file_path": "D:/P/Source/Engine/Audio/TypeRegistry.h"}), ("Write", {"file_path": "D:/P/Source/Engine/X/LiveOpsReload.h"}),
+                                 ("Write", {"file_path": "D:/P/Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"}),
+                                 ("Write", {"file_path": os.path.join(tool_policy.PROJECT_ROOT, "Source", "Core", "Foundation", "Types.h")}),
+                                 ("Edit", {"file_path": "D:/P/Source/Engine/Audio/AudioTypes.h"})):
             self.assertIsNone(self.pre(tool, tool_input), (tool, tool_input))
 
 
