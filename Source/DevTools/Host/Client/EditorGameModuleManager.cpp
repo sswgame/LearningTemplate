@@ -174,7 +174,7 @@ namespace sw
         if ( _editorAPI.applyUICommands != nullptr )
             _editorAPI.applyUICommands( _editor );
 
-        // 명령을 적용한 **뒤에** 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endHostModuleFrame 에서 소비된다.
+        // 명령을 적용한 뒤에 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endHostModuleFrame 에서 소비된다.
         // 이 질의를 적용 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
