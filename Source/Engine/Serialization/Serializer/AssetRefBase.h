@@ -77,7 +77,7 @@ namespace sw
         }
 
         /**
-         * @brief @p path 가 종류 @p type 의 에셋이면 true 입니다 — 내장 이름(철자 그대로), 실행 중 자원의 경로 규칙(렌더 텍스처), 접미사(대소문자 무시), 접미사가 없는 카탈로그는 경로 규칙(`AssetPathRule`) 순으로 본다.
+         * @brief @p path 가 종류 @p type 의 에셋이면 true 입니다 — 내장 이름(철자 그대로), 실행 중 자원의 경로 규칙(렌더 텍스처), 합 종류의 구성 종류, 접미사(대소문자 무시), 접미사가 없는 카탈로그는 경로 규칙(`AssetPathRule`) 순으로 본다.
          * @details 모두 없는 종류는 경로로 가를 수 없어 어떤 경로도 받지 않는다(`AssetRef<T>` 는 그런 대상을 컴파일에서 막는다 — `AssetTypeDef::canTellPath`).
          */
         [[nodiscard]] static bool isPathOfTarget( string_view path, const AssetTypeDef& type );

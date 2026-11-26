@@ -14,6 +14,11 @@ namespace sw
     {
         if ( type.isBuiltinName( path ) || type._runtimePath.matches( path ) )
             return true;
+        for ( uint32 index = 0; index < type._memberTypeCount; ++index )
+        {
+            if ( isPathOfTarget( path, *type._ppMemberType[index] ) ) // 합 종류는 구성 종류의 경로를 받는다
+                return true;
+        }
         for ( uint32 index = 0; index < type._suffixCount; ++index )
         {
             if ( StringUtil::endsWith( path, type._pSuffix[index]._text, true ) )
