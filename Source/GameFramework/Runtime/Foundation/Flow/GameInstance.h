@@ -52,6 +52,9 @@ namespace sw
     class SW_GF_API GameInstance : public IGame
     {
     public:
+        /** @brief 세이브 찍기(`captureSnapshot( SaveGame )`)의 프로파일러 구간 이름입니다. 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs`(GameFrameworkDev)가 같은 이름으로 읽는다. */
+        static constexpr const utf8* kSaveCaptureScopeName = "GT.Save.capture";
+
         /** @brief 윈도우 · RHI · 팩 설정을 비운 채로 둡니다. 세이브 슬롯은 사용자 데이터 폴더의 로컬 저장소입니다. */
         GameInstance();
         /** @brief 파생 인스턴스가 정리할 수 있게 합니다. */

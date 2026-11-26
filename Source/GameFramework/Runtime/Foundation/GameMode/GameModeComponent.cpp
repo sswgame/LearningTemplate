@@ -6,7 +6,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -33,33 +32,6 @@ namespace sw
         {
             /** @brief 세운 핸들 목록을 덜어 내기 시작하는 크기입니다(그 뒤로는 덜어 낸 크기의 두 배마다). */
             static constexpr uint32 kMinCompactThreshold = 64;
-            /** @brief 최고 걸음 시간으로 읽는 백분위입니다. */
-            static constexpr uint32 kPeakPercent = 100;
-
-            /**
-             * @brief 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 입니다 — 프로파일러 구간 `kStepScopeName` 의 마지막 프레임 시간(씬의 디렉터 걸음 합) · 측정 창의 최고(밀리초).
-             * @details 최고는 분포의 p100 이라 칸 아래 끝이다(약 12% 안, `FrameProfiler::getPercentileNanos`). 열린 디렉터가 없거나 계측이 꺼져 있으면 값이 없다(`Scene.ComponentTickMs` 와 같은 길).
-             */
-            template <bool bPeak>
-            [[nodiscard]] static bool readStepMilliseconds( const GameObjectManager* pManager, float64& outValue )
-            {
-                if ( pManager == nullptr )
-                    return false;
-                FrameProfiler* const pProfiler = game::findSubsystem<FrameProfiler>();
-                if ( pProfiler == nullptr || pProfiler->isEnabled() == false )
-                    return false;
-                bool bStarted = false;
-                for ( const GameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<GameModeComponent>() )
-                {
-                    bStarted = bStarted || pGameMode->isStarted();
-                }
-                if ( bStarted == false )
-                    return false;
-                const uint32 slot  = pProfiler->registerScope( GameModeComponent::kStepScopeName );
-                const uint64 nanos = bPeak ? pProfiler->getPercentileNanos( slot, kPeakPercent ) : pProfiler->getLastFrameNanos( slot );
-                outValue           = static_cast<float64>( nanos ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond );
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -509,9 +481,4 @@ namespace sw
         GameObject* pOwner = getOwner();
         return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
     }
-
-    SW_AUTOMATION_WATCH( gameModeStepMs, "GameMode.StepMs", "Rule step (updateGame) time of the last profiled frame in milliseconds, summed over the active scene's game modes (no value while the profiler is off)",
-                         &GameModeComponentInternal::readStepMilliseconds<false> );
-    SW_AUTOMATION_WATCH( gameModeStepPeakMs, "GameMode.StepPeakMs", "Longest profiled frame of rule steps (updateGame) in milliseconds since the profiler window opened (bucket lower bound; profiler on)",
-                         &GameModeComponentInternal::readStepMilliseconds<true> );
 } // namespace sw

@@ -13,8 +13,6 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Facial/WrinkleMap.h"
 #include "Engine/Animation/Rig/RigJiggleNode.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/Hit/CharacterHit.h"
@@ -48,38 +46,8 @@ namespace sw
             static constexpr uint16    kSmearResolution = 64;    ///< 번짐 격자(굽기 텍스처보다 성기다 — 번짐은 부드럽다)
             static constexpr float32   kSmearDilution   = 0.5f;  ///< 흐름 한 번이 세기 대비 묽히는 비율
             static constexpr float32   kWipeRadius      = 0.08f; ///< 닦기가 끄는 UV 반지름
-
-            static const CharacterBodyDynamicsComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                return query.findTargetComponent<CharacterBodyDynamicsComponent>( "CharacterBodyDynamicsComponent", outValue );
-            }
-
-            template <float32 ( CharacterBodyDynamicsComponent::*Getter )() const>
-            [[nodiscard]] static bool readValue( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CharacterBodyDynamicsComponent* pFound = findTarget( query, outValue );
-                if ( pFound == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( ( pFound->*Getter )() ) );
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( bodyFootLift, "Body.FootLift", "Heel foot lift (m) the target's body dynamics hands to foot IK",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::getFootLift>, true, false );
-    SW_AUTOMATION_QUERY_WATCH( bodyPupilSize, "Body.PupilSize", "Pupil size (0..1) after light adaptation and emotion",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::getPupilSize>, true, false );
-    SW_AUTOMATION_QUERY_WATCH( bodyEyeLuminance, "Body.EyeLuminance", "Light measured at the eye (sun when unoccluded, ambient, point lights)",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::getEyeLuminance>, true, false );
-    SW_AUTOMATION_QUERY_WATCH( bodyJiggle, "Body.JiggleDisplacement", "Largest distance (m) a jiggle tip is away from its animated pose",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeJiggleDisplacement>, true, false );
-    SW_AUTOMATION_QUERY_WATCH( bodyFluidWetness, "Body.FluidWetness", "Largest tear / saliva mask value on the target",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeFluidWetness>, true, false );
-    SW_AUTOMATION_QUERY_WATCH( bodySmearDilution, "Body.SmearDilution", "Largest makeup smear dilution (0..1) on the target",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeMaxSmearDilution>, true, false );
-    SW_AUTOMATION_QUERY_WATCH( bodyFluidEffects, "Body.FluidEffects", "Tear drip / saliva strand effects emitting on the target",
-                               &CharacterBodyDynamicsInternal::readValue<&CharacterBodyDynamicsComponent::computeActiveFluidEffects>, true, false );
 } // namespace sw
 
 namespace sw

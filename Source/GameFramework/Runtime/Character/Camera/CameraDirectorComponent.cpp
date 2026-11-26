@@ -8,8 +8,6 @@
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -91,85 +89,9 @@ namespace sw
             }
         };
 
-        /**
-         * @brief 카메라 디렉터 감시 값(`CameraDirector.*`) — 대상은 디렉터가 붙은 오브젝트(카메라)다. 프리셋 전환 시나리오가 블렌드 중간 · 끝의 포즈를 값으로 본다.
-         * @details 포즈는 디렉터가 낸 것(블렌드 · 감쇠 · 흔들림 뒤, 시퀀서 값 트랙 · 포토 모드 덮기 전)이다.
-         */
-        struct CameraDirectorWatchInternal
-        {
-            static const CameraDirectorComponent* findDirector( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                return query.findTargetComponent<CameraDirectorComponent>( "camera director", outValue );
-            }
-
-            [[nodiscard]] static bool readActivePreset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue.setText( pDirector->getActivePresetID().empty() ? "none" : pDirector->getActivePresetID().c_str() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readSelectedPreset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue.setText( pDirector->getSelectedPresetID().empty() ? "none" : pDirector->getSelectedPresetID().c_str() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readBlendWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pDirector->getBlendWeight() ) );
-                return true;
-            }
-
-            [[nodiscard]] static bool readFieldOfView( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
-                if ( pDirector == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( MathUtil::toDegree( pDirector->getPose()._fieldOfViewY ) ) );
-                return true;
-            }
-
-            /** @brief 포즈 자리에서 대상 오브젝트 자리까지의 거리(m)입니다. 1인칭은 0 에 가깝고 3인칭은 암 길이다. 대상이 없으면 까닭을 적고 false 입니다. */
-            [[nodiscard]] static bool readTargetDistance( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CameraDirectorComponent* pDirector = findDirector( query, outValue );
-                if ( pDirector == nullptr )
-                    return false;
-                const GameObject*     pTarget = query._pManager->resolveGameObject( pDirector->getTarget() );
-                const SceneComponent* pScene  = pTarget != nullptr ? pTarget->getComponent<SceneComponent>() : nullptr;
-                if ( pScene == nullptr )
-                {
-                    outValue.setText( "the camera director has no target with a scene component" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( ( pDirector->getPose()._position - pScene->getWorldMatrix().getTranslation() ).getLength() ) );
-                return true;
-            }
-        };
-
         /** @brief 켠 프리셋과 블렌드 스택을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
         const StatefulComponentRegistrar<CameraDirectorComponent> s_cameraDirectorComponentStateRegistration{ "CameraDirectorComponent" };
     } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( cameraDirectorActivePreset, "CameraDirector.ActivePreset", "Preset the target's camera director shows (selected preset with contexts applied); none without one",
-                               &CameraDirectorWatchInternal::readActivePreset, true, false );
-    SW_AUTOMATION_QUERY_WATCH( cameraDirectorSelectedPreset, "CameraDirector.SelectedPreset", "Preset the player or code chose on the target's camera director (before contexts); none without one",
-                               &CameraDirectorWatchInternal::readSelectedPreset, true, false );
-    SW_AUTOMATION_QUERY_WATCH( cameraDirectorBlendWeight, "CameraDirector.BlendWeight", "Blend weight of the target's camera director toward its active preset (1 when not blending)",
-                               &CameraDirectorWatchInternal::readBlendWeight, true, false );
-    SW_AUTOMATION_QUERY_WATCH( cameraDirectorFieldOfView, "CameraDirector.FieldOfView", "Vertical field of view of the target's camera director pose in degrees (blended)",
-                               &CameraDirectorWatchInternal::readFieldOfView, true, false );
-    SW_AUTOMATION_QUERY_WATCH( cameraDirectorTargetDistance, "CameraDirector.TargetDistance", "Distance in m from the target's camera director pose to the object it follows (0 in first person, the arm in third person)",
-                               &CameraDirectorWatchInternal::readTargetDistance, true, false );
 } // namespace sw
 
 namespace sw
