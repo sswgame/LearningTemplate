@@ -9,9 +9,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/DevToolsClientPart.h"
 #include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/Host/EditorModuleCommandlets.h"
-#include "DevTools/Host/HostClientDevTasks.h"
 #include "DevTools/Host/HostDevTools.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
@@ -122,7 +122,11 @@ namespace sw
                 _devTools.detach();
             }
 
-            unique_ptr<GameModuleManager> makeEditorModuleManager() override { return HostClientDevTasks::makeEditorModuleManager( *_pEngine ); }
+            unique_ptr<GameModuleManager> makeEditorModuleManager() override
+            {
+                IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find();
+                return pClientPart != nullptr ? pClientPart->makeEditorModuleManager( *_pEngine ) : nullptr;
+            }
 
             bool startAutomation( const CommandLineManager& commandLine ) override
             {
@@ -140,7 +144,9 @@ namespace sw
 
             HostTaskResult runAfterHostSubsystems( const CommandLineManager& commandLine ) override
             {
-                return HostClientDevTasks::runPortraitBake( *_pEngine, commandLine ); // 지금은 초상화 굽기 하나다
+                // 지금은 초상화 굽기 하나다. 렌더러가 없는 전용 서버에는 클라이언트 부분이 없다.
+                IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find();
+                return pClientPart != nullptr ? pClientPart->runPortraitBake( *_pEngine, commandLine ) : HostTaskResult::NotRequested;
             }
 
             void markStartupPhase( const utf8* pPhaseName ) override { _startupPhases.mark( pPhaseName ); }

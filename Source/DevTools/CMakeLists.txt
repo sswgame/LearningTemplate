@@ -23,11 +23,6 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 elseif(SW_TARGET_TYPE STREQUAL "Client")
 	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
 endif()
-# 개발 계층의 클라이언트 일(`Host/HostClientDevTasks.h`)은 정의가 구성마다 하나다. 클라이언트 · 서버를 함께 짓는 개발 구성은 클라이언트 정의를 쓰고,
-# 렌더러 · 에디터가 없는 전용 서버만 `Host/Server/` 의 정의를 쓴다.
-if(NOT SW_TARGET_TYPE STREQUAL "Server")
-	sw_remove_excluded_sources(DEVTOOLS_SOURCES "/Source/DevTools/Host/Server/")
-endif()
 
 # 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 정적 라이브러리로 한 실행 파일에 들고, 핫 리로드(`ModuleReload/` — 모듈 DLL 을 갈아 끼운다)를 짓지 않는다.
 # 그 창구(`IHostDevLayer` 의 리로드 함수)도 그 구성에서 형식에 없다(`SW_WITH_DYNAMIC_MODULES`). 자동화 실행기 · 콘솔 · 설정 리로드는 남는다.
