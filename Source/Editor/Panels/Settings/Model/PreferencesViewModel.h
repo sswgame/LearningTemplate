@@ -21,7 +21,7 @@ namespace sw
 namespace sw::editor
 {
     class EditorStateTextHistory;
-    struct EditorSettingsRegistration;
+    struct EditorPreferencesRegistration;
 
     /**
      * @class PreferencesViewModel
@@ -40,11 +40,11 @@ namespace sw::editor
          * @details 고른 섹션이 목록에 없으면(걸러졌거나 모듈과 함께 내려갔다) 첫 섹션을 고른다 — 목록이 비면 고른 것이 없다. 지은 목록이 그리는 동안 바뀌지 않게
          *          고름은 여기서만 고친다. 보인 섹션 수(감시 값)도 함께 남긴다.
          */
-        const vector<const EditorSettingsRegistration*>& refreshVisibleSections( const utf8* pFilterText );
+        const vector<const EditorPreferencesRegistration*>& refreshVisibleSections( const utf8* pFilterText );
         /** @brief 고른 섹션입니다. 없으면 nullptr 입니다. */
-        const EditorSettingsRegistration* getSelected() const { return _pSelected; }
+        const EditorPreferencesRegistration* getSelected() const { return _pSelected; }
         /** @brief 목록에서 @p registration 을 고릅니다. */
-        void selectSection( const EditorSettingsRegistration& registration );
+        void selectSection( const EditorPreferencesRegistration& registration );
         /** @brief 지난 `refreshVisibleSections` 가 보인 섹션 수입니다. */
         uint32 getVisibleSectionCount() const { return static_cast<uint32>( _listVisibleSection.size() ); }
 
@@ -81,14 +81,14 @@ namespace sw::editor
         void restoreSection( const string& sectionID, string_view text );
 
     private:
-        unique_ptr<EditorStateTextHistory>        _pHistory;               ///< 편집 되돌리기
-        vector<const EditorSettingsRegistration*> _listVisibleSection;     ///< 검색 글에 맞는 섹션(등록 순서)
-        string                                    _sectionFilterText;      ///< 목록을 지은 때의 검색 글
-        uint32                                    _sectionListGeneration;  ///< 목록을 지은 때의 섹션 등록 세대
-        uint32                                    _sectionTypeGeneration;  ///< 목록을 지은 때의 타입 레지스트리 세대
-        uint8                                     _bSectionListBuilt : 1;  ///< 한 번이라도 지었는지(세대가 0 부터라 첫 프레임을 세대로 가를 수 없다)
-        bool                                      _bModifiedOnly;          ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        const EditorSettingsRegistration*         _pSelected;              ///< 늘 `_listVisibleSection` 안의 항목이거나 nullptr 다(`refreshVisibleSections` 가 맞춘다)
-        int64                                     _pendingSaveNanoseconds; ///< 저장을 기다리는 첫 편집 시각(0 이면 기다리지 않는다)
+        unique_ptr<EditorStateTextHistory>           _pHistory;               ///< 편집 되돌리기
+        vector<const EditorPreferencesRegistration*> _listVisibleSection;     ///< 검색 글에 맞는 섹션(등록 순서)
+        string                                       _sectionFilterText;      ///< 목록을 지은 때의 검색 글
+        uint32                                       _sectionListGeneration;  ///< 목록을 지은 때의 섹션 등록 세대
+        uint32                                       _sectionTypeGeneration;  ///< 목록을 지은 때의 타입 레지스트리 세대
+        uint8                                        _bSectionListBuilt : 1;  ///< 한 번이라도 지었는지(세대가 0 부터라 첫 프레임을 세대로 가를 수 없다)
+        bool                                         _bModifiedOnly;          ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        const EditorPreferencesRegistration*         _pSelected;              ///< 늘 `_listVisibleSection` 안의 항목이거나 nullptr 다(`refreshVisibleSections` 가 맞춘다)
+        int64                                        _pendingSaveNanoseconds; ///< 저장을 기다리는 첫 편집 시각(0 이면 기다리지 않는다)
     };
 } // namespace sw::editor

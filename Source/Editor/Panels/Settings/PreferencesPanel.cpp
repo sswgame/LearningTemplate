@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -41,7 +41,7 @@ namespace sw::editor
         ImGui::BeginChild( "##PreferenceSections", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
         // 섹션 경로(`Editor/General`)의 앞 묶음은 머리글로 한 번만 쓰고 줄에는 끝 이름만 둔다 — 줄마다 "Editor/" 가 되풀이됐다(언리얼 Editor Preferences 의 묶음 목록).
         string_view previousGroup;
-        for ( const EditorSettingsRegistration* pRegistration : _model.refreshVisibleSections( _grid.getFilterText() ) )
+        for ( const EditorPreferencesRegistration* pRegistration : _model.refreshVisibleSections( _grid.getFilterText() ) )
         {
             const string_view path{ pRegistration->_pLabel };
             const size_t      slash = path.rfind( '/' );
@@ -56,7 +56,7 @@ namespace sw::editor
             ImGui::PopID();
         }
         ImGui::EndChild();
-        const EditorSettingsRegistration* pSelected = _model.getSelected();
+        const EditorPreferencesRegistration* pSelected = _model.getSelected();
 
         // 오른쪽: 고른 섹션의 그리드. "Modified only" 면 기본값과 같은 프로퍼티를 이미 그린 것으로 넘겨 숨긴다.
         ImGui::SameLine();

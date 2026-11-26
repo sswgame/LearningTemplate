@@ -14,12 +14,12 @@
 #include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/Viewport/EditorViewportOverlayBars.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 #include "Editor/Viewport/Model/EditorViewportOverlaysViewModel.h"
 #include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
-#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
@@ -261,7 +261,7 @@ namespace sw::editor
             const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorWatchVisualizer.get() );
             if ( pPanel == nullptr || pRegistration == nullptr )
                 return false;
-            outValue = pPanel->getViewportClient().getToolbarSettings()._visualizerToggles.isOn( *pRegistration ) ? 1.0 : 0.0;
+            outValue = pPanel->getViewportClient().getOverlayBars()._visualizerToggles.isOn( *pRegistration ) ? 1.0 : 0.0;
             return true;
         }
 
@@ -292,8 +292,8 @@ namespace sw::editor
             const EditorViewportClient* pClient = findSceneViewClient();
             if ( pClient == nullptr )
                 return false;
-            const ViewportToolbarSettings& settings = pClient->getToolbarSettings();
-            outValue                                = settings._bScaleSnap ? static_cast<float64>( settings._scaleSnapValue ) : 0.0;
+            const EditorViewportOverlayBars& settings = pClient->getOverlayBars();
+            outValue                                  = settings._bScaleSnap ? static_cast<float64>( settings._scaleSnapValue ) : 0.0;
             return true;
         }
 
@@ -313,7 +313,7 @@ namespace sw::editor
             const EditorViewportClient* pClient = findSceneViewClient();
             if ( pClient == nullptr )
                 return false;
-            outValue = pClient->getToolbarSettings()._bShowHUD ? static_cast<float64>( pClient->getHUDView().getDrawnSectionCount() ) : 0.0;
+            outValue = pClient->getOverlayBars()._bShowHUD ? static_cast<float64>( pClient->getHUDView().getDrawnSectionCount() ) : 0.0;
             return true;
         }
 

@@ -3,7 +3,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 
 #include "Engine/Config/EngineConfig.h"
 

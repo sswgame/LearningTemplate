@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 #include "Editor/Panels/Inspector/IComponentInspector.h"
 
 #include "Engine/Reflection/TypeInfo.h"
@@ -59,7 +59,7 @@ namespace sw::editor
 
         vector<IComponentInspector*> listInspector;
         vector<const TypeInfo*>      listType;
-        InspectorPropertyLayout::collectTypeChain( type, listType );
+        PropertyGridLayout::collectTypeChain( type, listType );
         for ( const TypeInfo* pType : listType )
         {
             IComponentInspector* pInspector = find( pType->_name.c_str() );

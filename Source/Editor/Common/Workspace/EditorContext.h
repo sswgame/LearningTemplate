@@ -36,7 +36,7 @@ namespace sw::editor
 
         /**
          * @brief 에디터 서브시스템들을 만들고 초기화합니다.
-         * @param install 범위에 하위 객체를 넣는 조립점(`EditorSubsystemSet::install`)입니다. 어느 하위 객체가 있는지는 컨텍스트가 아니라 셸 층이 정한다.
+         * @param install 범위에 하위 객체를 넣는 조립점(`EditorBuiltinSubsystems::install`)입니다. 어느 하위 객체가 있는지는 컨텍스트가 아니라 셸 층이 정한다.
          * @param toolDefaults 에디터 도구 시드 — 셸(ImGuiEditor)이 소유하고 이 컨텍스트보다 오래 산다. 서브시스템을 세우기 전에 범위에 빌려 건다(`getEditorToolDefaults`).
          * @param iconGlyphs · componentIcons 아이콘 표 둘 — 셸이 소유하고 같은 길로 빌려 건다(`EditorIconGlyphTable::findPublishedGlyph` · `getComponentIconTable`).
          * @param defaultAssets 에디터 기본 에셋 표 — 셸이 소유하고 같은 길로 빌려 건다(`editor::getSubsystem<const EditorDefaultAssets>()`).

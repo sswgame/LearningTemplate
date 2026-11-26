@@ -8,13 +8,13 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
-#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
+#include "Editor/Common/Commands/Asset/EditorAssetClassifier.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/EditorPanelText.h"
+#include "Editor/Common/GUI/Panel/EditorPanelTitles.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorSearchItem.h"
 #include "Editor/Common/Input/QuickLauncherPopup.h"
@@ -291,7 +291,7 @@ namespace sw::editor
                         return EditorSelfTestStep::WaitStable; // 도킹 · 첫 그리기 · 패널이 부른 에셋까지 — 프레임 수를 어림하지 않는다
                     }
                     // 앞으로 꺼낸 뒤 정지한 화면에 그 창이 그려졌다(지난 프레임에 살아 있고 그린 정점이 있다) — 탭 뒤에 숨거나 바인더가 틀려 다른 ImGui 컨텍스트로 가면 없다.
-                    const ImGuiWindow*                       pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( item._title.c_str() ).c_str() );
+                    const ImGuiWindow*                       pWindow = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( item._title.c_str() ).c_str() );
                     const bool                               bDrew   = pWindow != nullptr && pWindow->LastFrameActive >= ImGui::GetFrameCount() - 1 && pWindow->DrawList->VtxBuffer.Size > 0;
                     StringBuilder<constant::buffer::kMax256> whatBuilder;
                     whatBuilder.appendFormat( "panel did not draw when brought to the front: %#", item._id );
@@ -325,7 +325,7 @@ namespace sw::editor
                     const bool bSkipPanel = entry._pInstance == nullptr || entry._pInstance->isOpen() == false || entry._pInstance->getDefaultDockSlot() == EditorDockSlot::Floating;
                     if ( bSkipPanel )
                         continue;
-                    const ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( entry._title.c_str() ).c_str() );
+                    const ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( entry._title.c_str() ).c_str() );
                     string             what{ "panel is not docked by the default layout: " };
                     what += entry._title;
                     (void)context.expect( pWindow != nullptr && pWindow->DockId != 0, what.c_str() );
@@ -466,7 +466,7 @@ namespace sw::editor
             static void expectTransformBarStaysInSceneView( EditorSelfTestContext& context )
             {
                 constexpr float32  kPixelTolerance       = 1.0f;
-                const ImGuiWindow* pSceneView            = ImGui::FindWindowByName( EditorPanelText::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow* pSceneView            = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() );
                 const ImGuiWindow* pBar                  = ImGui::FindWindowByName( "##EditorTransformBar" );
                 const bool         bTransformBarNotDrawn = pSceneView == nullptr || pBar == nullptr || pBar->Active == false;
                 if ( bTransformBarNotDrawn )
@@ -519,7 +519,7 @@ namespace sw::editor
                         const expected<string> after = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
                         (void)context.expect( after.has_value() && *after == probe._xmlBefore, "drawing the inspector changed the object" );
                     }
-                    const ImGuiWindow* pInspector = ImGui::FindWindowByName( EditorPanelText::makeWindowID( InspectorPanel::kPanelTitle ).c_str() );
+                    const ImGuiWindow* pInspector = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( InspectorPanel::kPanelTitle ).c_str() );
                     (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );
                     destroyProbeObject( probe._objectID );
                     return EditorSelfTestStep::Done;

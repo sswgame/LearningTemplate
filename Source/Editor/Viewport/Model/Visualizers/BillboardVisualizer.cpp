@@ -9,7 +9,7 @@
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorCanvasProjection.h"
+#include "Editor/Viewport/Model/EditorViewportProjection.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Environment/Wind/WindComponent.h"
@@ -59,8 +59,8 @@ namespace sw::editor
                 float2                       screen{};
                 const bool                   bBillboardNotProjectable =
                     row._bBillboard == false || findWorldPosition( *pObject, *pComponent, position ) == false ||
-                    EditorCanvasProjection::projectPoint( *args._pViewProj, position, args._canvasPos, args._canvasSize, screen ) == false;
-                if ( bBillboardNotProjectable || EditorCanvasProjection::isInsideCanvas( screen, args._canvasPos, args._canvasSize ) == false )
+                    EditorViewportProjection::projectPoint( *args._pViewProj, position, args._canvasPos, args._canvasSize, screen ) == false;
+                if ( bBillboardNotProjectable || EditorViewportProjection::isInsideCanvas( screen, args._canvasPos, args._canvasSize ) == false )
                     return;
                 EditorVisualizerBillboard badge{};
                 badge._objectID    = objectID;

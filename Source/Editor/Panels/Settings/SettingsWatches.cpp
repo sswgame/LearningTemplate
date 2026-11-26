@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 #include "Editor/Panels/Settings/Model/ShortcutsViewModel.h"

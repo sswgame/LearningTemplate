@@ -2,7 +2,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Panels/Settings/Model/PreferencesViewModel.h"
 
@@ -22,29 +22,29 @@ namespace
     {
         static inline int32 s_changedCount = 0;
 
-        ModuleOverride             _instance;
-        ModuleOverride             _default;
-        EditorSettingsRegistration _section;
-        EditorSettingsRegistration _page;
-        PreferencesViewModel       _model;
+        ModuleOverride                _instance;
+        ModuleOverride                _default;
+        EditorPreferencesRegistration _section;
+        EditorPreferencesRegistration _page;
+        PreferencesViewModel          _model;
 
         PreferencesViewModelTest()
             : _instance{
         }
             , _default{}
             , _section{ { "zztest.section", 1000000 }, "ZzTest/Section", &ModuleOverride::StaticType, &_instance, &_default, &PreferencesViewModelTest::onChanged, nullptr, SW_TRUE },
-            _page{ { "zztest.page", 1000001 }, "ZzTest/Page", &EditorSettingsPageNone::getType, nullptr, nullptr, nullptr, &PreferencesViewModelTest::drawPage, SW_TRUE },
+            _page{ { "zztest.page", 1000001 }, "ZzTest/Page", &EditorPreferencesPageNone::getType, nullptr, nullptr, nullptr, &PreferencesViewModelTest::drawPage, SW_TRUE },
             _model{}
         {
             s_changedCount                        = 0;
-            EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorSettingsRegistration>::getList();
+            EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorPreferencesRegistration>::getList();
             SW_EXPECT_TRUE( EditorExtensionRegistration::addTo( list, _section ) );
             SW_EXPECT_TRUE( EditorExtensionRegistration::addTo( list, _page ) );
         }
 
         ~PreferencesViewModelTest()
         {
-            EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorSettingsRegistration>::getList();
+            EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorPreferencesRegistration>::getList();
             EditorExtensionRegistration::removeFrom( list, _page );
             EditorExtensionRegistration::removeFrom( list, _section );
         }
@@ -52,9 +52,9 @@ namespace
         static void onChanged() { ++s_changedCount; }
         static void drawPage() {}
 
-        static bool contains( const vector<const EditorSettingsRegistration*>& listSection, const EditorSettingsRegistration& section )
+        static bool contains( const vector<const EditorPreferencesRegistration*>& listSection, const EditorPreferencesRegistration& section )
         {
-            for ( const EditorSettingsRegistration* pSection : listSection )
+            for ( const EditorPreferencesRegistration* pSection : listSection )
             {
                 if ( pSection == &section )
                     return true;
@@ -66,9 +66,9 @@ namespace
 
 SW_TEST_CASE_F( PreferencesViewModelTest, EmptyFilterShowsEverySectionAndSelectsOne )
 {
-    const vector<const EditorSettingsRegistration*>& listVisible = _model.refreshVisibleSections( "" );
+    const vector<const EditorPreferencesRegistration*>& listVisible = _model.refreshVisibleSections( "" );
 
-    SW_EXPECT_EQUAL( EditorExtensionRegistry<EditorSettingsRegistration>::getCount(), _model.getVisibleSectionCount() );
+    SW_EXPECT_EQUAL( EditorExtensionRegistry<EditorPreferencesRegistration>::getCount(), _model.getVisibleSectionCount() );
     SW_EXPECT_TRUE( contains( listVisible, _section ) );
     SW_EXPECT_TRUE( contains( listVisible, _page ) );
     SW_EXPECT_TRUE( _model.getSelected() == listVisible.front() );
@@ -76,7 +76,7 @@ SW_TEST_CASE_F( PreferencesViewModelTest, EmptyFilterShowsEverySectionAndSelects
 
 SW_TEST_CASE_F( PreferencesViewModelTest, FilterMatchesLabelCaseInsensitively )
 {
-    const vector<const EditorSettingsRegistration*>& listVisible = _model.refreshVisibleSections( "zztest/section" );
+    const vector<const EditorPreferencesRegistration*>& listVisible = _model.refreshVisibleSections( "zztest/section" );
 
     SW_REQUIRE_EQUAL( 1u, _model.getVisibleSectionCount() );
     SW_EXPECT_TRUE( listVisible.front() == &_section );
@@ -85,7 +85,7 @@ SW_TEST_CASE_F( PreferencesViewModelTest, FilterMatchesLabelCaseInsensitively )
 
 SW_TEST_CASE_F( PreferencesViewModelTest, FilterMatchesPropertyNameOfValueSectionOnly )
 {
-    const vector<const EditorSettingsRegistration*>& listVisible = _model.refreshVisibleSections( "_bEnabled" );
+    const vector<const EditorPreferencesRegistration*>& listVisible = _model.refreshVisibleSections( "_bEnabled" );
 
     SW_EXPECT_TRUE( contains( listVisible, _section ) );
     SW_EXPECT_FALSE( contains( listVisible, _page ) ); // 그리기 함수 쪽은 이름으로만 찾는다
@@ -118,7 +118,7 @@ SW_TEST_CASE_F( PreferencesViewModelTest, SectionRemovedByModuleUnloadIsNotHeld 
     (void)_model.refreshVisibleSections( "zztest/section" );
     SW_EXPECT_TRUE( _model.getSelected() == &_section );
 
-    EditorExtensionRegistration::removeFrom( EditorExtensionRegistry<EditorSettingsRegistration>::getList(), _section );
+    EditorExtensionRegistration::removeFrom( EditorExtensionRegistry<EditorPreferencesRegistration>::getList(), _section );
     (void)_model.refreshVisibleSections( "zztest/section" ); // 검색 글은 같고 등록 세대만 바뀌었다
 
     SW_EXPECT_NULL( _model.getSelected() );

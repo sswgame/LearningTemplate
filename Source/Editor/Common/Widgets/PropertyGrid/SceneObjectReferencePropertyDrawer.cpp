@@ -10,7 +10,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
+#include "Editor/Common/Widgets/PropertyGrid/IPropertyDrawer.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/SceneObjectReferencePickerState.h"
@@ -24,7 +24,7 @@ namespace sw::editor
 {
     namespace
     {
-        class SceneObjectReferencePropertyDrawer final : public IInspectorProperty
+        class SceneObjectReferencePropertyDrawer final : public IPropertyDrawer
         {
         public:
             bool draw( const PropertyValueRow& row, PropertyGridViewModel& model ) override

@@ -6,14 +6,14 @@
 #include "Editor/Viewport/EditorDebugHUDView.h"
 #include "Editor/Viewport/EditorViewportAssetPlacement.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
-#include "Editor/Viewport/EditorViewportCanvasOverlay.h"
 #include "Editor/Viewport/EditorViewportGizmo.h"
+#include "Editor/Viewport/EditorViewportGuides.h"
+#include "Editor/Viewport/EditorViewportOverlayBars.h"
 #include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportPicker.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorDebugHUDViewModel.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
-#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 namespace sw::editor
 {
@@ -21,7 +21,7 @@ namespace sw::editor
      * @class EditorViewportClient
      * @brief 씬 뷰 캔버스 한 장을 조정하는 클라이언트입니다. 일은 책임마다의 값 멤버가 하고, 이 클래스는 순서와 입력 분배만 정합니다.
      * @details 카메라는 `EditorViewportCamera`, 피킹과 호버는 `EditorViewportPicker`, 기즈모는 `EditorViewportGizmo`, 격자 · 자 · 방향 큐브는
-     *          `EditorViewportCanvasOverlay`, 애셋 배치(고스트 · 표면 · 스냅)는 `EditorViewportAssetPlacement` 입니다. 모두 비가상으로 직접 부릅니다.
+     *          `EditorViewportGuides`, 애셋 배치(고스트 · 표면 · 스냅)는 `EditorViewportAssetPlacement` 입니다. 모두 비가상으로 직접 부릅니다.
      *          그리는 순서(격자 → 시각화 → 자 → 피킹 · 호버 → 기즈모 → HUD · 방향 큐브 → 드롭)는 ImGui 의 "마지막 항목" 과 ImGuizmo 상태에 기대므로 `draw` 한곳에 둡니다.
      */
     class EditorViewportClient
@@ -74,7 +74,7 @@ namespace sw::editor
         uint32 getLastGizmoObjectCount() const { return _gizmo.getLastObjectCount(); }
 
         /** @brief 툴바 설정을 반환합니다. 스냅, 시각화 켬과 끔 등이 있습니다. */
-        const ViewportToolbarSettings& getToolbarSettings() const { return _toolbarSettings; }
+        const EditorViewportOverlayBars& getOverlayBars() const { return _overlayBars; }
         /** @brief 직교 보기이면 true 입니다. 키패드 7 은 위, 1 은 앞, 3 은 오른쪽이고, 5 는 직교와 원근을 전환합니다. */
         bool isOrthographicView() const { return _camera.isOrthographicView(); }
         /** @brief 씬 뷰를 최대화했으면 true 입니다(Shift+Space). */
@@ -99,15 +99,15 @@ namespace sw::editor
         void processContextMenu( const EditorViewportPickInput& pickInput, bool bCanvasHovered );
 
     private:
-        ViewportToolbarSettings                 _toolbarSettings;
-        ViewportToolbarState                    _toolbarState;             ///< 오버레이 바가 이번 프레임에 보일 편집 상태 값(`drawOverlays` 가 모은다)
+        EditorViewportOverlayBars               _overlayBars;
+        EditorViewportOverlayViewState          _toolbarState;             ///< 오버레이 바가 이번 프레임에 보일 편집 상태 값(`drawOverlays` 가 모은다)
         float32                                 _canvasHeight;             ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
         EditorViewportCamera                    _camera;                   ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
         EditorViewportPicker                    _picker;                   ///< 클릭 선택과 호버
         EditorViewportGizmo                     _gizmo;                    ///< 트랜스폼 기즈모(View — 스냅샷을 그리고 명령을 낸다)
-        EditorGizmoEdit                         _gizmoEdit;                ///< 기즈모 명령의 적용과 그 되돌리기(Model)
+        EditorGizmoViewModel                    _gizmoViewModel;           ///< 기즈모 명령의 적용과 그 되돌리기(Model)
         EditorGizmoViewState                    _gizmoState;               ///< 기즈모가 이번 프레임에 그릴 대상 스냅샷
-        EditorViewportCanvasOverlay             _canvasOverlay;            ///< 격자, 자, 방향 큐브
+        EditorViewportGuides                    _canvasOverlay;            ///< 격자, 자, 방향 큐브
         EditorViewportOverlays                  _overlays;                 ///< 씬 뷰 위의 오버레이 바 목록
         EditorDebugHUDViewModel                 _hudModel;                 ///< HUD 박스의 섹션 줄(4 Hz 로 다시 적는다)
         EditorDebugHUDView                      _hudView;                  ///< 오른쪽 위의 HUD 박스(그 줄을 그린다)

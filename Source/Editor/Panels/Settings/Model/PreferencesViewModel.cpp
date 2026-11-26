@@ -4,9 +4,9 @@
 
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/EditorStateTextHistory.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
@@ -20,7 +20,7 @@ namespace sw::editor
     namespace
     {
         /** @brief 검색어에 맞는 프로퍼티가 섹션에 하나라도 있으면 true 입니다. 검색어가 없으면 늘 true 입니다. */
-        bool matchesFilter( const EditorSettingsRegistration& registration, const utf8* pFilterText )
+        bool matchesFilter( const EditorPreferencesRegistration& registration, const utf8* pFilterText )
         {
             const EditorListFilter filter{ pFilterText };
             if ( filter.isActive() == false )
@@ -29,8 +29,8 @@ namespace sw::editor
                 return true;
             if ( registration._pfnGetType() == nullptr )
                 return false; // 그리기 함수 쪽은 이름으로만 찾는다
-            vector<InspectorPropertyGroup> listGroup;
-            InspectorPropertyLayout::collectPropertyGroups( *registration._pfnGetType(), {}, filter, listGroup );
+            vector<PropertyGridGroup> listGroup;
+            PropertyGridLayout::collectPropertyGroups( *registration._pfnGetType(), {}, filter, listGroup );
             return listGroup.empty() == false;
         }
     } // namespace
@@ -50,9 +50,9 @@ namespace sw::editor
 
     PreferencesViewModel::~PreferencesViewModel() = default;
 
-    const vector<const EditorSettingsRegistration*>& PreferencesViewModel::refreshVisibleSections( const utf8* pFilterText )
+    const vector<const EditorPreferencesRegistration*>& PreferencesViewModel::refreshVisibleSections( const utf8* pFilterText )
     {
-        using SettingsRegistry         = EditorExtensionRegistry<EditorSettingsRegistration>;
+        using SettingsRegistry         = EditorExtensionRegistry<EditorPreferencesRegistration>;
         const uint32 listGeneration    = SettingsRegistry::getList().getGeneration();
         const uint32 typeGeneration    = TypeRegistry::getGeneration();
         const bool   bSameAsLastBuild  = _bSectionListBuilt && _sectionListGeneration == listGeneration && _sectionTypeGeneration == typeGeneration;
@@ -65,7 +65,7 @@ namespace sw::editor
         bool bSelectedVisible = false;
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
-            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+            const EditorPreferencesRegistration& registration = SettingsRegistry::getAt( index );
             if ( matchesFilter( registration, pFilterText ) == false )
                 continue;
             _listVisibleSection.push_back( &registration );
@@ -96,7 +96,7 @@ namespace sw::editor
         }
     }
 
-    void PreferencesViewModel::selectSection( const EditorSettingsRegistration& registration )
+    void PreferencesViewModel::selectSection( const EditorPreferencesRegistration& registration )
     {
         _pSelected = &registration;
         syncHistorySource();
@@ -122,14 +122,14 @@ namespace sw::editor
 
     void PreferencesViewModel::syncHistorySource()
     {
-        using SettingsRegistry = EditorExtensionRegistry<EditorSettingsRegistration>;
+        using SettingsRegistry = EditorExtensionRegistry<EditorPreferencesRegistration>;
         EditorStateTextSource source;
         if ( _pSelected != nullptr && _pSelected->_pfnGetType() != nullptr ) // 그리기 함수 페이지는 값의 주인이 따로 있다
         {
             const string sectionID{ _pSelected->_pID };
             source._capture = SW_DELEGATE_LAMBDA( Delegate<string()>, [sectionID]()
             {
-                const EditorSettingsRegistration* pSection = SettingsRegistry::find( sectionID );
+                const EditorPreferencesRegistration* pSection = SettingsRegistry::find( sectionID );
                 return pSection != nullptr ? JSONSerializer::serialize( pSection->_pInstance, *pSection->_pfnGetType() ).value_or( string{} ) : string{};
             } );
             source._restore = SW_DELEGATE_LAMBDA( Delegate<void( string_view )>, [this, sectionID]( string_view text )
@@ -140,7 +140,7 @@ namespace sw::editor
 
     void PreferencesViewModel::restoreSection( const string& sectionID, string_view text )
     {
-        const EditorSettingsRegistration* pSection = EditorExtensionRegistry<EditorSettingsRegistration>::find( sectionID );
+        const EditorPreferencesRegistration* pSection = EditorExtensionRegistry<EditorPreferencesRegistration>::find( sectionID );
         if ( pSection == nullptr || JSONSerializer::deserializeSoft( pSection->_pInstance, *pSection->_pfnGetType(), text ) == SoftReadResult::NotParsed )
             return;
         if ( pSection->_pfnOnChanged != nullptr )

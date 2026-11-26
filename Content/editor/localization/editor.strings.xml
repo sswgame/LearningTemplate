@@ -8,12 +8,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Ability Catalog" source="Ability Catalog" context="EditorPanelText._label">
+		<entry key="Ability Catalog" source="Ability Catalog" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Ability Debugger" source="Ability Debugger" context="EditorPanelText._label">
+		<entry key="Ability Debugger" source="Ability Debugger" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -60,12 +60,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Animation Graph" source="Animation Graph" context="EditorPanelText._label">
+		<entry key="Animation Graph" source="Animation Graph" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Animation Rewind" source="Animation Rewind" context="EditorPanelText._label">
+		<entry key="Animation Rewind" source="Animation Rewind" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -136,17 +136,17 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Behavior Tree" source="Behavior Tree" context="EditorPanelText._label">
+		<entry key="Behavior Tree" source="Behavior Tree" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Browse to Asset" source="Browse to Asset" context="EditorCommandText._label">
+		<entry key="Browse to Asset" source="Browse to Asset" context="EditorCommandInfo._label">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Bug Report" source="Bug Report" context="EditorPanelText._label">
+		<entry key="Bug Report" source="Bug Report" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -170,7 +170,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Camera Presets" source="Camera Presets" context="EditorPanelText._label">
+		<entry key="Camera Presets" source="Camera Presets" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -220,12 +220,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Catalog Editor" source="Catalog Editor" context="EditorPanelText._label">
+		<entry key="Catalog Editor" source="Catalog Editor" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Changes" source="Changes" context="EditorPanelText._label">
+		<entry key="Changes" source="Changes" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -241,7 +241,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Clip Preview" source="Clip Preview" context="EditorPanelText._label">
+		<entry key="Clip Preview" source="Clip Preview" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -265,12 +265,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Collision Responses" source="Collision Responses" context="EditorPanelText._label">
+		<entry key="Collision Responses" source="Collision Responses" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Command Palette" source="Command Palette" context="EditorPanelText._label">
+		<entry key="Command Palette" source="Command Palette" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -295,7 +295,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Content Browser" source="Content Browser" context="EditorPanelText._label">
+		<entry key="Content Browser" source="Content Browser" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -364,7 +364,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Cutscene Debugger" source="Cutscene Debugger" context="EditorPanelText._label">
+		<entry key="Cutscene Debugger" source="Cutscene Debugger" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -374,12 +374,12 @@
 				<item>editor/panels/contentbrowser.favorites.xml</item>
 			</origins>
 		</entry>
-		<entry key="Data Layers" source="Data Layers" context="EditorPanelText._label">
+		<entry key="Data Layers" source="Data Layers" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Data Table Editor" source="Data Table Editor" context="EditorPanelText._label">
+		<entry key="Data Table Editor" source="Data Table Editor" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -394,7 +394,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Dialogue Graph" source="Dialogue Graph" context="EditorPanelText._label">
+		<entry key="Dialogue Graph" source="Dialogue Graph" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -623,7 +623,7 @@
 		</entry>
 		<entry key="EdCommon.AlignSelected" source="Align and distribute the selected objects (select two or more).">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.AssetSlotClear" source="Clear this asset reference.">
@@ -673,18 +673,18 @@
 		</entry>
 		<entry key="EdCommon.CameraBookmarkPosition" source="Position: {position}">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CameraBookmarks" source="Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CameraSpeed"
 		       source="Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CommandPaletteHint" source="Type a command or search objects... (Esc to close)">
@@ -915,12 +915,12 @@
 		</entry>
 		<entry key="EdCommon.GridSnap" source="Grid snap: moved objects jump in steps of the grid size on the right.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.GridSnapSize" source="Grid snap step, in world units.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LayoutNameHint" source="layout name">
@@ -1405,12 +1405,12 @@
 		</entry>
 		<entry key="EdCommon.RotationSnap" source="Rotation snap: rotations jump in steps of the angle on the right.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.RotationSnapSize" source="Rotation snap step, in degrees.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.SaveLayout"
@@ -1426,12 +1426,12 @@
 		</entry>
 		<entry key="EdCommon.ScaleSnap" source="Scale snap: scaling jumps in steps of the value on the right.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ScaleSnapSize" source="Scale snap step, as a scale factor.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.SearchAssetsHint" source="Search assets">
@@ -1469,7 +1469,7 @@
 		</entry>
 		<entry key="EdCommon.SurfaceSnap" source="Surface snap: objects you drag land on the surface under the cursor.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeAccentColor"
@@ -1534,40 +1534,40 @@
 		</entry>
 		<entry key="EdCommon.View2D" source="2D view (XY plane grid). Click to switch to 3D.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.View3D" source="3D view (XZ plane grid). Click to switch to 2D.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewMode"
 		       source="Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewModeNoRenderer" source="The renderer is not attached yet.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewportGrid" source="Show or hide the ground grid.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewportHUD"
 		       source="Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewportOrientationCube"
 		       source="Show or hide the orientation cube that shows which way the camera faces.">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdField.AccentColor" source="Accent Color">
@@ -2489,7 +2489,7 @@
 		</entry>
 		<entry key="EdLabel.AutoScroll" source="Auto-scroll">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.AutoTangent" source="Auto Tangent">
@@ -2509,7 +2509,7 @@
 		</entry>
 		<entry key="EdLabel.ClearOnPlay" source="Clear on Play">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.CollapseAll" source="Collapse All">
@@ -2524,12 +2524,12 @@
 		</entry>
 		<entry key="EdLabel.CopyFullLogLine" source="Copy Full Log Line">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.CopyMessage" source="Copy Message">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.CopyPropertyName" source="Copy Property Name">
@@ -2544,7 +2544,7 @@
 		</entry>
 		<entry key="EdLabel.CopyVisibleLines" source="Copy Visible Lines">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.CreateVariant" source="Variant">
@@ -2697,12 +2697,12 @@
 		</entry>
 		<entry key="EdLabel.OpenInIDE" source="Open in IDE">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.OpenLogFile" source="Open Log File">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Orthographic" source="Orthographic">
@@ -2722,7 +2722,7 @@
 		</entry>
 		<entry key="EdLabel.PauseOnError" source="Pause on Error">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.PauseOnSpike" source="Pause on spike">
@@ -2813,7 +2813,7 @@
 		</entry>
 		<entry key="EdLabel.ShowAll" source="Show All">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.ShowAllFunctions" source="Show All Functions">
@@ -3346,7 +3346,7 @@
 		</entry>
 		<entry key="EdText.CameraBookmarksCtrl19" source="Camera Bookmarks (Ctrl+1~9)">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.CinematicNote" source="Cinematic note">
@@ -3497,7 +3497,7 @@
 		</entry>
 		<entry key="EdText.ExpectedByTest" source="expected by test">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.False" source="False">
@@ -3646,7 +3646,7 @@
 		</entry>
 		<entry key="EdText.MultiObjectAlignment" source="Multi-Object Alignment">
 			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportOverlayBars.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.NetworkPresetsCouldNotBeReadSeeThe" source="Network presets could not be read - see the log">
@@ -4487,7 +4487,7 @@
 		<entry key="EdVerb.Clear" source="Clear">
 			<origins>
 				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
@@ -4768,7 +4768,7 @@
 		</entry>
 		<entry key="EdWidget.Collapse" source="Collapse">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Command" source="Command">
@@ -4833,7 +4833,7 @@
 		</entry>
 		<entry key="EdWidget.Lines" source="lines">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.List" source="List">
@@ -4980,7 +4980,7 @@
 		</entry>
 		<entry key="EdWidget.TagFilter" source="Tags">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Target" source="Target">
@@ -5906,99 +5906,99 @@
 		</entry>
 		<entry key="EditorConsole.AllLevelsHidden" source="All log levels are hidden. Re-enable one in the toolbar.">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.AutoScroll"
 		       source="Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.Clear" source="Clear all console log output">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.ClearOnPlay" source="Clear the log when Play starts">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.Collapse" source="Fold identical log lines into one and show the count in front">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.CommandHint" source="> command or gv_name [value] (Tab completes, Up/Down history, help)">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.CopyAll" source="Copy every filtered console log to the clipboard">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.EntrySource" source="{file}({line}) - double-click to open in IDE">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.ErrorPause" source="Pause Play when an error log appears during Play">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.FilterHint" source="Filter (tag / message / file)">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.FilterTooltip" source="Filter by log message, module tag or file name">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.NoLogOutput" source="No log output yet.">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.OpenLogFile" source="Open the most recent saved log file in the file explorer">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.Options"
 		       source="Log options: auto-scroll, clear on Play, pause on error, copy and open the log file">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.ShowErrors" source="Toggle showing Error-level logs">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.ShowInfo" source="Toggle showing Info-level logs">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.ShowTrace" source="Toggle showing Trace-level logs">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.ShowWarnings" source="Toggle showing Warning-level logs">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.TagFilter" source="Show or hide each log tag (category)">
 			<origins>
-				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+				<item>Source/Editor/Panels/Console/OutputLogPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorContentBrowser.AddAsset"
@@ -10617,7 +10617,7 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Game" source="Game" context="EditorPanelText._label">
+		<entry key="Game" source="Game" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10628,32 +10628,32 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Global Variables" source="Global Variables" context="EditorPanelText._label">
+		<entry key="Global Variables" source="Global Variables" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Hierarchy" source="Hierarchy" context="EditorPanelText._label">
+		<entry key="Hierarchy" source="Hierarchy" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Hierarchy / Skeleton View" source="Hierarchy / Skeleton View" context="EditorPanelText._label">
+		<entry key="Hierarchy / Skeleton View" source="Hierarchy / Skeleton View" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="History" source="History" context="EditorPanelText._label">
+		<entry key="History" source="History" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Input Map Editor" source="Input Map Editor" context="EditorPanelText._label">
+		<entry key="Input Map Editor" source="Input Map Editor" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Inspector" source="Inspector" context="EditorPanelText._label">
+		<entry key="Inspector" source="Inspector" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10677,7 +10677,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Keyboard Shortcuts" source="Keyboard Shortcuts" context="EditorPanelText._label">
+		<entry key="Keyboard Shortcuts" source="Keyboard Shortcuts" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10701,23 +10701,23 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Map Check" source="Map Check" context="EditorPanelText._label">
+		<entry key="Map Check" source="Map Check" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Material" source="Material" context="EditorPanelText._label">
+		<entry key="Material" source="Material" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Material Graph" source="Material Graph" context="EditorCommandText._label">
+		<entry key="Material Graph" source="Material Graph" context="EditorCommandInfo._label">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Memory" source="Memory" context="EditorPanelText._label">
+		<entry key="Memory" source="Memory" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10728,12 +10728,12 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Mesh Preview" source="Mesh Preview" context="EditorPanelText._label">
+		<entry key="Mesh Preview" source="Mesh Preview" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Modules" source="Modules" context="EditorPanelText._label">
+		<entry key="Modules" source="Modules" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10786,12 +10786,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Multiplayer" source="Multiplayer" context="EditorPanelText._label">
+		<entry key="Multiplayer" source="Multiplayer" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="NPC Schedule" source="NPC Schedule" context="EditorPanelText._label">
+		<entry key="NPC Schedule" source="NPC Schedule" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10864,7 +10864,7 @@
 		</entry>
 		<entry key="Open the material graph editor"
 		       source="Open the material graph editor"
-		       context="EditorCommandText._detail">
+		       context="EditorCommandInfo._detail">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
@@ -10944,7 +10944,7 @@
 		</entry>
 		<entry key="Opens the material graph window (node canvas, live preview, save)"
 		       source="Opens the material graph window (node canvas, live preview, save)"
-		       context="EditorCommandText._tooltip">
+		       context="EditorCommandInfo._tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
@@ -10982,7 +10982,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Output Log" source="Output Log" context="EditorPanelText._label">
+		<entry key="Output Log" source="Output Log" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -10994,7 +10994,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Packaging" source="Packaging" context="EditorPanelText._label">
+		<entry key="Packaging" source="Packaging" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11041,12 +11041,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Prefab Overrides" source="Prefab Overrides" context="EditorPanelText._label">
+		<entry key="Prefab Overrides" source="Prefab Overrides" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Prefab Window" source="Prefab Window" context="EditorPanelText._label">
+		<entry key="Prefab Window" source="Prefab Window" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11056,7 +11056,7 @@
 				<item>editor/panels/contentbrowser.favorites.xml</item>
 			</origins>
 		</entry>
-		<entry key="Preferences" source="Preferences" context="EditorPanelText._label">
+		<entry key="Preferences" source="Preferences" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11071,12 +11071,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Profiler" source="Profiler" context="EditorPanelText._label">
+		<entry key="Profiler" source="Profiler" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Project Settings" source="Project Settings" context="EditorPanelText._label">
+		<entry key="Project Settings" source="Project Settings" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11086,7 +11086,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Quick Open" source="Quick Open" context="EditorPanelText._label">
+		<entry key="Quick Open" source="Quick Open" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11103,7 +11103,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Ragdoll Preview" source="Ragdoll Preview" context="EditorPanelText._label">
+		<entry key="Ragdoll Preview" source="Ragdoll Preview" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11160,7 +11160,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Recovered Work" source="Recovered Work" context="EditorPanelText._label">
+		<entry key="Recovered Work" source="Recovered Work" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11209,12 +11209,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Render Debugger" source="Render Debugger" context="EditorPanelText._label">
+		<entry key="Render Debugger" source="Render Debugger" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Render Targets" source="Render Targets" context="EditorPanelText._label">
+		<entry key="Render Targets" source="Render Targets" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11236,12 +11236,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Retarget Profile" source="Retarget Profile" context="EditorPanelText._label">
+		<entry key="Retarget Profile" source="Retarget Profile" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Rig Debug" source="Rig Debug" context="EditorPanelText._label">
+		<entry key="Rig Debug" source="Rig Debug" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11301,7 +11301,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Scene" source="Scene" context="EditorPanelText._label">
+		<entry key="Scene" source="Scene" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11345,7 +11345,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Sequencer" source="Sequencer" context="EditorPanelText._label">
+		<entry key="Sequencer" source="Sequencer" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11374,7 +11374,7 @@
 		</entry>
 		<entry key="Show the asset in the Content Browser"
 		       source="Show the asset in the Content Browser"
-		       context="EditorCommandText._tooltip">
+		       context="EditorCommandInfo._tooltip">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
@@ -11391,7 +11391,7 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Sprite Clip" source="Sprite Clip" context="EditorPanelText._label">
+		<entry key="Sprite Clip" source="Sprite Clip" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11401,12 +11401,12 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Streaming Cells" source="Streaming Cells" context="EditorPanelText._label">
+		<entry key="Streaming Cells" source="Streaming Cells" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Test Runner" source="Test Runner" context="EditorPanelText._label">
+		<entry key="Test Runner" source="Test Runner" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11421,17 +11421,17 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Tile Map Tool" source="Tile Map Tool" context="EditorPanelText._label">
+		<entry key="Tile Map Tool" source="Tile Map Tool" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Tile Set Editor" source="Tile Set Editor" context="EditorPanelText._label">
+		<entry key="Tile Set Editor" source="Tile Set Editor" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="UI Preview" source="UI Preview" context="EditorPanelText._label">
+		<entry key="UI Preview" source="UI Preview" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
@@ -11456,17 +11456,17 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="User Settings" source="User Settings" context="EditorPanelText._label">
+		<entry key="User Settings" source="User Settings" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="VFX Preview" source="VFX Preview" context="EditorPanelText._label">
+		<entry key="VFX Preview" source="VFX Preview" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Volumetric Fog" source="Volumetric Fog" context="EditorPanelText._label">
+		<entry key="Volumetric Fog" source="Volumetric Fog" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>

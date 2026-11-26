@@ -10,7 +10,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorComponentPicker.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridComponentPicker.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -175,7 +175,7 @@ namespace sw::editor
             if ( pHandle == nullptr )
                 return false;
             const Component* pTarget = pHandle->isValid() ? pObject->getMutableManager()->resolveComponent( *pHandle ) : nullptr;
-            outValue.setText( pTarget != nullptr ? InspectorComponentChoice::makeLabel( *pTarget ) : string{ "(none)" } );
+            outValue.setText( pTarget != nullptr ? PropertyGridComponentChoice::makeLabel( *pTarget ) : string{ "(none)" } );
             return true;
         }
 

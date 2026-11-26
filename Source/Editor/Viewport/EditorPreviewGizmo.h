@@ -5,8 +5,8 @@
 #pragma once
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/EditorViewportGizmo.h"
-#include "Editor/Viewport/Model/EditorGizmoEdit.h"
-#include "Editor/Viewport/ViewportToolbarSettings.h"
+#include "Editor/Viewport/EditorViewportOverlayBars.h"
+#include "Editor/Viewport/Model/EditorGizmoViewModel.h"
 
 namespace sw
 {
@@ -47,9 +47,9 @@ namespace sw::editor
         static void pick( EditorPreviewPanel& panel, const Ray& ray, bool bToggle );
 
     private:
-        EditorViewportGizmo     _gizmo;    ///< View — 스냅샷을 그리고 명령을 낸다
-        EditorGizmoEdit         _edit;     ///< Model — 명령 적용과 되돌리기
-        EditorGizmoViewState    _state;    ///< 이번 프레임의 기즈모 대상 스냅샷
-        ViewportToolbarSettings _settings; ///< 스냅 설정. 창에는 툴바가 없어 기본값(스냅 끔)이다
+        EditorViewportGizmo       _gizmo;    ///< View — 스냅샷을 그리고 명령을 낸다
+        EditorGizmoViewModel      _edit;     ///< Model — 명령 적용과 되돌리기
+        EditorGizmoViewState      _state;    ///< 이번 프레임의 기즈모 대상 스냅샷
+        EditorViewportOverlayBars _settings; ///< 스냅 설정. 창에는 툴바가 없어 기본값(스냅 끔)이다
     };
 } // namespace sw::editor

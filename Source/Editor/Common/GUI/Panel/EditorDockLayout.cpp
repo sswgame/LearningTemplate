@@ -8,7 +8,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/EditorPanelText.h"
+#include "Editor/Common/GUI/Panel/EditorPanelTitles.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -252,7 +252,7 @@ namespace sw::editor
         bool             bAllStable      = true;
         for ( const utf8* pTitle : EditorDockLayoutInternal::collectFrontTabTitles() )
         {
-            ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( pTitle ).c_str() );
+            ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( pTitle ).c_str() );
             if ( pWindow == nullptr || pWindow->Active == false )
                 continue;
             if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
@@ -349,7 +349,7 @@ namespace sw::editor
         {
             const ImGuiID slotDockID = entry._pInstance != nullptr ? EditorDockLayoutInternal::findSlotDockID( entry._pInstance->getDefaultDockSlot(), nodes ) : 0;
             if ( slotDockID != 0 )
-                ImGui::DockBuilderDockWindow( EditorPanelText::makeWindowID( entry._title.c_str() ).c_str(), slotDockID );
+                ImGui::DockBuilderDockWindow( EditorPanelTitles::makeWindowID( entry._title.c_str() ).c_str(), slotDockID );
         }
 
         ImGui::DockBuilderFinish( id );

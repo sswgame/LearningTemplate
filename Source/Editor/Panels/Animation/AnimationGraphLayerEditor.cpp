@@ -10,7 +10,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Animation/Model/AnimationGraphLayerEdit.h"
+#include "Editor/Panels/Animation/Model/AnimationGraphLayerEditModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -135,7 +135,7 @@ namespace sw::editor
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "AddLayer" ) ) )
         {
-            _selectedLayer = AnimationGraphLayerEdit::addLayer( inoutGraph );
+            _selectedLayer = AnimationGraphLayerEditModel::addLayer( inoutGraph );
             pEdit          = "Add Animation Layer";
         }
         EditorSelfTestMarks::record( "animationGraph.layer.add" );
@@ -156,7 +156,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##layerUp", ImGuiDir_Up ) )
         {
-            _selectedLayer = AnimationGraphLayerEdit::moveLayer( inoutGraph, _selectedLayer, -1 );
+            _selectedLayer = AnimationGraphLayerEditModel::moveLayer( inoutGraph, _selectedLayer, -1 );
             pEdit          = "Reorder Animation Layers";
         }
         ImGui::EndDisabled();
@@ -164,7 +164,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bSelected == false || _selectedLayer + 1 >= layerCount );
         if ( ImGui::ArrowButton( "##layerDown", ImGuiDir_Down ) )
         {
-            _selectedLayer = AnimationGraphLayerEdit::moveLayer( inoutGraph, _selectedLayer, 1 );
+            _selectedLayer = AnimationGraphLayerEditModel::moveLayer( inoutGraph, _selectedLayer, 1 );
             pEdit          = "Reorder Animation Layers";
         }
         ImGui::EndDisabled();
@@ -318,18 +318,18 @@ namespace sw::editor
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "AddMask" ) ) )
         {
-            _selectedMask = AnimationGraphLayerEdit::addMask( inoutGraph );
+            _selectedMask = AnimationGraphLayerEditModel::addMask( inoutGraph );
             pEdit         = "Add Bone Mask";
         }
         EditorSelfTestMarks::record( "animationGraph.mask.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddBoneMaskTip" ) );
         const bool                    bSelected = 0 <= _selectedMask && _selectedMask < static_cast<int32>( listMask.size() );
         const AnimationGraphLayerDef* pUser =
-            bSelected ? AnimationGraphLayerEdit::findLayerUsingMask( inoutGraph, listMask[static_cast<size_t>( _selectedMask )]._name ) : nullptr;
+            bSelected ? AnimationGraphLayerEditModel::findLayerUsingMask( inoutGraph, listMask[static_cast<size_t>( _selectedMask )]._name ) : nullptr;
         // 레이어가 쓰는 마스크를 지우면 저장한 그래프가 로드 오류가 된다 — 그 레이어의 마스크를 먼저 바꾼다.
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove##mask" ) );
         ImGui::BeginDisabled( bSelected == false || pUser != nullptr );
-        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##mask" ) ) && AnimationGraphLayerEdit::removeMask( inoutGraph, _selectedMask ) )
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##mask" ) ) && AnimationGraphLayerEditModel::removeMask( inoutGraph, _selectedMask ) )
         {
             _selectedMask = -1;
             pEdit         = "Remove Bone Mask";
@@ -370,7 +370,7 @@ namespace sw::editor
         string presetPath = inoutMask._filePath;
         if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Preset" ), presetPath, ".bonemask.xml" ) )
         {
-            const BoneMaskPresetResult result = AnimationGraphLayerEdit::applyMaskPreset( inoutMask, presetPath );
+            const BoneMaskPresetResult result = AnimationGraphLayerEditModel::applyMaskPreset( inoutMask, presetPath );
             if ( result == BoneMaskPresetResult::Embedded )
                 pInoutEdit = "Embed Bone Mask";
             else if ( result == BoneMaskPresetResult::Loaded )

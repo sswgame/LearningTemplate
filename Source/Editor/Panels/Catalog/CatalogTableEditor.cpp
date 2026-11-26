@@ -80,7 +80,7 @@ namespace sw::editor
     {
         _editText.clear();
         _editID  = 0;
-        _pending = CatalogTableEdit{};
+        _pending = CatalogTableEditModel{};
         _curveOwner.reset();
         _childOwner.reset();
         _graphCurve.reset();
@@ -167,7 +167,7 @@ namespace sw::editor
 
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddRow" ) ) )
         {
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, nullopt, string(), group._name };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::AddRow, nullopt, string(), group._name };
         }
         if ( bFirstGroup )
             EditorSelfTestMarks::record( "catalog.addrow.first" );
@@ -181,19 +181,19 @@ namespace sw::editor
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, elementIndex, string(), string() };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::DuplicateRow, elementIndex, string(), string() };
         if ( rowPosition == 0 && bFirstGroup )
             EditorSelfTestMarks::record( "catalog.row.duplicate.first" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, elementIndex, string(), string() };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::RemoveRow, elementIndex, string(), string() };
         if ( rowPosition == 0 && bFirstGroup )
             EditorSelfTestMarks::record( "catalog.row.remove.first" );
         if ( document.canCreateVariant( elementIndex ) )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) )
-                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::CreateVariant, elementIndex, string(), string() };
+                _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::CreateVariant, elementIndex, string(), string() };
             // 자식 창 버튼은 줄 동작과 함께 고정 열에 둔다 - 끝 열이면 칸이 많은 표에서 가로로 스크롤해야 보인다.
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) )
@@ -272,16 +272,16 @@ namespace sw::editor
         if ( pRowID != nullptr )
             EditorSelfTestMarks::recordFormat( "catalog.revert.%#.%#", pRowID->c_str(), column.c_str() );
         if ( bCommitted )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, committed };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::SetCell, elementIndex, column, committed };
         if ( bReset )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, elementIndex, column, string() };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetCell, elementIndex, column, string() };
         if ( bFirstCell )
             EditorSelfTestMarks::record( "catalog.cell.first" );
 
         if ( pValue != nullptr && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
         {
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
-                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, elementIndex, column, string() };
+                _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetCell, elementIndex, column, string() };
             ImGui::EndPopup();
         }
         ImGui::PopID();
@@ -373,10 +373,10 @@ namespace sw::editor
         // 구조체 칸은 하나뿐이라 더할 것이 없다.
         if ( section._kind == CatalogChildSectionKind::Field )
             return;
-        const auto groupEdit = [this, &section]( CatalogTableEdit::Kind kind )
-        { _pending = CatalogTableEdit{ kind, _childOwner.value(), section._name, string(), section._ownerPath }; };
+        const auto groupEdit = [this, &section]( CatalogTableEditModel::Kind kind )
+        { _pending = CatalogTableEditModel{ kind, _childOwner.value(), section._name, string(), section._ownerPath }; };
         if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "AddChild" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddChildNode, _childOwner.value(), section._name, section._keyAttribute, section._ownerPath };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::AddChildNode, _childOwner.value(), section._name, section._keyAttribute, section._ownerPath };
         if ( inoutbFirstAdd )
             EditorSelfTestMarks::record( "catalog.children.add" );
         inoutbFirstAdd = false;
@@ -387,19 +387,19 @@ namespace sw::editor
         {
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "UseInherited" ) ) )
-                groupEdit( CatalogTableEdit::Kind::InheritChildGroup );
+                groupEdit( CatalogTableEditModel::Kind::InheritChildGroup );
         }
         if ( section._bOverridden == false && section._bCleared == false && section._listNode.empty() == false )
         {
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "OverrideInherited" ) ) )
-                groupEdit( CatalogTableEdit::Kind::OverrideChildGroup );
+                groupEdit( CatalogTableEditModel::Kind::OverrideChildGroup );
         }
         if ( section._bCleared == false )
         {
             ImGui::SameLine();
             if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "ClearInherited" ) ) )
-                groupEdit( CatalogTableEdit::Kind::ClearChildGroup );
+                groupEdit( CatalogTableEditModel::Kind::ClearChildGroup );
             EditorSelfTestMarks::record( "catalog.children.clear" );
         }
     }
@@ -451,14 +451,14 @@ namespace sw::editor
         if ( bActions )
         {
             ImGui::TableSetColumnIndex( 0 );
-            const auto nodeEdit = [this, &node]( CatalogTableEdit::Kind kind )
-            { _pending = CatalogTableEdit{ kind, _childOwner.value(), string(), string(), node._path }; };
+            const auto nodeEdit = [this, &node]( CatalogTableEditModel::Kind kind )
+            { _pending = CatalogTableEditModel{ kind, _childOwner.value(), string(), string(), node._path }; };
             if ( node._bRemoved )
             {
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorCatalog", "ChildRemoved" ) );
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "RestoreChild" ) ) )
-                    nodeEdit( CatalogTableEdit::Kind::RestoreChildNode );
+                    nodeEdit( CatalogTableEditModel::Kind::RestoreChildNode );
                 EditorSelfTestMarks::record( "catalog.children.restore" );
             }
             else if ( bLocked == false )
@@ -466,20 +466,20 @@ namespace sw::editor
                 if ( section._kind == CatalogChildSectionKind::List && section._bHasParent )
                 {
                     if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "MoveEarlier" ) ) )
-                        nodeEdit( CatalogTableEdit::Kind::MoveChildEarlier );
+                        nodeEdit( CatalogTableEditModel::Kind::MoveChildEarlier );
                     ImGui::SameLine();
                     if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "MoveLater" ) ) )
-                        nodeEdit( CatalogTableEdit::Kind::MoveChildLater );
+                        nodeEdit( CatalogTableEditModel::Kind::MoveChildLater );
                     if ( node._bMoved )
                     {
                         ImGui::SameLine();
                         if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "ResetOrder" ) ) )
-                            nodeEdit( CatalogTableEdit::Kind::ResetChildOrder );
+                            nodeEdit( CatalogTableEditModel::Kind::ResetChildOrder );
                     }
                     ImGui::SameLine();
                 }
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-                    nodeEdit( CatalogTableEdit::Kind::RemoveChildNode );
+                    nodeEdit( CatalogTableEditModel::Kind::RemoveChildNode );
                 if ( inoutbFirstRemove )
                     EditorSelfTestMarks::record( "catalog.children.remove" );
                 inoutbFirstRemove = false;
@@ -506,14 +506,14 @@ namespace sw::editor
                 bool       bHovered   = false;
                 const bool bReset     = EditorWidgets::endResetToDefaultGroup( cell._bWritten && cell._bKey == false, bHovered );
                 if ( bCommitted )
-                    _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetChildCell, _childOwner.value(), cell._column, committed, node._path };
+                    _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::SetChildCell, _childOwner.value(), cell._column, committed, node._path };
                 if ( bReset )
-                    _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetChildCell, _childOwner.value(), cell._column, string(), node._path };
+                    _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetChildCell, _childOwner.value(), cell._column, string(), node._path };
                 inoutbFirstCell = false;
                 if ( cell._bWritten && cell._bKey == false && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
                 {
                     if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
-                        _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetChildCell, _childOwner.value(), cell._column, string(), node._path };
+                        _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetChildCell, _childOwner.value(), cell._column, string(), node._path };
                     ImGui::EndPopup();
                 }
             }
@@ -524,12 +524,12 @@ namespace sw::editor
 
     bool CatalogTableEditor::applyPending( CatalogDocument& inoutDocument )
     {
-        if ( _pending._kind == CatalogTableEdit::Kind::None )
+        if ( _pending._kind == CatalogTableEditModel::Kind::None )
             return false;
-        const CatalogTableEdit edit = std::move( _pending );
-        _pending                    = CatalogTableEdit{};
-        const bool bChanged         = edit.apply( inoutDocument, _lastActionText );
-        _bEditFailed                = bChanged ? SW_FALSE : SW_TRUE;
+        const CatalogTableEditModel edit = std::move( _pending );
+        _pending                         = CatalogTableEditModel{};
+        const bool bChanged              = edit.apply( inoutDocument, _lastActionText );
+        _bEditFailed                     = bChanged ? SW_FALSE : SW_TRUE;
         if ( bChanged )
             SW_LOG_INFO_ID( "Catalog.TableEdited", "Catalog %#", _lastActionText.c_str() );
         else
@@ -601,7 +601,7 @@ namespace sw::editor
             drawCell( document, key._elementIndex, "_interpolation", false, fieldWidth );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, key._elementIndex, string(), string() };
+                _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::RemoveRow, key._elementIndex, string(), string() };
             if ( key._bValid == false )
             {
                 ImGui::SameLine();
@@ -610,7 +610,7 @@ namespace sw::editor
             ImGui::PopID();
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddKey" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddCurveKey, curve._elementIndex, string(), string() };
+            _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::AddCurveKey, curve._elementIndex, string(), string() };
         EditorSelfTestMarks::record( "catalog.curves.addkey" );
         ImGui::Separator();
         ImGui::PopID();
@@ -637,7 +637,7 @@ namespace sw::editor
         if ( ImGui::BeginChild( "##curveGraph", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CatalogTableEditorInternal::kCurveGraphLines ) ), ImGuiChildFlags_Borders ) )
         {
             if ( EditorCurveEditorState::drawEditor( _graphState, "catalog.curves.graph" ) )
-                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCurveKeys, pCurve->_elementIndex, string(), string(), CatalogChildPath{}, _graphState._working };
+                _pending = CatalogTableEditModel{ CatalogTableEditModel::Kind::SetCurveKeys, pCurve->_elementIndex, string(), string(), CatalogChildPath{}, _graphState._working };
         }
         ImGui::EndChild();
     }

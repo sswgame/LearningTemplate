@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportGizmo.h
- * @brief 씬 뷰의 트랜스폼 기즈모(ImGuizmo) View 입니다. 대상 스냅샷(`EditorGizmoViewState`)만 읽고, 조작은 명령(`EditorGizmoCommand`)으로 냅니다 — 적용과 되돌리기는 `EditorGizmoEdit`(Model)이 합니다.
+ * @brief 씬 뷰의 트랜스폼 기즈모(ImGuizmo) View 입니다. 대상 스냅샷(`EditorGizmoViewState`)만 읽고, 조작은 명령(`EditorGizmoCommand`)으로 냅니다 — 적용과 되돌리기는 `EditorGizmoViewModel`(Model)이 합니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -8,16 +8,16 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Viewport/Model/EditorGizmoEdit.h"
+#include "Editor/Viewport/Model/EditorGizmoViewModel.h"
 
 namespace sw::editor
 {
-    struct ViewportToolbarSettings;
+    struct EditorViewportOverlayBars;
 
     /**
      * @class EditorViewportGizmo
      * @brief 대상에 기즈모를 그리고 조작을 명령으로 냅니다. 드래그 중간 값(그룹 행렬 · 대상의 그룹 기준 상대 행렬)은 이 쪽이 들고, 바뀐 월드 행렬을 프레임마다 명령 하나로 보낸다.
-     * @details `EditorViewportClient` 와 미리보기 기즈모(`EditorPreviewGizmo`)가 값 멤버로 들고, 모으기(`EditorGizmoEdit::gather`) → `draw` → 적용(`EditorGizmoEdit::apply( getCommands() )`) 순으로 부른다.
+     * @details `EditorViewportClient` 와 미리보기 기즈모(`EditorPreviewGizmo`)가 값 멤버로 들고, 모으기(`EditorGizmoViewModel::gather`) → `draw` → 적용(`EditorGizmoViewModel::apply( getCommands() )`) 순으로 부른다.
      *          헤더는 ImGuizmo 를 include 하지 않습니다.
      */
     class EditorViewportGizmo
@@ -31,7 +31,7 @@ namespace sw::editor
          *        이름은 부르는 쪽이 정한다(시나리오가 `EditorDrag` 로 끈다).
          */
         void draw( const EditorGizmoViewState& state, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
-                   const ViewportToolbarSettings& settings, const utf8* pCenterMark );
+                   const EditorViewportOverlayBars& settings, const utf8* pCenterMark );
         /** @brief 지난 `draw` 가 낸 명령입니다(Model 이 적용한다). */
         const vector<EditorGizmoCommand>& getCommands() const { return _listCommand; }
 

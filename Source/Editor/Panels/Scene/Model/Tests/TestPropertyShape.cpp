@@ -6,7 +6,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
-#include "Editor/Panels/Scene/Model/PropertyShapeEdit.h"
+#include "Editor/Panels/Scene/Model/PropertyShapeViewModel.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"

@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
+#include "Editor/Common/Workspace/Play/EditorSceneGenerationReset.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -160,9 +160,9 @@ SW_TEST_CASE( EditorPlaySessionRestoreTest, TravelDuringPlayKeepsTheEditSceneDir
 {
     EditorWorkspace workspace{ nullptr };
     workspace.markSceneDirty();
-    SW_EXPECT_TRUE( EditorSceneGenerationSync::apply( workspace, workspace.getObservedSceneGeneration() + 1, true, nullptr ) );
+    SW_EXPECT_TRUE( EditorSceneGenerationReset::apply( workspace, workspace.getObservedSceneGeneration() + 1, true, nullptr ) );
     SW_EXPECT_TRUE( workspace.isSceneDirty() );
-    SW_EXPECT_TRUE( EditorSceneGenerationSync::apply( workspace, workspace.getObservedSceneGeneration() + 1, false, nullptr ) );
+    SW_EXPECT_TRUE( EditorSceneGenerationReset::apply( workspace, workspace.getObservedSceneGeneration() + 1, false, nullptr ) );
     SW_EXPECT_FALSE( workspace.isSceneDirty() );
 }
 

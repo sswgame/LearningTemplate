@@ -12,8 +12,8 @@
 
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/FileWatch/FileWatchService.h"
+#include "DevTools/Host/DevToolsHostBinding.h"
 #include "DevTools/Host/EditorModuleCommandlets.h"
-#include "DevTools/Host/HostDevTools.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Engine.h"
@@ -39,7 +39,7 @@ namespace sw
         public:
             static constexpr const utf8* kSubsystemName = "DevConsole";
 
-            DevConsoleHostSubsystem( HostDevTools& devTools, const utf8* pGameServiceName, bool bEnableEditor )
+            DevConsoleHostSubsystem( DevToolsHostBinding& devTools, const utf8* pGameServiceName, bool bEnableEditor )
                 : _devTools{ devTools }
                 , _arrDependency{ pGameServiceName }
                 , _bEnableEditor{ bEnableEditor ? SW_TRUE : SW_FALSE }
@@ -57,7 +57,7 @@ namespace sw
             span<const utf8* const> getSubsystemDependencies() const override { return _arrDependency; }
 
         private:
-            HostDevTools&          _devTools;
+            DevToolsHostBinding&   _devTools;
             const utf8*            _arrDependency[1]; ///< 게임 호스트 서비스 이름(프로그램 내내 사는 글)
             uint8                  _bEnableEditor : 1;
             [[maybe_unused]] uint8 _reserved      : 7;
@@ -65,7 +65,7 @@ namespace sw
 
         /**
          * @class HostDevLayer
-         * @brief 개발 구성의 개발 계층입니다 — 개발 도구 연결(`HostDevTools`), 동적 모듈 구성이면 핫 리로드(`ModuleReloadDriver`), App 의 자동화 · 기동 측정을 듭니다.
+         * @brief 개발 구성의 개발 계층입니다 — 개발 도구 연결(`DevToolsHostBinding`), 동적 모듈 구성이면 핫 리로드(`ModuleReloadDriver`), App 의 자동화 · 기동 측정을 듭니다.
          * @details 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 리로드 구동기(`ModuleReload/`)를 짓지 않는다 — 리로드 창구는 리로드가 없다고 답한다.
          *          기동 단계표는 이 계층을 만든 때(호스트 `initialize` 의 첫 줄)부터 잰다.
          */
@@ -193,8 +193,8 @@ namespace sw
             int64 getMainLoopElapsedMilliseconds() const { return ( MonotonicClock::nowMicroseconds() - _mainLoopStartMicro ) / constant::time::kMicrosecondsPerMillisecond; }
 
         private:
-            FileWatchService _fileWatch; ///< 프로세스의 파일 감시 창구 — 아래 둘이 빌려 써 맨 앞에 둔다(마지막에 사라진다)
-            HostDevTools     _devTools;
+            FileWatchService    _fileWatch; ///< 프로세스의 파일 감시 창구 — 아래 둘이 빌려 써 맨 앞에 둔다(마지막에 사라진다)
+            DevToolsHostBinding _devTools;
 #if SW_WITH_DYNAMIC_MODULES
             ModuleReloadDriver _moduleReload;
 #endif

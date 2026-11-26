@@ -55,7 +55,7 @@ namespace sw::editor
         Scene* const pScene = editor::getActiveScene();
         if ( pScene == nullptr )
         {
-            // 씬을 바꾸면 스택을 비운다(`EditorSceneGenerationSync`) — 씬 없이 이 단계가 도는 것은 기록과 씬이 어긋났다는 뜻이다.
+            // 씬을 바꾸면 스택을 비운다(`EditorSceneGenerationReset`) — 씬 없이 이 단계가 도는 것은 기록과 씬이 어긋났다는 뜻이다.
             SW_LOG_ERROR_ID( "EditorSceneSettingsCommands.NoActiveScene", "No active scene - the scene settings undo step is skipped" );
             return;
         }

@@ -14,10 +14,10 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
-#include "Editor/Viewport/Model/TerrainBrushEdit.h"
+#include "Editor/Viewport/Model/TerrainBrushViewModel.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
@@ -58,13 +58,13 @@ namespace sw::editor
                 if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Resolution" ), "Resolution" ), preview.c_str() ) )
                 {
                     vector<uint32> listResolution;
-                    TerrainBrushEdit::collectUsableResolutions( listResolution );
+                    TerrainBrushViewModel::collectUsableResolutions( listResolution );
                     for ( const uint32 resolution : listResolution )
                     {
                         fixed_string<constant::buffer::kMax32> label;
                         formatstring( label.data(), label.capacity(), "%#%#", resolution, resolution == current ? " (current)" : "" );
                         if ( ImGui::Selectable( label.c_str(), resolution == state._resizeResolution ) )
-                            TerrainBrushEdit::setResizeResolution( resolution );
+                            TerrainBrushViewModel::setResizeResolution( resolution );
                     }
                     ImGui::EndCombo();
                 }
@@ -85,7 +85,7 @@ namespace sw::editor
             static void drawFoliageCombo( TerrainBrushSettings& settings )
             {
                 vector<TerrainBrushFoliageLayer> listFoliage;
-                TerrainBrushEdit::collectFoliageLayers( listFoliage );
+                TerrainBrushViewModel::collectFoliageLayers( listFoliage );
                 if ( listFoliage.empty() )
                     return;
                 const utf8* pPreview = SW_LOCKEY( "EdWidget", "NoFoliageOnLayer" );
@@ -111,10 +111,10 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
 
-            /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). 설정 값은 Model 의 것을 바로 고친다(`TerrainBrushEdit::getSettings`). */
+            /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). 설정 값은 Model 의 것을 바로 고친다(`TerrainBrushViewModel::getSettings`). */
             static void drawSettingsWindow( const EditorViewportVisualizerArgs& args, const TerrainBrushViewState& state, vector<TerrainBrushCommand>& outListCommand )
             {
-                TerrainBrushSettings& settings = TerrainBrushEdit::getSettings();
+                TerrainBrushSettings& settings = TerrainBrushViewModel::getSettings();
                 ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
                 if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
                 {
@@ -151,21 +151,21 @@ namespace sw::editor
             /** @brief 모으기(Model) → 원 그리기 · 마우스 양보 → 붓질 명령 → 설정 창 → 적용(Model). */
             static void process( const EditorViewportVisualizerArgs& args )
             {
-                TerrainBrushEdit::markActive( ImGui::GetFrameCount() );
+                TerrainBrushViewModel::markActive( ImGui::GetFrameCount() );
                 vector<TerrainBrushCommand> listCommand;
                 TerrainBrushViewState       state{};
                 const bool                  bUsable = args._pObjectManager != nullptr && args._pViewProj != nullptr && args._bFlat2D == false;
                 Ray                         ray{};
                 const bool                  bRay = bUsable && EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
-                TerrainBrushEdit::gather( bRay ? &ray : nullptr, state );
+                TerrainBrushViewModel::gather( bRay ? &ray : nullptr, state );
 
                 TerrainBrushStrokeInput input{};
                 input._bUsable   = bUsable;
                 input._bStroking = state._bStroking;
                 if ( bUsable == false )
                 {
-                    TerrainBrushEdit::stepStroke( input, listCommand );
-                    TerrainBrushEdit::apply( listCommand );
+                    TerrainBrushViewModel::stepStroke( input, listCommand );
+                    TerrainBrushViewModel::apply( listCommand );
                     return;
                 }
 
@@ -192,15 +192,15 @@ namespace sw::editor
                 input._bHit       = state._bHit;
                 input._bStillDown = ImGui::IsMouseDown( ImGuiMouseButton_Left ) && state._bEditable && state._bStrokeTargetAlive;
                 input._bPressed   = bClaim && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left );
-                TerrainBrushEdit::stepStroke( input, listCommand );
+                TerrainBrushViewModel::stepStroke( input, listCommand );
 
                 drawSettingsWindow( args, state, listCommand );
-                TerrainBrushEdit::apply( listCommand );
+                TerrainBrushViewModel::apply( listCommand );
             }
 
             [[nodiscard]] static bool readToolActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const optional<int32> activeFrame = TerrainBrushEdit::getLastActiveFrame();
+                const optional<int32> activeFrame = TerrainBrushViewModel::getLastActiveFrame();
                 outValue                          = activeFrame.has_value() && *activeFrame + 1 >= ImGui::GetFrameCount() ? 1.0 : 0.0;
                 return true;
             }

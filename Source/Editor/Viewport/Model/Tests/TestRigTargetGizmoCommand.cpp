@@ -3,7 +3,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Viewport/Model/RigTargetGizmoEdit.h"
+#include "Editor/Viewport/Model/RigTargetGizmoViewModel.h"
 
 namespace
 {

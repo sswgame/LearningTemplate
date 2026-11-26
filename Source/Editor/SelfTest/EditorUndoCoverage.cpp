@@ -14,7 +14,7 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -253,7 +253,7 @@ namespace sw::editor
              */
             static bool editRow( PropertyGridViewModel& model, const PropertyValueRow& row, float64 delta )
             {
-                const bool bCheckbox = row._kind == PropertyRowKind::BitField || ( row._kind == PropertyRowKind::Builtin && row._widget == InspectorValueWidget::Checkbox );
+                const bool bCheckbox = row._kind == PropertyRowKind::BitField || ( row._kind == PropertyRowKind::Builtin && row._widget == PropertyGridValueWidget::Checkbox );
                 if ( bCheckbox )
                 {
                     const bool* pValue = row._value.getPtr<bool>();
@@ -264,20 +264,20 @@ namespace sw::editor
                 }
                 if ( row._kind != PropertyRowKind::Builtin )
                     return false;
-                if ( row._widget == InspectorValueWidget::Number )
+                if ( row._widget == PropertyGridValueWidget::Number )
                 {
                     MutableObjectAddress instance{ nullptr };
                     const PropertyInfo*  pProp = nullptr;
                     if ( model.findRowValue( row._rowID, instance, pProp ) == false )
                         return false;
-                    const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( pProp->_typeName.c_str() );
-                    float64                      value    = 0.0;
+                    const PropertyGridBuiltinValue* pBuiltin = PropertyGridBuiltinValue::findBuiltin( pProp->_typeName.c_str() );
+                    float64                         value    = 0.0;
                     if ( pBuiltin == nullptr || ReflectedValueUtil::readNumber( static_cast<ReflectBuiltinIndex>( pBuiltin->_index ), pProp->getValuePtr<void>( instance.get() ), value ) == false )
                         return false;
                     model.setRowNumber( row._rowID, value + delta );
                     return true;
                 }
-                if ( row._widget == InspectorValueWidget::Vector3 )
+                if ( row._widget == PropertyGridValueWidget::Vector3 )
                 {
                     const float3* pValue = row._value.getPtr<float3>();
                     if ( pValue == nullptr )
@@ -324,7 +324,7 @@ namespace sw::editor
                         ++inoutCount._failed;
                         return;
                     }
-                    if ( after != before || stack.getCurrentIndex() != indexBefore || row._widget == InspectorValueWidget::Checkbox || row._kind == PropertyRowKind::BitField )
+                    if ( after != before || stack.getCurrentIndex() != indexBefore || row._widget == PropertyGridValueWidget::Checkbox || row._kind == PropertyRowKind::BitField )
                         break;
                 }
                 const size_t indexAfter = stack.getCurrentIndex();

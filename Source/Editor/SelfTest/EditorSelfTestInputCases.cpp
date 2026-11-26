@@ -8,10 +8,10 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/EditorPanelText.h"
+#include "Editor/Common/GUI/Panel/EditorPanelTitles.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -534,7 +534,7 @@ namespace sw::editor
                     const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );
                     if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
                     {
-                        ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
+                        ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelTitles::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
                         if ( pWindow != nullptr )
                             ImGui::FocusWindow( pWindow );
                         return EditorSelfTestStep::Continue;

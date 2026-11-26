@@ -234,7 +234,7 @@ namespace sw::editor
                 Component*        pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
                 if ( pComponent == nullptr )
                     return;
-                // 인스펙터 편집과 같은 규칙(`InspectorObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
+                // 인스펙터 편집과 같은 규칙(`PropertyGridObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
                 const bool           bRecord        = EditorPlaySession::areSceneEditsAllowed();
                 const ObjectSnapshot beforeSnapshot = bRecord ? EditorTransaction::captureSnapshot( pOwner ) : ObjectSnapshot{};
                 (void)pOwner->moveComponent( pComponent, direction ); // 끝 · 주 씬 컴포넌트면 그대로 — 켜짐 조건이 이미 막는다

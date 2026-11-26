@@ -19,7 +19,7 @@
 #include "Editor/Panels/Physics/Model/RagdollPreviewViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/Model/EditorColliderHandle.h"
 #include "Editor/Viewport/Model/EditorHandleDrag.h"
 

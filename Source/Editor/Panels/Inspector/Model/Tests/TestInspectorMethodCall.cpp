@@ -2,8 +2,8 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorFavorites.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridFavorites.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 
 #include "Engine/Reflection/ReflectionInvoke.h"
@@ -42,13 +42,13 @@ SW_TEST_CASE( InspectorMethodCallTest, SlotsConvertToArgumentsAndResultCarriesRe
     const sw::FunctionInfo* pHeal = InspectorMethodCallTestInternal::findMethod( "heal" );
     SW_REQUIRE_NOT_NULL( pHeal );
 
-    sw::vector<sw::editor::InspectorMethodArgSlot> listSlot;
-    SW_REQUIRE_TRUE( sw::editor::InspectorBuiltinValue::prepareMethodArgs( *pHeal, listSlot ) );
+    sw::vector<sw::editor::PropertyGridMethodArgSlot> listSlot;
+    SW_REQUIRE_TRUE( sw::editor::PropertyGridBuiltinValue::prepareMethodArgs( *pHeal, listSlot ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listSlot.size() );
     listSlot[0]._value = sw::TaskValue{ int32{ 10 } };
     listSlot[1]._value = sw::TaskValue{ float32{ 2.0f } };
 
-    const sw::vector<sw::ReflectedValue> listArg = sw::editor::InspectorBuiltinValue::makeMethodArgs( listSlot );
+    const sw::vector<sw::ReflectedValue> listArg = sw::editor::PropertyGridBuiltinValue::makeMethodArgs( listSlot );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listArg.size() );
     SW_EXPECT_TRUE( listArg[0]._typeName == sw::hashed_string( "int32" ) );
     SW_EXPECT_TRUE( listArg[1]._typeName == sw::hashed_string( "float32" ) );
@@ -59,7 +59,7 @@ SW_TEST_CASE( InspectorMethodCallTest, SlotsConvertToArgumentsAndResultCarriesRe
     model.invokeMethod( *pHeal, listArg );
     SW_EXPECT_EQUAL( 120, actor._hp );
 
-    const sw::editor::InspectorInvokeResult& result = model.getLastInvokeResult();
+    const sw::editor::PropertyGridInvokeResult& result = model.getLastInvokeResult();
     SW_EXPECT_EQUAL( sw::string( "heal" ), result._methodName );
     SW_EXPECT_FALSE( result.hasFailure() );
     SW_EXPECT_EQUAL( 1u, result._targetCount );
@@ -116,7 +116,7 @@ SW_TEST_CASE( InspectorMethodCallTest, FailedCallsLeaveTheReasonAndDoNotRun )
  */
 SW_TEST_CASE( InspectorMethodCallTest, ResultAggregatesTargets )
 {
-    sw::editor::InspectorInvokeResult result;
+    sw::editor::PropertyGridInvokeResult result;
     result.begin( "heal" );
     result.record( sw::ReflectCallResult::ArgumentMismatch, {} );
     result.record( sw::ReflectCallResult::Ok, sw::ReflectedValue::make( int32{ 3 } ) );
@@ -142,13 +142,13 @@ SW_TEST_CASE( InspectorMethodCallTest, ActionFavoriteKeyAndLookup )
     const sw::FunctionInfo* pHeal = InspectorMethodCallTestInternal::findMethod( "heal" );
     SW_REQUIRE_NOT_NULL( pType );
     SW_REQUIRE_NOT_NULL( pHeal );
-    const sw::string key = sw::editor::InspectorFavorites::makeMethodKey( *pType, *pHeal );
-    SW_EXPECT_EQUAL( sw::editor::InspectorFavorites::makeKey( pType->_name.c_str(), "heal" ), key );
+    const sw::string key = sw::editor::PropertyGridFavorites::makeMethodKey( *pType, *pHeal );
+    SW_EXPECT_EQUAL( sw::editor::PropertyGridFavorites::makeKey( pType->_name.c_str(), "heal" ), key );
 
     // 프로퍼티 즐겨찾기와 다른 파일이다 — 섞으면 메서드만 즐겨찾은 타입에 빈 프로퍼티 구역이 선다.
-    SW_EXPECT_FALSE( sw::string_view( sw::editor::InspectorFavorites::kPropertyFileName ) == sw::string_view( sw::editor::InspectorFavorites::kActionFileName ) );
+    SW_EXPECT_FALSE( sw::string_view( sw::editor::PropertyGridFavorites::kPropertyFileName ) == sw::string_view( sw::editor::PropertyGridFavorites::kActionFileName ) );
 
-    sw::editor::InspectorFavorites    actions( sw::editor::InspectorFavorites::kActionFileName );
+    sw::editor::PropertyGridFavorites actions( sw::editor::PropertyGridFavorites::kActionFileName );
     sw::editor::PropertyGridViewModel model;
     SW_EXPECT_FALSE( model.hasActionFavorites() );
     SW_EXPECT_FALSE( model.isActionFavorite( *pType, *pHeal ) );

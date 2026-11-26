@@ -20,7 +20,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
+#include "Editor/Common/Workspace/Play/EditorSceneGenerationReset.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -222,11 +222,11 @@ namespace sw::editor
 
     void EditorSceneFileCommands::syncAfterSceneGenerationChange()
     {
-        // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
+        // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationReset::apply` 에 있다.
         // 스택은 선택 조회(②): `apply` 가 nullptr 스택을 받는다(스택 없는 구성은 되돌릴 기록이 없다).
         EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>();
         const bool       bStopped  = EditorPlaySession::isStopped();
-        const bool       bChanged  = EditorSceneGenerationSync::apply( workspace, editor::getSubsystem<SceneManager>().getSceneGeneration(), bStopped == false, editor::findSubsystem<CommandStack>() );
+        const bool       bChanged  = EditorSceneGenerationReset::apply( workspace, editor::getSubsystem<SceneManager>().getSceneGeneration(), bStopped == false, editor::findSubsystem<CommandStack>() );
         if ( bChanged && bStopped )
             workspace.captureSceneDiskBaseline();
     }

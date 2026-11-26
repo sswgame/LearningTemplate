@@ -2,7 +2,7 @@
  * @file PackSceneChunkPlan.h
  * @brief 씬 단위 청크 나누기입니다 — 기동 필수(엔진 · 공용 · 첫 씬과 그 밖의 뿌리가 닿는 것)는 기본 청크에 두고, 한 씬만 쓰는 것은 그 씬의 청크,
  *        둘 이상의 씬이 쓰는 것은 공유 청크(`shared`)에 둡니다. 쿠커(`PackCooker`)가 팩 몫을 나눌 때 씁니다.
- * @details 언리얼 청크 pak 의 Primary Asset 라벨 · 유니티 Addressables 그룹과 같은 자리다 — 여기서는 씬이 라벨이고, 참조 고르기(`PackReachResult`)의
+ * @details 언리얼 청크 pak 의 Primary Asset 라벨 · 유니티 Addressables 그룹과 같은 자리다 — 여기서는 씬이 라벨이고, 참조 고르기(`PackReachableSet`)의
  *          씬마다의 닿음이 그 라벨의 범위다. 결과는 입력 순서와 상관없이 같다(이름 · id 로만 정한다).
  *          쿠킹 끝의 확인(`findUncovered`)이 실제로 쓴 팩 몫에서 씬이 닿는 에셋마다 그 청크가 기동 필수거나 그 씬의 청크인지 본다 — 빠지면 쿠킹 오류다.
  */

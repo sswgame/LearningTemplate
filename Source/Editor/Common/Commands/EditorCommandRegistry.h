@@ -14,8 +14,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/EditorCommandInfo.h"
 #include "Editor/Common/Commands/EditorCommandTarget.h"
-#include "Editor/Common/Commands/EditorCommandText.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
@@ -260,7 +260,7 @@ namespace sw::editor
      * @class EditorCommandRegistry
      * @brief 에디터 커맨드 정의를 모아 두고 id 로 찾아 실행합니다. `EditorContext` 가 소유합니다.
      */
-    class EditorCommandTextSet;
+    class EditorCommandInfoSet;
 
     class SW_EDITOR_API EditorCommandRegistry : public EditorSubsystem
     {
@@ -355,7 +355,7 @@ namespace sw::editor
          * @brief 메뉴 막대에 오르는 메뉴(`MainMenu/…`)의 보이는 이름을 표시 파일의 메뉴 이름 줄로 채웁니다. 명령을 모두 등록한 뒤 부릅니다(등록이 메뉴를 다시 만든다).
          * @details 이름 줄이 없는 메뉴는 오류를 남기고 경로 마디를 보인다(빠진 줄이 화면에 드러나게 — 빠진 현지화 키와 같다).
          */
-        void applyMenuLabels( const EditorCommandTextSet& texts );
+        void applyMenuLabels( const EditorCommandInfoSet& texts );
 
         /** @brief 아이콘과 라벨을 합친 메뉴 표시 문자열을 만듭니다. */
         static void formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::buffer::kMax128>& outLabel );
@@ -390,7 +390,7 @@ namespace sw::editor
     /**
      * @struct EditorCommandRegistration
      * @brief 확장 모듈이나 EditorModule 의 임의의 파일이 커맨드 하나의 동작을 추가하는 등록 항목입니다.
-     * @details 코드는 id 와 동작만 든다. 라벨 · 아이콘 · 메뉴 · 단축키 액션 · 맥락 메뉴는 그 모듈의 표시 파일(`*.commands.xml`, `SW_EDITOR_COMMAND_TEXT`)이 id 로 정한다.
+     * @details 코드는 id 와 동작만 든다. 라벨 · 아이콘 · 메뉴 · 단축키 액션 · 맥락 메뉴는 그 모듈의 표시 파일(`*.commands.xml`, `SW_EDITOR_COMMAND_INFO`)이 id 로 정한다.
      *          id 는 명령 표(`EditorCommandGUI.cpp` 의 `_s_arrCommandRow`)의 id 와도 겹치면 안 된다(`validate`). 문자열은 리터럴이어야 한다.
      */
     struct EditorCommandRegistration : EditorExtensionRegistration
@@ -417,7 +417,7 @@ namespace sw::editor
          * @brief 등록 항목을 모두 @p registry 에 추가합니다. 표시 · 배치는 @p texts 가 id 로 채운다(줄이 없는 명령은 오류를 남기고 넣지 않는다).
          *        모듈을 내릴 때는 그 줄이 먼저 목록에서 빠지므로 남은 줄만 들어간다.
          */
-        static void appendRegistrations( EditorCommandRegistry& registry, EditorCommandTextSet& texts );
+        static void appendRegistrations( EditorCommandRegistry& registry, EditorCommandInfoSet& texts );
     };
 } // namespace sw::editor
 

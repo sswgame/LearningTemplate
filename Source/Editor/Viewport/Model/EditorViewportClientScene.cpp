@@ -13,7 +13,7 @@
 #include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorGizmoEdit.h"
+#include "Editor/Viewport/Model/EditorGizmoViewModel.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -73,10 +73,10 @@ namespace sw::editor
 
     void EditorViewportClientScene::gatherGizmo( EditorGizmoViewState& outState )
     {
-        EditorGizmoEdit::gather( editor::getMainSceneSelection(), outState );
+        EditorGizmoViewModel::gather( editor::getMainSceneSelection(), outState );
     }
 
-    void EditorViewportClientScene::applyGizmo( EditorGizmoEdit& edit, const vector<EditorGizmoCommand>& listCommand )
+    void EditorViewportClientScene::applyGizmo( EditorGizmoViewModel& edit, const vector<EditorGizmoCommand>& listCommand )
     {
         edit.apply( editor::getMainSceneSelection(), listCommand );
     }

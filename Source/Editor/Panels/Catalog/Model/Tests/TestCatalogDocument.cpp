@@ -9,7 +9,7 @@
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
-#include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
+#include "Editor/Panels/Catalog/Model/CatalogTableEditModel.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -615,28 +615,28 @@ SW_TEST_CASE( CatalogCurveModelTest, GradientSamplesNeedEveryChannelAndAreClampe
 
 // ---------------------------------------------------------------------- 표에서 고른 편집
 
-SW_TEST_CASE( CatalogTableEditTest, DescribesWhatChangedOrWhyItWasRefused )
+SW_TEST_CASE( CatalogTableEditModelTest, DescribesWhatChangedOrWhyItWasRefused )
 {
     CatalogDocument document;
     SW_REQUIRE_TRUE( document.load( Util::kItems ) );
     const int32 row = document.getGroups()[0]._listRow[0];
     string      description;
 
-    SW_EXPECT_FALSE( CatalogTableEdit{}.apply( document, description ) );
+    SW_EXPECT_FALSE( CatalogTableEditModel{}.apply( document, description ) );
     SW_EXPECT_TRUE( description.empty() );
 
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, row, "cost", "7" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::SetCell, row, "cost", "7" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Edited Item.cost" );
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, row, "cost", "" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetCell, row, "cost", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Unset Item.cost" );
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, sw::nullopt, "", "Item" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::AddRow, sw::nullopt, "", "Item" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Added row to Item" );
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, row, "", "" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::DuplicateRow, row, "", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Duplicated row in Item" );
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, row, "", "" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::RemoveRow, row, "", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "Removed row from Item" );
 
-    SW_EXPECT_FALSE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, document.getGroups()[0]._listRow[0], "nope", "" }.apply( document, description ) ) );
+    SW_EXPECT_FALSE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetCell, document.getGroups()[0]._listRow[0], "nope", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( description == "nope: the element has no such attribute" ); // 거절의 이유가 대상(속성 이름)과 함께 나온다
 }
 
@@ -1133,7 +1133,7 @@ SW_TEST_CASE( CatalogDocumentTest, RevertsWrittenCellToInheritedValue )
 
     // 되돌리기는 행 메뉴의 Unset 과 같은 편집 하나 — 부모 값이 보인다.
     string description;
-    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, b, "name", "" }.apply( document, description ) ) );
+    SW_REQUIRE_TRUE( ( CatalogTableEditModel{ CatalogTableEditModel::Kind::UnsetCell, b, "name", "" }.apply( document, description ) ) );
     SW_EXPECT_TRUE( document.findCellValue( b, "name" ) == nullptr );
     SW_REQUIRE_TRUE( document.findInheritedValue( b, "name" ) != nullptr );
     SW_EXPECT_EQUAL( string( "A" ), string( document.findInheritedValue( b, "name" ) ) );

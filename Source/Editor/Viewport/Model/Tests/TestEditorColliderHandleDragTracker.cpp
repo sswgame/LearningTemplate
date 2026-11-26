@@ -3,7 +3,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Viewport/Model/EditorColliderHandleEdit.h"
+#include "Editor/Viewport/Model/EditorColliderHandleViewModel.h"
 
 namespace
 {

@@ -36,7 +36,7 @@ namespace sw
     class SW_DEVTOOLS_API FileWatchService
     {
     public:
-        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터의 에셋 리로드가 찾는다(`HostDevTools` 가 호스트 범위에 드러낸다)
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터의 에셋 리로드가 찾는다(`DevToolsHostBinding` 가 호스트 범위에 드러낸다)
 
         /** @brief 루트 하나를 볼 감시자를 만드는 함수입니다(없으면 nullptr). 테스트가 OS 없는 감시자를 준다. */
         using CreateWatcherDelegate = Delegate<unique_ptr<FileWatcher>()>;

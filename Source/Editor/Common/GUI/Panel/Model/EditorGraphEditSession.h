@@ -1,7 +1,7 @@
 /**
  * @file EditorGraphEditSession.h
  * @brief 노드 그래프 문서 패널(대화 그래프 · 애니메이션 그래프)이 함께 쓰는 Model 쪽 편집 알림 입구입니다. ImGui 를 모릅니다.
- * @details 그래프 문서는 공용 그래프 틀(`EditorGraphDocumentPanel`)이 들고 패널마다 명령 묶음(`DialogueGraphEdit` · `AnimationGraphEdit` — Model)이 고친다.
+ * @details 그래프 문서는 공용 그래프 틀(`EditorGraphDocumentPanel`)이 들고 패널마다 명령 묶음(`DialogueGraphEditModel` · `AnimationGraphEditModel` — Model)이 고친다.
  *          알림(되돌리기 한 단계 · 미저장)과 그 이름은 명령 묶음만 낸다 — 이 입구의 알림 함수는 private 이고 두 명령 묶음만 friend 다(감사 E-16).
  *          View 는 틀이 준 입구(`getGraphEditSession`)를 명령에 넘기기만 하고 스스로 알릴 수 없다. 언리얼 그래프 에디터의 스키마 액션이 트랜잭션을 여는 자리와 같다.
  */
@@ -13,8 +13,8 @@
 namespace sw::editor
 {
     class DocumentEditRecorder;
-    struct DialogueGraphEdit;
-    struct AnimationGraphEdit;
+    struct DialogueGraphEditModel;
+    struct AnimationGraphEditModel;
 
     /**
      * @class EditorGraphEditSession
@@ -30,8 +30,8 @@ namespace sw::editor
         }
 
     private:
-        friend struct DialogueGraphEdit;  // 대화 그래프 명령이 고친 뒤 알린다
-        friend struct AnimationGraphEdit; // 애니메이션 그래프 명령이 고친 뒤 알린다
+        friend struct DialogueGraphEditModel;  // 대화 그래프 명령이 고친 뒤 알린다
+        friend struct AnimationGraphEditModel; // 애니메이션 그래프 명령이 고친 뒤 알린다
         /** @brief 문서를 고쳤음을 @p label(명령이 정한 되돌리기 이름)로 알립니다. */
         void recordDocumentEdit( string_view label ) const;
 

@@ -11,9 +11,9 @@
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
-#include "Editor/Panels/Scene/Model/PropertyShapeEdit.h"
+#include "Editor/Panels/Scene/Model/PropertyShapeViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 

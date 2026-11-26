@@ -7,7 +7,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 
 #include "Engine/Input/RawInputEvent.h"
 

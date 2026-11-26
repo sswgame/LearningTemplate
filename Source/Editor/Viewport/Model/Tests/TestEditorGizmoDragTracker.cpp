@@ -3,7 +3,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Editor/Viewport/Model/EditorGizmoEdit.h"
+#include "Editor/Viewport/Model/EditorGizmoViewModel.h"
 
 namespace
 {

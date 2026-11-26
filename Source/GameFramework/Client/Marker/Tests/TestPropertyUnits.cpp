@@ -67,7 +67,7 @@ namespace
 
 /**
  * @brief [PropertyUnitsTest] PROPERTY 의 `Units` 는 값이 저장된 단위를 말한다 — 등록된 모든 타입(엔진 · GameFramework · 킷 · 게임)
- * @details 인스펙터는 `Units` 로 보이는 값 · 드래그 속도 · 단위 글자를 정한다(`InspectorPropertyLayout::getDisplayUnit`). 철자는 파서가 단위 표(`ReflectionUnits.h`)로
+ * @details 인스펙터는 `Units` 로 보이는 값 · 드래그 속도 · 단위 글자를 정한다(`PropertyGridLayout::getDisplayUnit`). 철자는 파서가 단위 표(`ReflectionUnits.h`)로
  *          막고 `deg` 는 파서가 거절하지만(도로 적는 칸은 `Radians` · `EulerAngles` 다), 표에 있는 단위가 값과 맞는지는 모른다. 규칙은 다섯이다. (1) 이름이 각도인 실수 칸은 `rad` 다.
  *          (2) `percent` 는 0..100 값이다 — 위 경계가 1 이하면 `ratio` 다. (3) `ratio` 의 위 경계는 1 이하, `rad` 의 위 경계는 2π 이하다.
  *          (4) 툴팁이 `Units` 와 다른 단위를 말하지 않는다(`kArrConflictingUnitWord`). (5) `Radians` · `EulerAngles` 칸은 `Units` 를 적지 않는다 — 형식이 단위를 말하고,

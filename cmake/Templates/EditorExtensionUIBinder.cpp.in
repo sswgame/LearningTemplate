@@ -3,7 +3,7 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/GUI/EditorUIContextState.h"
+#include "Editor/Common/GUI/EditorUIContextBinder.h"
 
 #include <imgui.h>
 #include <implot.h>
@@ -17,7 +17,7 @@ namespace sw::editor
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
             static void  freeForImGui( void* pPointer, void* /*pUserData*/ ) { Memory::free( pPointer ); }
 
-            static void bind( const EditorUIContextState& state )
+            static void bind( const EditorUIContextBinder& state )
             {
                 IMGUI_CHECKVERSION();
                 ImGui::SetAllocatorFunctions( &allocateForImGui, &freeForImGui, nullptr );

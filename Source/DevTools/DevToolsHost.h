@@ -8,7 +8,7 @@
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
-#include "DevTools/Profiling/FrameStall.h"
+#include "DevTools/Profiling/FrameHitchInjection.h"
 
 #include "Engine/EngineHooks.h"
 
@@ -64,7 +64,7 @@ namespace sw
         EngineFrameHooks makeFrameHooks();
 
         /** @brief 개발 명령 `profile.stall` 이 거는 프레임 지연입니다(씬 틱 뒤에 소비한다). */
-        FrameStall& getFrameStall() { return _frameStall; }
+        FrameHitchInjection& getFrameHitchInjection() { return _frameHitchInjection; }
 
     private:
         void            onFrameBegin( const EngineFrameContext& context );
@@ -79,6 +79,6 @@ namespace sw
         unique_ptr<DevConsoleHost>            _pConsole; ///< `startConsole` 이 세운 콘솔(App 만 — 서버는 자기 명령 채널이 있다)
         unique_ptr<ContentFolderWatchService> _pContentFolderWatch;
         unique_ptr<FileReadDiagnostics>       _pFileReadDiagnostics; ///< 파일 읽기 관찰자(디스크 흉내 · 읽기 기록) — 만들 때 걸고 소멸할 때 뗀다
-        FrameStall                            _frameStall;           ///< `profile.stall` 이 건 지연(`onAfterSceneTick` 이 소비한다)
+        FrameHitchInjection                   _frameHitchInjection;  ///< `profile.stall` 이 건 지연(`onAfterSceneTick` 이 소비한다)
     };
 } // namespace sw

@@ -12,13 +12,13 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorColliderHandleTool.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportClientScene.h"
 #include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
@@ -44,13 +44,13 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorViewportClient::EditorViewportClient()
-        : _toolbarSettings{}
+        : _overlayBars{}
         , _toolbarState{}
         , _canvasHeight{ 0.0f }
         , _camera{}
         , _picker{}
         , _gizmo{}
-        , _gizmoEdit{}
+        , _gizmoViewModel{}
         , _gizmoState{}
         , _canvasOverlay{}
         , _overlays{}
@@ -68,13 +68,13 @@ namespace sw::editor
     {
         // 어떤 시각화가 기본으로 켜지는지는 시각화 등록 항목이 정한다. 스냅, 카메라 속도, 표시 기본값은 환경설정(Editor/Viewport)에서 온다.
         const EditorViewportPreferences& preferences = getPreferences<EditorViewportPreferences>();
-        _toolbarSettings._cameraSpeed                = preferences._cameraSpeed;
-        _toolbarSettings._gridSnapValue              = preferences._gridSnapValue;
-        _toolbarSettings._rotationSnapValue          = preferences._rotationSnapValue.degrees(); // 도구 막대 · ImGuizmo 는 도
-        _toolbarSettings._scaleSnapValue             = preferences._scaleSnapValue;
-        _toolbarSettings._bShowHUD                   = preferences._bShowHUD;
-        _toolbarSettings._bShowGrid                  = preferences._bShowGrid;
-        _toolbarSettings._bShowOrientationCube       = preferences._bShowOrientationCube;
+        _overlayBars._cameraSpeed                    = preferences._cameraSpeed;
+        _overlayBars._gridSnapValue                  = preferences._gridSnapValue;
+        _overlayBars._rotationSnapValue              = preferences._rotationSnapValue.degrees(); // 도구 막대 · ImGuizmo 는 도
+        _overlayBars._scaleSnapValue                 = preferences._scaleSnapValue;
+        _overlayBars._bShowHUD                       = preferences._bShowHUD;
+        _overlayBars._bShowGrid                      = preferences._bShowGrid;
+        _overlayBars._bShowOrientationCube           = preferences._bShowOrientationCube;
     }
 
     uint32 EditorViewportClient::findDrawnBillboardGlyph( uint64 objectID ) const
@@ -90,7 +90,7 @@ namespace sw::editor
     void EditorViewportClient::resetCameraToDefault()
     {
         _camera.resetToDefault();
-        _toolbarSettings._cameraSpeed = getPreferences<EditorViewportPreferences>()._cameraSpeed;
+        _overlayBars._cameraSpeed = getPreferences<EditorViewportPreferences>()._cameraSpeed;
     }
 
     void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )
@@ -102,7 +102,7 @@ namespace sw::editor
         EditorInputGUI::setModeLayerEnabled( EditorViewportClientInternal::kFlyLayer, bFlying );
         if ( bWindowHovered || bWindowFocused )
         {
-            _camera.applyBookmarkRequest( _toolbarSettings._requestedBookmarkSlot );
+            _camera.applyBookmarkRequest( _overlayBars._requestedBookmarkSlot );
 
             // 키는 `Editor.Panel.scene_view` 레이어의 액션이다(씬 뷰가 포커스이고 글을 치는 중이 아닐 때만 발화한다).
             _camera.processBookmarkKeys();
@@ -119,7 +119,7 @@ namespace sw::editor
             }
             else if ( bFlying )
             {
-                _camera.processFlyInput( deltaTime, _toolbarSettings._cameraSpeed );
+                _camera.processFlyInput( deltaTime, _overlayBars._cameraSpeed );
             }
             else
             {
@@ -179,9 +179,9 @@ namespace sw::editor
     void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
         // 모으기(Model) → 바 그리기(View, 값만 본다) → 바가 적은 요청 실행.
-        ViewportToolbarState::gather( _toolbarState );
-        _overlays.draw( canvasMin, canvasSize, _toolbarSettings, _toolbarState );
-        _toolbarSettings.applyViewModeRequest();
+        EditorViewportOverlayViewState::gather( _toolbarState );
+        _overlays.draw( canvasMin, canvasSize, _overlayBars, _toolbarState );
+        _overlayBars.applyViewModeRequest();
     }
 
     void EditorViewportClient::draw( const void* pTextureID, const float2& canvasSize )
@@ -217,8 +217,8 @@ namespace sw::editor
             ImDrawList*  pCanvasDrawList = ImGui::GetWindowDrawList();
             const ImVec2 canvasMax{ imagePos.x + canvasSize._x, imagePos.y + canvasSize._y };
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
-            if ( _toolbarSettings._bShowGrid )
-                _canvasOverlay.drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _camera.getPosition(), _toolbarSettings._bIs2DMode );
+            if ( _overlayBars._bShowGrid )
+                _canvasOverlay.drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _camera.getPosition(), _overlayBars._bIs2DMode );
 
             // 시각화는 씬 전체를 복사하지 않고 매니저의 레지스트리(카메라 · 물리)를 읽는다 — 씬 쪽 입력은 Model 이 채운다.
             EditorViewportVisualizerArgs visualizerArgs{};
@@ -233,10 +233,10 @@ namespace sw::editor
             // 마우스 양보는 시각화가 매 프레임 다시 잡아야 유지된다(끄는 중에 토글을 꺼 그리기 함수가 안 돌아도 풀린다). 클릭 선택은 이 그리기 뒤라 같은 프레임의 첫 클릭도 양보를 본다.
             EditorViewportMouseCapture::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
             // 모으기(Model, 씬을 읽는다) → 그리기(View, 값만 본다) — 언리얼 컴포넌트 비주얼라이저가 FPrimitiveDrawInterface 에 값을 넘기는 가름.
-            _visualizerDrawList.gatherAll( visualizerArgs, _toolbarSettings._visualizerToggles );
-            EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles, _visualizerDrawList, _listScreenBillboard );
+            _visualizerDrawList.gatherAll( visualizerArgs, _overlayBars._visualizerToggles );
+            EditorViewportVisualizer::drawAll( visualizerArgs, _overlayBars._visualizerToggles, _visualizerDrawList, _listScreenBillboard );
 
-            _canvasOverlay.processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _toolbarSettings._bShowRuler );
+            _canvasOverlay.processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _overlayBars._bShowRuler );
             pCanvasDrawList->PopClipRect();
 
             // 피킹과 호버는 기즈모보다 먼저 본다. ImGuizmo::IsOver · IsUsing 은 지난 프레임에 그린 기즈모의 상태다.
@@ -247,7 +247,7 @@ namespace sw::editor
             pickInput._canvasSize           = canvasSize;
             pickInput._skipObjectID         = frame._cameraObjectID;
             pickInput._pListScreenBillboard = &_listScreenBillboard;
-            pickInput._b2DMode              = _toolbarSettings._bIs2DMode;
+            pickInput._b2DMode              = _overlayBars._bIs2DMode;
             _picker.processClick( pickInput, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseCapture::isCaptured() ) == false, bGizmoBusy );
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             _picker.processMarquee( pickInput, pCanvasDrawList );
@@ -264,25 +264,25 @@ namespace sw::editor
                 {
                     // 모으기(Model) → 기즈모(View, 스냅샷만 읽고 명령을 낸다) → 적용 · 되돌리기(Model). 메인 뷰포트는 메인 선택이다.
                     EditorViewportClientScene::gatherGizmo( _gizmoState );
-                    _gizmo.draw( _gizmoState, arrView, arrProj, canvasPos, canvasSize, _toolbarSettings, "sceneView.gizmoCenter" );
-                    EditorViewportClientScene::applyGizmo( _gizmoEdit, _gizmo.getCommands() );
+                    _gizmo.draw( _gizmoState, arrView, arrProj, canvasPos, canvasSize, _overlayBars, "sceneView.gizmoCenter" );
+                    EditorViewportClientScene::applyGizmo( _gizmoViewModel, _gizmo.getCommands() );
                 }
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             // 위쪽이나 오른쪽에 붙은 오버레이 바 아래에 둔다(지난 프레임 위치). 방향 큐브는 HUD 박스 아래다.
             const float2 topRightInset = _overlays.computeTopRightInset();
-            if ( _toolbarSettings._bShowHUD )
+            if ( _overlayBars._bShowHUD )
                 _hudModel.update( ImGui::GetIO().DeltaTime );
-            const float32 hudBoxHeight = _toolbarSettings._bShowHUD ? _hudView.draw( ImGui::GetWindowDrawList(), canvasPos, canvasSize, topRightInset, _hudModel ) : topRightInset._y;
+            const float32 hudBoxHeight = _overlayBars._bShowHUD ? _hudView.draw( ImGui::GetWindowDrawList(), canvasPos, canvasSize, topRightInset, _hudModel ) : topRightInset._y;
 
-            if ( _toolbarSettings._bShowOrientationCube )
-                EditorViewportCanvasOverlay::drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize, hudBoxHeight, _camera );
+            if ( _overlayBars._bShowOrientationCube )
+                EditorViewportGuides::drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize, hudBoxHeight, _camera );
             pCanvasDrawList->PopClipRect();
 
             // 배치 고스트도 캔버스 안에만 그린다
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
-            _assetPlacement.process( pCanvasDrawList, canvasPos, canvasSize, viewProj, _toolbarSettings );
+            _assetPlacement.process( pCanvasDrawList, canvasPos, canvasSize, viewProj, _overlayBars );
             pCanvasDrawList->PopClipRect();
         }
     }
@@ -300,7 +300,7 @@ namespace sw::editor
             _contextMenuObjectID = EditorViewportPicker::findObjectUnderMouse( pickInput, hit ) ? hit._objectID : 0;
 
             Ray          mouseRay{};
-            const uint32 planeAxis        = _toolbarSettings._bIs2DMode ? 2u : 1u; // 애셋 드롭과 같은 바닥: 2D 는 Z = 0, 3D 는 Y = 0
+            const uint32 planeAxis        = _overlayBars._bIs2DMode ? 2u : 1u; // 애셋 드롭과 같은 바닥: 2D 는 Z = 0, 3D 는 Y = 0
             _bContextMenuHasWorldPosition = EditorViewportProjectionUtil::makeMouseRay( pickInput._viewProj.invert(), pickInput._canvasPos, pickInput._canvasSize, mouseRay ) &&
                                             EditorViewportRayPick::rayHitsAxisPlane( mouseRay, planeAxis, _contextMenuWorldPosition );
         }
@@ -313,8 +313,8 @@ namespace sw::editor
         subject._bHasWorldPosition  = _bContextMenuHasWorldPosition;
         subject._bCallerDecidesOpen = true;
         subject._bOpenRequested     = bOpen;
-        EditorViewportPick::getSelectedIDs( subject._listSelectedID );
-        subject._selectOnly = &EditorViewportPick::selectOnly;
+        EditorViewportPickViewModel::getSelectedIDs( subject._listSelectedID );
+        subject._selectOnly = &EditorViewportPickViewModel::selectOnly;
         (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 } // namespace sw::editor

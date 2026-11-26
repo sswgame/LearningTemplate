@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/Model/EditorOrbitMath.h"
 
 #include "Engine/Object/Component/CameraComponent.h"

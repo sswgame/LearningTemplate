@@ -21,11 +21,11 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Widgets/PropertyGrid/IInspectorProperty.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorComponentPicker.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorNameSource.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/IPropertyDrawer.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridComponentPicker.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridNameSource.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -75,7 +75,7 @@ namespace sw::editor
             fixed_string<constant::buffer::kMax64> _search;
         };
 
-        class BuiltinPropertyBase : public IInspectorProperty
+        class BuiltinPropertyBase : public IPropertyDrawer
         {
         protected:
             void showTooltipIfHovered( const PropertyValueRow& row )
@@ -239,7 +239,7 @@ namespace sw::editor
         };
 
         // ------------------------------------------------------------------------------
-        // 값 위젯. 프로퍼티와 CallInEditor 인자를 같은 함수로 그린다. 분기는 `InspectorWidgetFor<T>` 가 정한다
+        // 값 위젯. 프로퍼티와 CallInEditor 인자를 같은 함수로 그린다. 분기는 `PropertyGridWidgetFor<T>` 가 정한다
         // ------------------------------------------------------------------------------
         static_assert( ImGuiDataType_S8 + 1 == ImGuiDataType_U8 && ImGuiDataType_U8 + 1 == ImGuiDataType_S16 &&
                            ImGuiDataType_S16 + 2 == ImGuiDataType_S32 && ImGuiDataType_S32 + 2 == ImGuiDataType_S64 &&
@@ -280,7 +280,7 @@ namespace sw::editor
         bool drawNameChoice( EditorWidgetID id, const hashed_string& source, hashed_string& value, bool& outbUnknownSource )
         {
             vector<hashed_string> listName; // 이 칸이 보일 때만 모은다(프로필 · 채널은 수십 개 이하)
-            outbUnknownSource = InspectorNameSource::collectNames( source, listName ) == false;
+            outbUnknownSource = PropertyGridNameSource::collectNames( source, listName ) == false;
             if ( outbUnknownSource )
                 return false;
             const auto found = std::find( listName.begin(), listName.end(), value );
@@ -417,10 +417,10 @@ namespace sw::editor
         template <typename T>
         bool drawValueWidget( EditorWidgetID id, T& value )
         {
-            constexpr InspectorValueWidget kWidget = InspectorWidgetFor<T>::kWidget;
-            if constexpr ( kWidget == InspectorValueWidget::Number )
+            constexpr PropertyGridValueWidget kWidget = PropertyGridWidgetFor<T>::kWidget;
+            if constexpr ( kWidget == PropertyGridValueWidget::Number )
                 return EditorWidgets::dragScalar( id, getNumberDataType<T>(), &value, std::is_integral_v<T> ? 1.0f : 0.01f, nullptr, nullptr, getNumberFormat<T>() );
-            else if constexpr ( kWidget == InspectorValueWidget::Checkbox )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Checkbox )
             {
                 if constexpr ( std::is_same_v<T, bool> )
                     return ImGui::Checkbox( id.c_str(), &value );
@@ -433,29 +433,29 @@ namespace sw::editor
                     return true;
                 }
             }
-            else if constexpr ( kWidget == InspectorValueWidget::Text )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Text )
                 return EditorWidgets::drawTextField( id.c_str(), value );
-            else if constexpr ( kWidget == InspectorValueWidget::Name )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Name )
                 return drawNameInput( id, value );
-            else if constexpr ( kWidget == InspectorValueWidget::Vector2 )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Vector2 )
                 return EditorWidgets::dragFloat2( id, &value._x, 0.1f );
-            else if constexpr ( kWidget == InspectorValueWidget::Vector3 )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Vector3 )
                 return EditorWidgets::dragFloat3( id, &value._x, 0.1f );
-            else if constexpr ( kWidget == InspectorValueWidget::Vector4 )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Vector4 )
                 return EditorWidgets::dragFloat4( id, &value._x, 0.01f );
-            else if constexpr ( kWidget == InspectorValueWidget::Matrix )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Matrix )
                 return drawMatrixWidget( id, value );
-            else if constexpr ( kWidget == InspectorValueWidget::Rotation )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Rotation )
                 return drawRotationWidget( id, value );
-            else if constexpr ( kWidget == InspectorValueWidget::Handle )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Handle )
                 return drawHandleWidget( id, value );
-            else if constexpr ( kWidget == InspectorValueWidget::Packed )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Packed )
                 return drawPackedWidget( id, value );
-            else if constexpr ( kWidget == InspectorValueWidget::Direction )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Direction )
                 return drawDirectionWidget( id, value );
             else
             {
-                static_assert( kWidget == InspectorValueWidget::Tag, "drawValueWidget: no widget for this InspectorValueWidget" );
+                static_assert( kWidget == PropertyGridValueWidget::Tag, "drawValueWidget: no widget for this PropertyGridValueWidget" );
                 return drawTagWidget( id, value );
             }
         }
@@ -473,7 +473,7 @@ namespace sw::editor
 
         using DrawMethodArgFn = bool ( * )( EditorWidgetID id, TaskValue& value );
 
-        /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValue` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
+        /** @brief 인자 위젯 테이블입니다. 순서는 `PropertyGridBuiltinValue` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
         const DrawMethodArgFn kArrDrawMethodArg[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgument<CppType>,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -510,12 +510,12 @@ namespace sw::editor
                 const float64 scale     = kIsInteger ? 1.0 : static_cast<float64>( row._scale );
                 const float32 dragSpeed = kIsInteger ? 1.0f : ( row._dragSpeed > 0.0f ? row._dragSpeed : 0.01f );
                 // 위젯은 `UIMin` 과 `UIMax`(없으면 `Min` 과 `Max`) 안에서 움직인다. 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255).
-                const InspectorNumericRange& range    = row._range;
-                const T                      minValue = static_cast<T>( range._widgetMin * scale );
-                const T                      maxValue = static_cast<T>( range._widgetMax * scale );
-                const T*                     pMin     = range._bHasWidgetMin ? &minValue : nullptr;
-                const T*                     pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
-                const utf8* const            pFormat  = model.getUnitNumberFormat( row._rowID, getNumberFormat<T>() );
+                const PropertyGridNumericRange& range    = row._range;
+                const T                         minValue = static_cast<T>( range._widgetMin * scale );
+                const T                         maxValue = static_cast<T>( range._widgetMax * scale );
+                const T*                        pMin     = range._bHasWidgetMin ? &minValue : nullptr;
+                const T*                        pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
+                const utf8* const               pFormat  = model.getUnitNumberFormat( row._rowID, getNumberFormat<T>() );
 
                 T    widgetValue = kIsInteger ? *pValue : static_cast<T>( static_cast<float64>( *pValue ) * scale );
                 bool bChanged    = false;
@@ -620,7 +620,7 @@ namespace sw::editor
                 if ( bPicked || acceptObjectDrop( row, model, *pValue, picked ) )
                 {
                     // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
-                    const string undoLabel = InspectorPropertyLayout::makeUndoLabel( row._label.c_str() );
+                    const string undoLabel = PropertyGridLayout::makeUndoLabel( row._label.c_str() );
                     model.setPropertyText( row._rowID, SerializerUtil::formatValueText( ValueAddress{ &picked }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                            undoLabel.c_str() );
                 }
@@ -651,12 +651,12 @@ namespace sw::editor
              * @details 고를 수 있는 값은 "(none)" 과 @p targetTypeName 의 열거한 컴포넌트 핸들뿐이다. 목록은 콤보가 열린 프레임에만 @p inoutListChoice 에 모은다.
              * @return 지금 값과 다른 것을 골랐으면 true 이고 @p outPicked 에 담습니다.
              */
-            static bool drawPicker( const utf8* pLabel, const string& preview, InspectorHandleState state, ComponentHandle current, const PropertyGridViewModel& model,
-                                    const hashed_string& targetTypeName, vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
+            static bool drawPicker( const utf8* pLabel, const string& preview, PropertyGridHandleState state, ComponentHandle current, const PropertyGridViewModel& model,
+                                    const hashed_string& targetTypeName, vector<PropertyGridComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
             {
-                const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
+                const bool bColored = state == PropertyGridHandleState::Missing || state == PropertyGridHandleState::WrongType;
                 if ( bColored )
-                    EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Signal", "Error" ) );
+                    EditorThemeUtil::pushTextColor( state == PropertyGridHandleState::Missing ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Signal", "Error" ) );
                 const bool bOpen = EditorWidgets::beginCombo( pLabel, preview.c_str() );
                 if ( bColored )
                     EditorThemeUtil::popTextColor();
@@ -671,7 +671,7 @@ namespace sw::editor
                 EditorSelfTestMarks::record( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                 if ( inoutListChoice.empty() )
                     ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "NoneInScene", TextArgumentList().addText( "type", targetTypeName.c_str() ) ).c_str() );
-                for ( const InspectorComponentChoice& choice : inoutListChoice )
+                for ( const PropertyGridComponentChoice& choice : inoutListChoice )
                 {
                     if ( ImGui::Selectable( choice._label.c_str(), choice._handle == current ) )
                     {
@@ -688,8 +688,8 @@ namespace sw::editor
             }
 
         private:
-            ValueProperty<ComponentHandle>   _untyped;
-            vector<InspectorComponentChoice> _listChoice; ///< 콤보가 열린 프레임에만 채운다
+            ValueProperty<ComponentHandle>      _untyped;
+            vector<PropertyGridComponentChoice> _listChoice; ///< 콤보가 열린 프레임에만 채운다
         };
 
         class StringProperty : public BuiltinPropertyBase
@@ -795,7 +795,7 @@ namespace sw::editor
                     drawReadOnlyText( row, row._valueText.c_str() );
                     return true;
                 }
-                const string undoLabel = InspectorPropertyLayout::makeUndoLabel( row._label.c_str() );
+                const string undoLabel = PropertyGridLayout::makeUndoLabel( row._label.c_str() );
                 const bool   bOpen     = EditorWidgets::beginCombo( _pLabel, row._valueText.empty() ? "(none)" : row._valueText.c_str() );
                 if ( bOpen == false && _openRowID == row._rowID )
                     _openRowID = constant::invalid_index::kUint32;
@@ -907,28 +907,28 @@ namespace sw::editor
         };
 
         /**
-         * @brief 내장 타입 하나의 프로퍼티 위젯을 만듭니다. 분기는 `InspectorWidgetFor<T>` 가 정합니다.
+         * @brief 내장 타입 하나의 프로퍼티 위젯을 만듭니다. 분기는 `PropertyGridWidgetFor<T>` 가 정합니다.
          * @details 메타데이터(범위, 단위, 색, 애셋 경로)를 읽는 분기는 전용 클래스를 쓰고, 나머지는 `ValueProperty` 를 씁니다.
          */
         template <typename T>
-        unique_ptr<IInspectorProperty> createBuiltinProperty()
+        unique_ptr<IPropertyDrawer> createBuiltinProperty()
         {
-            constexpr InspectorValueWidget kWidget = InspectorWidgetFor<T>::kWidget;
+            constexpr PropertyGridValueWidget kWidget = PropertyGridWidgetFor<T>::kWidget;
             if constexpr ( std::is_same_v<T, ComponentHandle> )
                 return make_unique<ComponentHandleProperty>();
-            else if constexpr ( kWidget == InspectorValueWidget::Number )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Number )
                 return make_unique<NumericProperty<T>>();
-            else if constexpr ( kWidget == InspectorValueWidget::Checkbox )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Checkbox )
                 return make_unique<CheckboxProperty<T>>();
-            else if constexpr ( kWidget == InspectorValueWidget::Text )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Text )
                 return make_unique<StringProperty>();
-            else if constexpr ( kWidget == InspectorValueWidget::Name )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Name )
                 return make_unique<HashedStringProperty>();
-            else if constexpr ( kWidget == InspectorValueWidget::Vector2 )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Vector2 )
                 return make_unique<Float2Property>();
-            else if constexpr ( kWidget == InspectorValueWidget::Vector3 )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Vector3 )
                 return make_unique<Float3Property>();
-            else if constexpr ( kWidget == InspectorValueWidget::Vector4 )
+            else if constexpr ( kWidget == PropertyGridValueWidget::Vector4 )
                 return make_unique<Float4Property>();
             else
                 return make_unique<ValueProperty<T>>();
@@ -936,7 +936,7 @@ namespace sw::editor
 
         constexpr const utf8* kRegistryLabel = "Inspector property type"; ///< 등록 거절 로그에 나오는 이름
 
-        static_assert( SW_COUNT_OF( kArrDrawMethodArg ) == InspectorBuiltinValue::kBuiltinCount,
+        static_assert( SW_COUNT_OF( kArrDrawMethodArg ) == PropertyGridBuiltinValue::kBuiltinCount,
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
 
     } // namespace
@@ -950,9 +950,9 @@ namespace sw::editor
 
     PropertyDrawerRegistry::~PropertyDrawerRegistry() = default;
 
-    IInspectorProperty* PropertyDrawerRegistry::find( string_view typeName ) const
+    IPropertyDrawer* PropertyDrawerRegistry::find( string_view typeName ) const
     {
-        const unique_ptr<IInspectorProperty>* pProperty = _registry.find( hashed_string( typeName ) );
+        const unique_ptr<IPropertyDrawer>* pProperty = _registry.find( hashed_string( typeName ) );
         return pProperty != nullptr ? pProperty->get() : nullptr;
     }
 
@@ -993,8 +993,8 @@ namespace sw::editor
         (void)_registry.addLogged( hashed_string( CatalogKeyBase::kTypeName ), make_unique<CatalogKeyProperty>(), kRegistryLabel );
     }
 
-    bool PropertyDrawerRegistry::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,
-                                                vector<InspectorComponentChoice>& inoutListChoice )
+    bool PropertyDrawerRegistry::drawMethodArg( const utf8* pLabel, PropertyGridMethodArgSlot& slot, const FunctionParameterInfo& parameter, const PropertyGridViewModel& model,
+                                                vector<PropertyGridComponentChoice>& inoutListChoice )
     {
         if ( slot._value.hasValue() == false || slot._builtinIndex >= SW_COUNT_OF( kArrDrawMethodArg ) )
         {
@@ -1008,9 +1008,9 @@ namespace sw::editor
         }
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
-        const ComponentHandle* pCurrent = slot._value.getStoredSize() == sizeof( ComponentHandle ) ? slot._value.getPtr<ComponentHandle>() : nullptr;
-        string                 preview;
-        InspectorHandleState   state{};
+        const ComponentHandle*  pCurrent = slot._value.getStoredSize() == sizeof( ComponentHandle ) ? slot._value.getPtr<ComponentHandle>() : nullptr;
+        string                  preview;
+        PropertyGridHandleState state{};
         if ( pCurrent == nullptr || model.describeComponentHandle( parameter._handleTargetTypeName, *pCurrent, preview, state ) == false )
         {
             ImGui::TextDisabled( "%s", pLabel );

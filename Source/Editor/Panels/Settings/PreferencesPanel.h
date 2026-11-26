@@ -1,6 +1,6 @@
 /**
  * @file PreferencesPanel.h
- * @brief 에디터 환경설정 창입니다(Edit > Preferences). 등록된 섹션(`SW_EDITOR_SETTINGS`)을 프로퍼티 그리드로 그리고, 바뀌면 잠시 뒤 저장합니다.
+ * @brief 에디터 환경설정 창입니다(Edit > Preferences). 등록된 섹션(`SW_EDITOR_PREFERENCES`)을 프로퍼티 그리드로 그리고, 바뀌면 잠시 뒤 저장합니다.
  * @details 섹션 목록 · 고른 섹션 · 숨길 프로퍼티 · 되돌리기 · 저장 기다리기는 `PreferencesViewModel`(Model/, ImGui 없음)이 들고, 이 창은 목록 · 그리드 그리기와 검색 칸만 든다.
  */
 #pragma once

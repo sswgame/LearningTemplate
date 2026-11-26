@@ -18,7 +18,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -456,7 +456,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_SETTINGS( EditorAutosavePreferences, "autosave", "Editor/Autosave", 150, nullptr );
+    SW_EDITOR_PREFERENCES( EditorAutosavePreferences, "autosave", "Editor/Autosave", 150, nullptr );
     // 명령 단계 뒤(이번 프레임의 씬 세션 처리 · 세대 동기화가 끝난 뒤)에 돈다
     SW_EDITOR_GAME_STEP( Autosave, "autosave", EditorGameStepOrder::kAutosave, &EditorAutosaveCommandsInternal::runGameStep );
     SW_DEV_COMMAND( AutosaveNow, "autosave.now", "autosave.now", "Write an autosave copy of the open scene now (ignores the interval)", &EditorAutosaveCommandsInternal::runNow );

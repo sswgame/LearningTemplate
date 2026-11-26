@@ -131,7 +131,7 @@ namespace sw
          * @details 디스패치하는 쪽이 항목을 붙일 때 한 번 받아 항목에 들고, 부를 때마다 그 값으로 `ScopedFrameProfile` 을 엽니다 — 프레임마다 이름을 잇거나
          *          찾지 않는다. 시스템마다 손으로 구간을 더하지 않으므로 새 시스템도 계측에서 빠지지 않는다(언리얼 `FTickFunction` 이 틱 함수 이름으로
          *          stat 을 여는 자리). 이름은 두 표(이 표 · 외부 출력)가 사본을 든다.
-         *          엔진 서비스가 묶이지 않았으면(엔진 없는 테스트 매니저) 어디에도 쌓이지 않는 지점입니다(`EditorProfileUtil::registerScope` 와 같은 계약).
+         *          엔진 서비스가 묶이지 않았으면(엔진 없는 테스트 매니저) 어디에도 쌓이지 않는 지점입니다(`EditorProfileScope::registerScope` 와 같은 계약).
          */
         static ProfileScopeID registerEngineNamedScope( const utf8* pPrefix, const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
         /** @brief 엔진의 FrameProfiler 에 카운터 이름을 등록합니다(`registerScope`). */

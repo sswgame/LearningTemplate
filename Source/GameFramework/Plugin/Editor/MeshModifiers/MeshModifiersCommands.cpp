@@ -33,5 +33,5 @@ namespace sw::editor
 
     SW_EDITOR_COMMAND( MeshModifiersOpen, "meshmodifiers.openPanel", &openMeshModifiersPanel, nullptr, NoScene );
 
-    SW_EDITOR_COMMAND_TEXT( MeshModifiers, "meshmodifiers.commands", "editor/commands/meshmodifiers.commands.xml" ); // 이 모듈 명령의 표시 · 배치
+    SW_EDITOR_COMMAND_INFO( MeshModifiers, "meshmodifiers.commands", "editor/commands/meshmodifiers.commands.xml" ); // 이 모듈 명령의 표시 · 배치
 } // namespace sw::editor

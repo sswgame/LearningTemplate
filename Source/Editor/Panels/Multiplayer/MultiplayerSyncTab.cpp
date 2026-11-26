@@ -3,7 +3,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -27,7 +27,7 @@ namespace sw::editor
     } // namespace
 
     // 클라이언트 답 시한 환경설정 — 값은 `MultiplayerSyncViewModel` 이 읽는다.
-    SW_EDITOR_SETTINGS( EditorSyncPreferences, "multiplayer_sync", "Editor/Multiplayer Sync", 370, nullptr );
+    SW_EDITOR_PREFERENCES( EditorSyncPreferences, "multiplayer_sync", "Editor/Multiplayer Sync", 370, nullptr );
 } // namespace sw::editor
 
 namespace sw::editor

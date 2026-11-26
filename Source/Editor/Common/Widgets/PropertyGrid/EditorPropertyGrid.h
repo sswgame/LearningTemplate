@@ -14,8 +14,8 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorComponentPicker.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridComponentPicker.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
 
@@ -64,7 +64,7 @@ namespace sw::editor
             _openAllRequest = OpenAllRequest::None;
             _model.endFrame(); // 닫힌 편집 구간을 되돌리기에 남긴다(그리기를 모두 마친 뒤 — 남기기는 이번 프레임의 쓰기 요청 뒤 게임 단계에 선다)
         }
-        /** @brief 이 그리드의 편집 모델입니다 — 확장 영역의 편집 구간을 여는 View(`InspectorPropertyUndo::trackComponentRegion`)가 쓴다. */
+        /** @brief 이 그리드의 편집 모델입니다 — 확장 영역의 편집 구간을 여는 View(`PropertyGridUndo::trackComponentRegion`)가 쓴다. */
         PropertyGridViewModel& editModel() { return _model; }
         /** @brief 현재 검색어를 반환합니다. 비어 있으면 빈 문자열입니다. 환경설정 창이 섹션을 거를 때 씁니다. */
         const utf8* getFilterText() const { return _propertyFilter.c_str(); }
@@ -81,12 +81,12 @@ namespace sw::editor
          * @brief 즐겨찾기 집합을 연결합니다. 연결하면 프로퍼티 행의 우클릭 메뉴에 즐겨찾기 토글이 생기고 즐겨찾기 행 이름 앞에 별을 그립니다. nullptr 이면 끕니다.
          * @details 집합의 주인은 인스펙터 패널이다. 환경설정 창처럼 즐겨찾기가 없는 그리드는 연결하지 않는다. 토글하면 저장 파일에 바로 쓴다.
          */
-        void setFavorites( InspectorFavorites* pFavorites ) { _model.setFavorites( pFavorites ); }
+        void setFavorites( PropertyGridFavorites* pFavorites ) { _model.setFavorites( pFavorites ); }
         /** @brief 메서드 액션 즐겨찾기 집합을 연결합니다 — 별을 켠 메서드는 목록 맨 위에 선다(반복 작업용 액션 목록). 집합의 주인은 인스펙터 패널이다. */
-        void setActionFavorites( InspectorFavorites* pActionFavorites ) { _model.setActionFavorites( pActionFavorites ); }
+        void setActionFavorites( PropertyGridFavorites* pActionFavorites ) { _model.setActionFavorites( pActionFavorites ); }
         /**
          * @brief 대상의 프로퍼티 중 즐겨찾기한 것만 타입 이름 머리 아래에 그립니다. 그릴 것이 없으면 아무것도 그리지 않습니다.
-         * @details 인스펙터 맨 위 Favorites 구역이 쓴다. 키는 대상 타입 이름과 프로퍼티 이름이다(`InspectorFavorites::makeKey`).
+         * @details 인스펙터 맨 위 Favorites 구역이 쓴다. 키는 대상 타입 이름과 프로퍼티 이름이다(`PropertyGridFavorites::makeKey`).
          */
         void drawFavoriteProperties( const EditorPropertyGridTarget& target );
 
@@ -99,7 +99,7 @@ namespace sw::editor
         /** @brief 마지막으로 그린 프레임에 목록 맨 위에 그린 액션 즐겨찾기 메서드 행 수입니다(감시 값 `Editor.InspectorFavoriteMethodRows`). */
         uint32 getFavoriteMethodRowCount() const { return _favoriteMethodRowCount; }
         /** @brief 마지막 호출의 결과입니다(감시 값 `Editor.InspectorCallTargets` · `Editor.InspectorCallFailures`). */
-        const InspectorInvokeResult& getLastInvokeResult() const { return _model.getLastInvokeResult(); }
+        const PropertyGridInvokeResult& getLastInvokeResult() const { return _model.getLastInvokeResult(); }
         /** @brief 마지막으로 그린 프레임에 값을 채운 프로퍼티 행 수입니다(감시 값 `Editor.InspectorFilledRows` — 화면 밖 행은 세지 않는다). */
         uint32 getFilledRowCount() const { return _filledRowCount; }
         /** @brief 마지막으로 그린 프레임에 화면 밖이라 높이만 둔 깊이 0 행 수입니다(감시 값 `Editor.InspectorSkippedRows`). */
@@ -181,7 +181,7 @@ namespace sw::editor
         /** @brief 이 메서드를 목록에 그리면 true 입니다 — `CallInEditor` 이거나 진단 보기가 켜져 있을 때입니다. */
         [[nodiscard]] bool isMethodListed( const FunctionInfo& method ) const;
         /** @brief 메서드의 인자 입력란을 인자 슬롯마다 그립니다. */
-        void drawMethodArgInputs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot );
+        void drawMethodArgInputs( const FunctionInfo& method, vector<PropertyGridMethodArgSlot>& inoutListSlot );
         /** @brief 타입의 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 기반 클래스부터 그립니다. 인자 없는 이벤트는 즉시 호출할 수 있습니다. */
         void drawTypeEvents( const TypeInfo* pTypeInfo );
 
@@ -202,9 +202,9 @@ namespace sw::editor
         };
 
         fixed_string<constant::buffer::kMax64>                         _propertyFilter;         ///< 프로퍼티 검색 필터
-        unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot;       ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
+        unordered_map<string, vector<PropertyGridMethodArgSlot>>       _mapMethodArgSlot;       ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
         unordered_map<uint32, fixed_string<constant::buffer::kMax256>> _mapContainerAddText;    ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
-        vector<InspectorComponentChoice>                               _listMethodArgChoice;    ///< 메서드 인자 핸들 선택기의 선택지 — 콤보가 열린 프레임에만 채운다
+        vector<PropertyGridComponentChoice>                            _listMethodArgChoice;    ///< 메서드 인자 핸들 선택기의 선택지 — 콤보가 열린 프레임에만 채운다
         PropertyGridViewModel                                          _model;                  ///< 편집 모델 — 대상 · 값 행 · 배치 캐시 · 즐겨찾기 · 명령
         PropertyGridViewState                                          _viewState;              ///< 그리는 대상의 값 행(저장 공간을 다시 쓴다)
         vector<OpenRowScope>                                           _listOpenScope;          ///< 지금 열린 행 범위(바깥에서 안쪽 순서)
