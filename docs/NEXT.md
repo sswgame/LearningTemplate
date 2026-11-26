@@ -26,7 +26,7 @@
 | --- | --- |
 | w-shaderreload · LT-wt/shaderreload | 손으로 쓴 열거 이름 함수(`getKindName` 류 · 열거형 위 문자열 switch)를 `ENUM()` · `getEnumName` 으로 |
 | w-pimpl · LT-wt/pimpl | 8 절 임포트 산출물 이름을 원본 .meta 에 적기(코드 몫 — 다시 임포트는 통합) |
-| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 조사: PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가(보고서만) |
+| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기(조사 끝 — 타입 검증은 배포에 남기고 프로퍼티 검증 · ObjectValidation · 기록 표는 개발 전용으로, 관문 타입의 `PROPERTY( Validate )` 는 파서가 거절) |
 
 나머지 갈래(enum-meta · gf-dev · devtools-merge · server-subsystem · engine-owner · core-lift · render-data)는 main 에 합쳤다. push 뒤 워크트리를 지운다.
 
