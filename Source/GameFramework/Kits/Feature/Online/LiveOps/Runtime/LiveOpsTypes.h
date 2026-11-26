@@ -69,7 +69,7 @@ namespace sw
      *          지역 목록(`vector<string>`)이 있어 고정 배치형 코덱은 없습니다.
      */
     REFLECT()
-    struct LiveEventDef
+    struct SW_KIT_API LiveEventDef
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = LiveOpsLimit::kMaxParameterCount )
@@ -143,7 +143,7 @@ namespace sw
      * @details 등록 요청 본문(B)과 저장소의 기기 레코드(A, 기기 표 `liveops_device`)가 같은 선언을 씁니다. 상한은 `PushLimit` 와 같은 값입니다.
      */
     REFLECT()
-    struct PushDeviceRegistration
+    struct SW_KIT_API PushDeviceRegistration
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = PushLimit::kMaxProviderIDSize )

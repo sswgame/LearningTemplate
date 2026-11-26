@@ -25,6 +25,7 @@ namespace sw
         static constexpr int32 kSaltSize              = 16;
         static constexpr int32 kPasswordHashSize      = 32;
         static constexpr int32 kDigestSize            = 32;
+        static constexpr int32 kDigestHexSize         = kDigestSize * 2; ///< 다이제스트를 16 진 글로 적은 길이
         static constexpr int32 kTokenSecretSize       = 32;
         static constexpr int32 kMinLoginNameSize      = 3;
         static constexpr int32 kMaxLoginNameSize      = 16;

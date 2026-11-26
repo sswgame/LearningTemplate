@@ -151,7 +151,7 @@ namespace sw
         PROPERTY( SaveGame, Replicated, Min = -100000, Max = 100000 )
         float3 _position{}; ///< 범위는 NaN · 무한대를 거절하는 경계다
 
-        ServiceRecordUnknownFields _unknownProperties{};
+        SW_TRANSIENT ServiceRecordUnknownFields _unknownProperties{}; ///< 게임 상태 복원 대상이 아니다. ServiceRecordTable 이 읽고 다시 쓸 때 따로 든다
     };
 } // namespace sw
 

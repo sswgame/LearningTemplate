@@ -83,7 +83,7 @@ namespace sw
 
     /** @brief 우편 표(`mail_item`)의 레코드입니다. */
     REFLECT()
-    struct ServiceMailStoreRecord
+    struct SW_GF_API ServiceMailStoreRecord
     {
         REFLECT_BODY();
         PROPERTY()

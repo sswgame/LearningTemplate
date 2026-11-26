@@ -9,6 +9,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
@@ -19,7 +20,7 @@ namespace sw
      *          감사 표(`ServiceAuditLog::getTable`)의 레코드 형식이기도 하다(판은 이 형식의 `REFLECT( Version )`).
      */
     REFLECT()
-    struct ServiceAuditEntry
+    struct SW_GF_API ServiceAuditEntry
     {
         REFLECT_BODY();
         static constexpr int32 kMaxTextSize  = 256;  ///< `_actor` · `_action` · `_subject`. 관리자 프로토콜의 문구 상한(`AdminProtocol::kMaxTextSize`)과 같다

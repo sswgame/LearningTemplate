@@ -10,8 +10,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/FileWatch/FileWatchService.h"
-#include "DevTools/Host/EditorGameModuleManager.h"
 #include "DevTools/Host/EditorModuleHeadlessTasks.h"
+#include "DevTools/Host/HostClientDevTasks.h"
 #include "DevTools/Host/HostDevTools.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
@@ -19,12 +19,8 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Renderer/Capture/PortraitStudio.h"
-#include "Engine/Renderer/RenderThread.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Window/SplashSubsystem.h"
-#include "Engine/Window/SplashWindow.h"
 
+#include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/Host/HostLaunch.h"
 
 #if SW_WITH_DYNAMIC_MODULES
@@ -126,7 +122,7 @@ namespace sw
                 _devTools.detach();
             }
 
-            unique_ptr<GameModuleManager> makeEditorModuleManager() override { return make_unique<EditorGameModuleManager>( *_pEngine ); }
+            unique_ptr<GameModuleManager> makeEditorModuleManager() override { return HostClientDevTasks::makeEditorModuleManager( *_pEngine ); }
 
             bool startAutomation( const CommandLineManager& commandLine ) override
             {
@@ -144,7 +140,7 @@ namespace sw
 
             HostTaskResult runAfterHostServices( const CommandLineManager& commandLine ) override
             {
-                return runPortraitBake( commandLine ); // 지금은 초상화 굽기 하나다
+                return HostClientDevTasks::runPortraitBake( *_pEngine, commandLine ); // 지금은 초상화 굽기 하나다
             }
 
             void markStartupPhase( const utf8* pPhaseName ) override { _startupPhases.mark( pPhaseName ); }
@@ -176,37 +172,8 @@ namespace sw
         private:
             /** @brief 로그로 찍는 첫 프레임 수입니다. */
             static constexpr uint32 kStartupFramesLogged = 3;
-            /** @brief 초상화 한 변의 기본 픽셀 수입니다(`--portrait-size` 가 없거나 0 이하일 때). */
-            static constexpr int32 kDefaultPortraitSize = 256;
 
             int64 getMainLoopElapsedMilliseconds() const { return ( MonotonicClock::nowMicroseconds() - _mainLoopStartMicro ) / constant::time::kMicrosecondsPerMillisecond; }
-
-            /**
-             * @brief 초상화 굽기(`--render-portraits=a.prefab.xml,b.prefab.xml`)입니다. 게임 컴포넌트 타입이 로드된 뒤 그리고 끝낸다(창은 띄우지 않는다).
-             * @details 스튜디오 씬 · 패킷은 이 스레드가, 그리기 · 읽기는 렌더 스레드가 명령으로 한다(`PortraitStudio`). 하나라도 실패하면 실패다.
-             */
-            HostTaskResult runPortraitBake( const CommandLineManager& commandLine ) const
-            {
-                string portraitList;
-                if ( commandLine.getArgument( CommandLineArgument::RENDER_PORTRAITS, portraitList ) == false || portraitList.empty() )
-                    return HostTaskResult::NotRequested;
-                int32        portraitSize = kDefaultPortraitSize;
-                AbsolutePath portraitDir;
-                commandLine.getArgument( CommandLineArgument::PORTRAIT_SIZE, portraitSize );
-                commandLine.getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
-                // 굽는 동안 스플래시를 남기지 않는다. 렌더러 없는 구성은 스플래시 단계가 없다.
-                if ( SplashSubsystem* const pSplashHost = engine::findSubsystem<SplashSubsystem>() )
-                    pSplashHost->getSplash().dismiss();
-                RenderThread* const pRenderThread = _pEngine->getRenderThread();
-                if ( pRenderThread == nullptr || pRenderThread->getDevice() == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "HostDevLayer.PortraitBakeNeedsRender", "Portrait bake needs a render thread with a device (--render-portraits)" );
-                    return HostTaskResult::Failed;
-                }
-                const bool bBaked = PortraitStudio::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
-                                                                      static_cast<uint32>( portraitSize > 0 ? portraitSize : kDefaultPortraitSize ) );
-                return bBaked ? HostTaskResult::Finished : HostTaskResult::Failed;
-            }
 
         private:
             FileWatchService _fileWatch; ///< 프로세스의 파일 감시 창구 — 아래 둘이 빌려 써 맨 앞에 둔다(마지막에 사라진다)

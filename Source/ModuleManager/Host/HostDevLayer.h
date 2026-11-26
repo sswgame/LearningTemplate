@@ -88,7 +88,7 @@ namespace sw
         virtual void addConsoleHostService( HostLaunch& launch, const utf8* pGameServiceName, bool bEnableEditor ) = 0;
 
         // ---- 클라이언트(App)의 개발 전용 몫 ----
-        /** @brief 에디터 인스턴스를 드는 모듈 관리자를 만듭니다(`-EnableEditor` — 구현 `DevTools/Host/EditorGameModuleManager`). 에디터 렌더 훅 · 창 최소 크기도 그 관리자가 건다. */
+        /** @brief 에디터 인스턴스를 드는 모듈 관리자를 만듭니다(`-EnableEditor` — 구현 `DevTools/Host/Client/EditorGameModuleManager`). 에디터 렌더 훅 · 창 최소 크기도 그 관리자가 건다. */
         [[nodiscard]] virtual unique_ptr<GameModuleManager> makeEditorModuleManager() = 0;
         /**
          * @brief 엔진이 선 뒤 자동화 실행기(`IAutomationRuntime`)를 찾아 시작합니다. 모듈을 올리기 전에 부릅니다.

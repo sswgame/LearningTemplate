@@ -66,7 +66,7 @@ namespace sw
         string _nameKey{}; ///< 이름과 비밀번호가 있으면 소문자 이름 키이고, 아니면 빈 문자열이다
         PROPERTY( MaxCount = LoginConstant::kMaxDisplayNameSize )
         string _displayName{};
-        PROPERTY( MaxCount = LoginConstant::kDigestSize * 2 )
+        PROPERTY( MaxCount = LoginConstant::kDigestHexSize )
         string _guestDigestHex{}; ///< 게스트 장치 다이제스트이다. 지울 때 그 레코드를 찾는 데 쓰며, 없으면 빈 문자열이다
         PROPERTY()
         int64 _deletionDueMs{ 0 };
@@ -105,7 +105,7 @@ namespace sw
     struct LoginExternalSubjectRecord
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = LoginConstant::kDigestSize * 2 )
+        PROPERTY( MaxCount = LoginConstant::kDigestHexSize )
         string _subjectDigestHex{};
 
         ServiceRecordUnknownFields _unknownProperties{};

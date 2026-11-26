@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Host/EditorGameModuleManager.h"
+#include "DevTools/Host/Client/EditorGameModuleManager.h"
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/DynamicModules.h"

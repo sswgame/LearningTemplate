@@ -23,6 +23,11 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 elseif(SW_TARGET_TYPE STREQUAL "Client")
 	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
 endif()
+# 개발 계층의 클라이언트 일(`Host/HostClientDevTasks.h`)은 정의가 구성마다 하나다. 클라이언트 · 서버를 함께 짓는 개발 구성은 클라이언트 정의를 쓰고,
+# 렌더러 · 에디터가 없는 전용 서버만 `Host/Server/` 의 정의를 쓴다.
+if(NOT SW_TARGET_TYPE STREQUAL "Server")
+	sw_remove_excluded_sources(DEVTOOLS_SOURCES "/Source/DevTools/Host/Server/")
+endif()
 
 # 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 정적 라이브러리로 한 실행 파일에 들고, 핫 리로드(`ModuleReload/` — 모듈 DLL 을 갈아 끼운다)를 짓지 않는다.
 # 그 창구(`IHostDevLayer` 의 리로드 함수)도 그 구성에서 형식에 없다(`SW_WITH_DYNAMIC_MODULES`). 자동화 실행기 · 콘솔 · 설정 리로드는 남는다.
@@ -86,15 +91,12 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 리플렉션 — 머티리얼 그래프 에셋 형식(`Material/` — 컴파일러가 Engine `Graphics/Material/Dev` 에서 옮겨 왔다, 설계 2026-11-17 G2)이 DevTools 의 첫 REFLECT 타입이다.
-# 입력은 적은 헤더뿐이다(빈 HEADERS 는 DevTools 전체를 훑는다). 보존 규칙 파일 스키마(`SavedCleanupSubsystem.h`), 리로드 길 · 메모리 비교 상태 이름(`ReloadSource.h` · `MemoryDiffStatus.h`)도 여기서 읽는다. 주인(CONTENT_OWNER)을 비워 호스트 소유로 둔다 — 개발 호스트가 늘 DevTools 를 링크한다.
-# 셰이더 쿠커는 이 컴파일러를 모른다 — `IShaderSourceGenerator` 정적 등록(`MaterialGraphGeneratedPaths.cpp`)으로 붙는다.
+# HEADERS 를 비워 DevTools 전체에서 REFLECT · ENUM 헤더를 훑는다. 손으로 적은 목록은 새 반사 형식을 빠뜨려 링크에서야 드러났다.
+# 주인(CONTENT_OWNER)을 비워 호스트 소유로 둔다. 개발 호스트가 늘 DevTools 를 링크한다.
+# 셰이더 쿠커는 이 컴파일러를 모른다. `IShaderSourceGenerator` 정적 등록(`MaterialGraphGeneratedPaths.cpp`)으로 붙는다.
 # ------------------------------------------------------------------------------
 sw_add_reflection_step(DevTools
 	MODULE DevTools
-	HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/Material/MaterialGraph.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Maintenance/SavedCleanupSubsystem.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/AssetReload/ReloadSource.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Memory/MemoryDiffStatus.h"
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 	DEFINES SW_DEVTOOLS_EXPORTS
 )

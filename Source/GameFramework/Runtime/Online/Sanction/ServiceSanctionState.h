@@ -10,6 +10,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
@@ -29,7 +30,7 @@ namespace sw
 {
     /** @brief 계정 하나의 제재 상태입니다. 관리자 조회 응답에 고정 배치형으로 실립니다. `_version` 은 레코드 버전이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다. */
     REFLECT()
-    struct ServiceSanctionState
+    struct SW_GF_API ServiceSanctionState
     {
         REFLECT_BODY();
         static constexpr int64 kPermanentMs = 0x7FFFFFFFFFFFFFFFll;
