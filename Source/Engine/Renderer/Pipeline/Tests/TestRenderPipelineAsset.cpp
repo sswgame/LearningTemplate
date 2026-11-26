@@ -232,6 +232,38 @@ namespace
     };
 } // namespace
 
+/**
+ * @brief [RenderPipelineAssetTest] 그래프 순환은 로드 오류다 — 첫 패스가 둘째 패스의 출력을 읽고 둘째가 첫째의 출력을 읽는다. 한 방향으로 이으면 읽힌다
+ * @details 변이: 로드의 시험 컴파일(`validateGraphsCompile`)을 지우면 순환 파이프라인이 읽혀 마지막 단언이 진다(그때까지 순환은 첫 프레임의 그래프 묶기에서 로그로만 나왔다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, GraphCycleIsALoadError )
+{
+    const auto makeTwoComputeXML = []( string_view secondInput )
+    {
+        StringBuilder<constant::buffer::kMax2048> xml;
+        xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                    "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"C\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "</_listAttachment><_listPass>" );
+        xml.appendFormat( "<RenderGraphPassDesc _name=\"First\" _type=\"Compute\" %#><_listInput><item>A</item></_listInput><_listOutput><item>B</item></_listOutput></RenderGraphPassDesc>",
+                          ComputePassTestUtil::withShader() );
+        xml.appendFormat( "<RenderGraphPassDesc _name=\"Second\" _type=\"Compute\" %#><_listInput><item>%#</item></_listInput><_listOutput><item>A</item></_listOutput></RenderGraphPassDesc>",
+                          ComputePassTestUtil::withShader(), secondInput );
+        xml.append( "</_listPass></RenderPipelineDesc>" );
+        return string( xml.view() );
+    };
+    RenderPipelineAsset chain; // 둘째는 C 를 읽는다 — 첫째가 둘째의 출력(A)을 읽는 간선 하나라 순서가 선다(둘째 → 첫째)
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( chain, makeTwoComputeXML( "C" ) ) );
+
+    SW_EXPECT_LOG( "Renderer.GraphCycle" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.ViewGraphDoesNotCompile" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset cycle; // 둘째가 첫째의 출력(B)을 읽고, 첫째는 앞서 쓰는 패스가 없는 A 를 둘째의 쓰기에서 읽는다
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( cycle, makeTwoComputeXML( "B" ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 셰이더 · 입력 · 출력 하나면 읽힌다. 진입점은 적은 값이다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ComputePassLoads )
 {

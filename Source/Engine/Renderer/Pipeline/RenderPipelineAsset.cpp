@@ -1314,6 +1314,59 @@ namespace sw
                 }
                 return issueCount;
             }
+
+            /**
+             * @brief 4) 뷰 그래프와 프레임 그래프를 패스 서술만으로 한 번 컴파일한다 — 순환(앞 패스가 뒤 패스의 출력을 읽고 뒤 패스가 앞 패스의 출력을 읽는다)은 첫 프레임 로그가 아니라 로드 오류다.
+             * @details 모든 패스를 켠 그래프다(뷰마다 꺼지는 패스는 간선을 줄일 뿐이라 켠 그래프에 없던 순환이 생기지 않는다). 접근은 실행과 같은 규칙이다 — 뷰 패스는 입력 읽기 · 출력과 깊이 첨부 쓰기
+             *          (읽고 쓰는 첨부는 쓰기 하나), 프레임 패스는 `buildFramePassAccesses` 와 자원 수명 선언. 패스 종류가 스스로 거는 엔진 자원과 모듈 확장 패스는 코드의 것이라 들지 않는다
+             *          (실행의 그래프 묶기가 같은 컴파일을 다시 본다). 언리얼 RDG 가 개발 빌드에서 그래프를 즉시 검증하는 자리다.
+             */
+            static uint32 validateGraphsCompile( const RenderPipelineAsset& asset, string_view sourcePath )
+            {
+                uint32                    issueCount{ 0 };
+                const RenderPipelineDesc& desc = asset.getDesc();
+                if ( desc._listPass.empty() == false )
+                {
+                    RenderGraph viewGraph;
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
+                    {
+                        vector<hashed_string> listOutput = pass._listResolvedOutput;
+                        if ( pass._resolvedDepthAttachment.empty() == false && VectorUtil::contains( listOutput, pass._resolvedDepthAttachment ) == false )
+                            listOutput.push_back( pass._resolvedDepthAttachment );
+                        vector<hashed_string> listInput;
+                        for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                        {
+                            if ( VectorUtil::contains( listOutput, input._attachment ) == false )
+                                listInput.push_back( input._attachment );
+                        }
+                        (void)viewGraph.addPass( pass._resolvedName, std::move( listInput ), std::move( listOutput ) ); // 이름 겹침은 앞 규칙(2-0)이 막았다
+                    }
+                    if ( viewGraph.compile() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.ViewGraphDoesNotCompile", "[%#] the view graph (_listPass) does not compile - see the render graph error above (cycle or mixed reads)", sourcePath );
+                        ++issueCount;
+                    }
+                }
+                if ( desc._listFramePass.empty() == false )
+                {
+                    RenderGraph frameGraph;
+                    for ( const RenderGraphResourceDesc& resource : desc._listResource )
+                    {
+                        frameGraph.declareResource( hashed_string( resource._name.c_str() ), resource._kind );
+                    }
+                    for ( uint32 index = 0; index < static_cast<uint32>( desc._listFramePass.size() ); ++index )
+                    {
+                        const RenderGraphPassDesc& pass = desc._listFramePass[index];
+                        (void)frameGraph.addPass( hashed_string( pass._name.c_str() ), asset.buildFramePassAccesses( pass ), RenderGraphPassExecuteFn{}, pass._queue, index );
+                    }
+                    if ( frameGraph.compile() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.FrameGraphDoesNotCompile", "[%#] the frame graph (_listFramePass) does not compile - see the render graph error above (cycle or mixed reads)", sourcePath );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
         };
     } // namespace
 
@@ -1345,6 +1398,9 @@ namespace sw
         issueCount += Internal::validatePostProcessMaterialPasses( _desc, sourcePath );
         issueCount += Internal::validateDecalPasses( _desc, sourcePath );
         issueCount += Internal::validateAttachmentStoreOps( _desc, sourcePath );
+        // 그래프 컴파일은 서술이 맞을 때만 본다 — 앞 규칙이 알린 결함(없는 첨부 · 겹친 이름)이 그래프 오류로 한 번 더 나오지 않게.
+        if ( issueCount == 0 )
+            issueCount += Internal::validateGraphsCompile( *this, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                              sourcePath, issueCount );
