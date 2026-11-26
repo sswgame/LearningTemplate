@@ -168,15 +168,16 @@ namespace sw
     /** @brief 원장의 상한 값들입니다. */
     struct LedgerConstant
     {
-        static constexpr int32 kMaxPostingCount     = 16;                 ///< 한 이동의 다리 수
-        static constexpr int64 kMaxAmount           = 1000000000000000ll; ///< 레그 하나와 잔액 하나의 상한(10^15). 레그 16 개의 합이 int64 안에 들어간다
-        static constexpr int64 kMaxBalance          = kMaxAmount;
-        static constexpr int32 kMaxAssetIDSize      = 48;
-        static constexpr int32 kMaxStoredTextSize   = 512; ///< 저장 레코드 안 글(메모 · 에스크로 표식) 하나의 최대 길이
-        static constexpr int32 kMaxReasonSize       = 32;
-        static constexpr int32 kMaxMemoSize         = 256;
-        static constexpr int32 kMaxJournalKeySize   = 200;
-        static constexpr int32 kMaxJournalScopeSize = 32; ///< `makeFromToken` 의 범위(`rcpt.<스토어>` · `mail.claim`) 길이
+        static constexpr int32 kMaxPostingCount       = 16;                   ///< 한 이동의 다리 수
+        static constexpr int32 kMaxHolderBalanceCount = kMaxPostingCount * 2; ///< 분개 하나에 적는 보유자 잔액 수의 상한(다리 수의 두 배)
+        static constexpr int64 kMaxAmount             = 1000000000000000ll;   ///< 레그 하나와 잔액 하나의 상한(10^15). 레그 16 개의 합이 int64 안에 들어간다
+        static constexpr int64 kMaxBalance            = kMaxAmount;
+        static constexpr int32 kMaxAssetIDSize        = 48;
+        static constexpr int32 kMaxStoredTextSize     = 512; ///< 저장 레코드 안 글(메모 · 에스크로 표식) 하나의 최대 길이
+        static constexpr int32 kMaxReasonSize         = 32;
+        static constexpr int32 kMaxMemoSize           = 256;
+        static constexpr int32 kMaxJournalKeySize     = 200;
+        static constexpr int32 kMaxJournalScopeSize   = 32; ///< `makeFromToken` 의 범위(`rcpt.<스토어>` · `mail.claim`) 길이
         /// `makeFromToken` 이 16 진으로 펴는 토큰 바이트(83). 범위 상한 + '/' + 16 진이 분개 키 상한에 들도록 키 상한에서 낸다 — 와이어(청약철회 거래 id)가 받은 토큰은 언제나 원장 키가 된다.
         static constexpr int32 kMaxTokenBytes = ( kMaxJournalKeySize - 1 - kMaxJournalScopeSize ) / 2;
     };

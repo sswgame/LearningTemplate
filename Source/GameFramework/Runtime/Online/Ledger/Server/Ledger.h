@@ -82,7 +82,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount )
         vector<LedgerPosting> _listPosting{};
-        PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount * 2 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxHolderBalanceCount )
         vector<LedgerJournalBalance> _listHolderBalance{};
         PROPERTY( MaxCount = LedgerConstant::kMaxReasonSize )
         string _reason{};

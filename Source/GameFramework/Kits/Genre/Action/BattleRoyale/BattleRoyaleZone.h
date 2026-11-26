@@ -126,11 +126,11 @@ namespace sw
         bool isPhaseValid() const;
 
     private:
-        BattleRoyaleZoneDef                       _settings;
-        NotificationBuffer<BattleRoyaleZoneEvent> _eventBuffer;
-        const IBrZoneTerrain*                     _pTerrain;
-        GameRandom                                _random;
-        float32                                   _mapSize;
+        SW_TRANSIENT BattleRoyaleZoneDef _settings;
+        SW_TRANSIENT NotificationBuffer<BattleRoyaleZoneEvent> _eventBuffer;
+        const IBrZoneTerrain*                                  _pTerrain;
+        SW_CODEC_STATE GameRandom                              _random; ///< serializeState 가 세이브에 싣는다
+        SW_TRANSIENT float32                                   _mapSize;
 
         // 실수의 범위는 NaN · 무한대를 거절하는 경계다(바이트는 실수 비트 그대로). 음수 남은 시간은 `update` 의 시간을 늘리고 음수 반지름은 모두를 원 밖으로 만든다.
         PROPERTY( RuntimeState, Replicated, Min = 0, Max = 1024 )
