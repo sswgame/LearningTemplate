@@ -23,5 +23,6 @@
   {"old": "getCommandLineManager", "new": "getCommandLine", "why": "CommandLine 을 돌려준다", "allowExisting": true},
   {"old": "_pCommandLineManager", "new": "_pCommandLine", "why": "CommandLine 칸", "allowExisting": true},
   {"old": "pCommandLineManager", "new": "pCommandLine", "why": "지역 변수", "ban": false, "allowExisting": true},
-  {"old": "commandLineManager", "new": "commandLine", "why": "지역 변수 · 매개변수", "ban": false, "allowExisting": true}
+  {"old": "commandLineManager", "new": "commandLine", "why": "지역 변수 · 매개변수", "ban": false, "allowExisting": true},
+  {"old": "LoadBotMainInternal", "new": "LoadBotModuleEntryInternal", "why": "LoadBotModuleEntry.cpp 의 내부 이름공간 — 파일 이름(진입점 선언 LoadBotModuleEntry.h)과 맞춘다"}
 ]

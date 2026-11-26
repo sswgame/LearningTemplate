@@ -409,7 +409,7 @@ namespace sw
         /**
          * @brief `registerToCommandLine` 이 넘겨준 파서입니다. 나중에 등록되는 변수의 보류값을 여기서 꺼냅니다.
          * @details 소유하지 않습니다. 둘 다 `Engine` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은
-         *          `CommandLine` 를 서비스로 받을 수 없으므로(HostOnly) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
+         *          `CommandLine` 을 서비스로 받을 수 없으므로(HostOnly) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
          */
         class CommandLine* _pCmdLineManager{ nullptr };
         /** @brief 명령줄에서 글로 받아 파서를 기다리는 enum 변수 값입니다(이름 → 글). `applyPendingEnumText` 가 비웁니다. */

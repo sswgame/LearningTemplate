@@ -58,10 +58,10 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectHash.h"
+#include "Engine/Server/IServerService.h"
 #include "Engine/Server/OpsHTTPEndpoint.h"
 #include "Engine/Server/ServerAdminChannel.h"
 #include "Engine/Server/ServerObservability.h"
-#include "Engine/Server/ServerService.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 #include "Engine/Telemetry/CrashReportSubsystem.h"
 

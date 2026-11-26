@@ -12,8 +12,8 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Event/EventDispatcher.h"
-#include "Core/Event/EventType.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"

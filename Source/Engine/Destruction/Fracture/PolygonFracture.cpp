@@ -6,7 +6,7 @@
 #include "Core/Container/pair.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Spatial/PolygonTriangulation.h"
+#include "Core/Spatial/PolygonTriangulationUtil.h"
 
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"

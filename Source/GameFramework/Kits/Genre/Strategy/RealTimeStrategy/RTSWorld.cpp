@@ -6,7 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/TimeRollover.h"
+#include "Core/Time/TimeRolloverUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

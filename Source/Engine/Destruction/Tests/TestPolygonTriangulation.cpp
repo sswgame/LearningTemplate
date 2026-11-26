@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Spatial/PolygonTriangulation.h"
+#include "Core/Spatial/PolygonTriangulationUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;

@@ -20,7 +20,7 @@
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
-#include "Core/Time/TimeRollover.h"
+#include "Core/Time/TimeRolloverUtil.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Skeletal/Pose.h"

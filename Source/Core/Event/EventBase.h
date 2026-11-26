@@ -1,5 +1,5 @@
 /**
- * @file EventType.h
+ * @file EventBase.h
  * @brief 엔진 이벤트 타입 ID 입니다(게임플레이 이벤트는 GameFramework 의 해시 ID 를 씁니다).
  */
 #pragma once

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"

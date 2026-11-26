@@ -34,7 +34,7 @@ foreach(kit IN LISTS load_bot_kit)
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 2) 봇 모듈(`OnlineLoadBotCore` — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립 · 진입점 `LoadBotMain.cpp`)과 그것을 올리는 실행 파일.
+# 2) 봇 모듈(`OnlineLoadBotCore` — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립 · 진입점 `LoadBotModuleEntry.cpp`)과 그것을 올리는 실행 파일.
 #    실행 파일은 Engine · ModuleManager · DevTools 만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 써서 엔진 기동 뒤에만 올라올 수 있다 —
 #    실행 파일이 직접 링크하면 main 전에 DLL 초기화가 실패한다(0xC0000142, 로그 없음, Windows 오류 대화상자로 CTest 가 시간 초과). App · Server 가 모듈을
 #    기동 뒤에 올리는 것과 같은 모양으로, 실행 파일이 엔진의 `ModuleTypes` 단계에서 `SW_LOADBOT_MODULES` 를 순서대로 올리고 진입점(`LoadBotModuleEntry.h`)을 부른다.

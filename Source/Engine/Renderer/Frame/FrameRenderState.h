@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Time/TimeRollover.h"
+#include "Core/Time/TimeRolloverUtil.h"
 
 #include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Environment/Sky/SkyGradient.h"

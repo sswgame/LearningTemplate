@@ -25,7 +25,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/Server/ServerService.h"
+#include "Engine/Server/IServerService.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"

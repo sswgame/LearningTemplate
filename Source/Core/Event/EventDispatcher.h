@@ -7,7 +7,7 @@
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/LinearAllocator.h"

@@ -1,5 +1,5 @@
 /**
- * @file TimeRollover.h
+ * @file TimeRolloverUtil.h
  * @brief 누적 시간(float64 초)을 주기로 접어 float32 칸에 싣습니다 — 셰이더 상수처럼 칸이 float 인 곳으로 보내는 시간의 정밀도 손실(감사 C-12)을 막는다.
  * @details float32 초는 10 시간에 한 눈금이 3.9 ms 라 시간으로 도는 애니메이션이 끊긴다. 주기 안의 값만 보내면 눈금은 주기가 정한다(3600 초면 0.24 ms).
  *          대가는 주기마다 한 번 시간이 0 으로 돌아가는 것이다 — Godot 의 `rendering/limits/time/time_rollover_secs`(기본 3600)와 같은 자리이고,

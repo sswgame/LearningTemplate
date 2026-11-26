@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Time/TimeRollover.h"
+#include "Core/Time/TimeRolloverUtil.h"
 
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"

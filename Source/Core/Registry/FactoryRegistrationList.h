@@ -1,5 +1,5 @@
 /**
- * @file ServiceFactoryList.h
+ * @file FactoryRegistrationList.h
  * @brief 정적 등록자가 올리는 이름 · 순서가 있는 만들기 함수의 등록 기록(`FactoryRegistration`)과 그 목록 정의 매크로입니다. 서버 서비스 · 온라인 서버 키트 · 온라인 클라이언트 ·
  *        온라인 프로토콜 · 푸시 중계 레지스트리가 같이 씁니다.
  * @details 목록은 공용 `RegistrationList`((순서 값, 이름) 순, 이름 필수)를 그대로 쓴다 — 중복 거절 · 핫 리로드 대체(`RegistrationReloadScope`) · 그림자 복원은

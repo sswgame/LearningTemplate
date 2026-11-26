@@ -1,5 +1,5 @@
 /**
- * @file ServerService.h
+ * @file IServerService.h
  * @brief 전용 서버 루프가 돌리는 서버 서비스의 창구(`IServerService`)와 그 문맥입니다. 모듈 서브시스템(호스트 `EngineSubsystemHost::kServer`)이 공개하고 서버가 범위에서 찾습니다.
  * @details - 서버 서비스는 게임 틱과 따로 서버 프로세스와 함께 사는 일입니다(온라인 서비스 호스트, 서버 등록). 언리얼 `UEngineSubsystem`(모듈이 올라오면 엔진이 만든다)에
  *            `FTickableGameObject`(루프가 부르는 갱신)를 더한 자리입니다.

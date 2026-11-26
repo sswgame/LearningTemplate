@@ -1,9 +1,9 @@
 /**
- * @file LoadBotMain.cpp
+ * @file LoadBotModuleEntry.cpp
  * @brief 온라인 부하 테스트 봇의 진입점(모듈 `OnlineLoadBotCore` 가 내보낸다) — `OnlineLoadBot --scenario=<json> --load=<.scenario.xml> (--server=<ip:port> [--tls=<신뢰 PEM>] | --local-server=<port> --online-config=<json>
  *        [--store-config=<서버 설정 json>]) [--game=<ip:port>] [--report=<json>] [--max-error-percent=N] [--light-hash]`.
  * @details - 실행 파일(`Main.cpp`)이 엔진을 세우고 이 모듈을 올린 뒤 부른다(`LoadBotModuleEntry.h`). 로그는 엔진 로거(콘솔 · 파일)로 간다.
- *          - 인자는 `CommandLine` 가 읽는다(경로는 기동 폴더 기준으로 한 번 절대화, 틀린 인자는 모두 모아 종료 코드 2).
+ *          - 인자는 `CommandLine` 이 읽는다(경로는 기동 폴더 기준으로 한 번 절대화, 틀린 인자는 모두 모아 종료 코드 2).
  *          - 부하 값(봇 수 · 늘리는 시간 · 길이)은 `--load` 의 Automation `<Load>` 한 곳에서 온다 — 시나리오 JSON 은 단계만 든다.
  *          - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
  *            키트 목록 · 옵션은 `--online-config`(`LoadBot.online.json`)를 전용 서버와 같은 로더로 읽는다. 포트 0 이면 OS 가 고른다. 서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
@@ -14,6 +14,8 @@
  *            보고서를 쓰지 못하면 4, 원장 감사가 깨지면 5(`LoadBotModuleEntry`).
  */
 #include "pch.h"
+
+#include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"
 
 #include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
@@ -36,7 +38,6 @@
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
-#include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
 
@@ -44,7 +45,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 명령줄 인자입니다(`LoadBotMainInternal::readOptions` 가 `CommandLine` 로 읽는다). 경로는 모두 기동 때 절대화된 것이다. */
+        /** @brief 명령줄 인자입니다(`LoadBotModuleEntryInternal::readOptions` 가 `CommandLine` 으로 읽는다). 경로는 모두 기동 때 절대화된 것이다. */
         struct LoadBotOptions
         {
             AbsolutePath _scenarioPath{};     ///< `--scenario=<json>` — 단계 나무(필수)
@@ -60,14 +61,14 @@ namespace sw
             uint8        _bLightHash{ SW_FALSE };
         };
 
-        struct LoadBotMainInternal
+        struct LoadBotModuleEntryInternal
         {
             static constexpr uint16 kDefaultServerPort = OnlineProtocolConstant::kDefaultPort;
             static constexpr int64  kIdleSleepNs       = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
             static constexpr int32  kPercentScale      = 100;
 
             /**
-             * @brief 봇 인자를 `CommandLine` 로 읽습니다(엔진 표준 인자는 등록하지 않는다 — 봇 인자만 받는다).
+             * @brief 봇 인자를 `CommandLine` 으로 읽습니다(엔진 표준 인자는 등록하지 않는다 — 봇 인자만 받는다).
              * @details 경로 인자는 `CommandLineDiskPath` 라 받을 때 기동 폴더 기준으로 한 번 절대화되고 비면 거절된다. 값 없는 `--tls` 도 그래서 거절된다
              *          (받아 주면 값 없는 `--tls` 가 개발용 인증서를 신뢰한다). 틀린 인자는 모두 모아 여러 줄 글(쓰는 법 포함)로 돌려준다. 길이가 정해지지 않아 오류 형식이 글이다.
              */
@@ -327,5 +328,5 @@ namespace sw
 extern "C" SW_MODULE_API int32 swRunOnlineLoadBot( int32 argc, utf8** argv )
 {
     static_assert( std::is_same_v<decltype( &swRunOnlineLoadBot ), sw::PFN_RunOnlineLoadBot> );
-    return sw::LoadBotMainInternal::run( argc, argv );
+    return sw::LoadBotModuleEntryInternal::run( argc, argv );
 }
