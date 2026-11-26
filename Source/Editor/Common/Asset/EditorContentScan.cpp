@@ -93,6 +93,15 @@ namespace sw::editor
         return bListed;
     }
 
+    bool EditorContentScan::collectFiles( const DiskPath& folder, const string_view* pExtension, size_t extensionCount, vector<DiskPath>& outListFilePath, bool bRecursive,
+                                          const StopToken& stopToken )
+    {
+        const bool bListed = FileUtil::collectFiles( folder, pExtension, extensionCount, outListFilePath, bRecursive, stopToken );
+        (void)VectorUtil::removeIf( outListFilePath, []( const DiskPath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ) || isListedFile( path.str() ) == false; } );
+        return bListed;
+    }
+
     bool EditorContentScan::isDataXMLPath( string_view path )
     {
         for ( const string_view extension : kArrDataXMLExtension )

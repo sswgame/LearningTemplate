@@ -107,8 +107,8 @@ SW_TEST_CASE( AudioClipCacheTest, EvictionWalksRecencyOrderSkippingPlaying )
  */
 SW_TEST_CASE( AudioClipCacheTest, FileFormatComesFromTheSuffixRow )
 {
-    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/sfx/step.OGG" ) == AudioFileFormat::Vorbis );
-    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/sfx/step.wav" ) == AudioFileFormat::WAV );
-    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/music/theme.mp3" ) == AudioFileFormat::Other );
-    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/sfx/step.txt" ) == AudioFileFormat::Other );
+    SW_EXPECT_TRUE( AudioClipAssetKind::findFileFormat( "game/sfx/step.OGG" ) == AudioFileFormat::Vorbis );
+    SW_EXPECT_TRUE( AudioClipAssetKind::findFileFormat( "game/sfx/step.wav" ) == AudioFileFormat::WAV );
+    SW_EXPECT_TRUE( AudioClipAssetKind::findFileFormat( "game/music/theme.mp3" ) == AudioFileFormat::Other );
+    SW_EXPECT_TRUE( AudioClipAssetKind::findFileFormat( "game/sfx/step.txt" ) == AudioFileFormat::Other );
 }

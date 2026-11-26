@@ -30,14 +30,6 @@ namespace sw
     class AudioStreamSource;
     class TaskArgs;
 
-    /** @brief 소리 파일의 코덱입니다. 접미사 칸(`AssetSuffix::_format`)이 정하고, 디코더 고르기가 이것을 본다(확장자 글을 다시 비교하지 않는다). */
-    enum class AudioFileFormat : uint8
-    {
-        Vorbis = 0, ///< `AudioVorbisDecoder`(스트리밍 가능)
-        WAV,        ///< PCM16 · float32 는 공통 디코더, 그 밖(ADPCM)은 백엔드의 대체 디코더
-        Other,      ///< 공통 디코더가 없는 형식(MP3 · FLAC) — 백엔드의 대체 디코더만 읽는다
-    };
-
     /**
      * @struct AudioClipData
      * @brief 재생할 소리 하나입니다. float32 교차 샘플이며, 채널은 1(모노)이나 2(스테레오)입니다. 그보다 많으면 읽을 때 스테레오로 줄입니다.
@@ -48,21 +40,8 @@ namespace sw
      */
     struct SW_API AudioClipData
     {
-        /** @brief 소리 파일의 접미사입니다(디코더가 읽는 형식). */
-        static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { ".ogg", AssetSuffixRole::Plain, AssetSuffix::makeFormat( AudioFileFormat::Vorbis )},
-            { ".wav", AssetSuffixRole::Plain,    AssetSuffix::makeFormat( AudioFileFormat::WAV )},
-            { ".mp3", AssetSuffixRole::Plain,  AssetSuffix::makeFormat( AudioFileFormat::Other )},
-            {".flac", AssetSuffixRole::Plain,  AssetSuffix::makeFormat( AudioFileFormat::Other )},
-        };
-        /** @brief @p path 의 코덱입니다(접미사 칸). 소리 파일이 아니면 `Other` 입니다. */
-        [[nodiscard]] static AudioFileFormat findFileFormat( string_view path )
-        {
-            const AssetSuffix* pSuffix = kAssetType.findSuffix( path );
-            return pSuffix != nullptr ? pSuffix->getFormat<AudioFileFormat>() : AudioFileFormat::Other;
-        }
-        /** @brief 소리 에셋 종류입니다(등록은 `AudioClip.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `Audio` 다. */
-        static constexpr AssetTypeDef kAssetType{ "Audio", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Audio" };
+        /** @brief 소리 에셋 종류입니다(정의는 `AudioClipAssetKind` — 오디오 헤더 없이 접미사 · 코덱을 읽는 곳이 있다. 등록은 `AudioClip.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr const AssetTypeDef& kAssetType = AudioClipAssetKind::kAssetType;
 
         vector<float32>                     _listSample;        ///< 채널 교차 샘플([-1, 1]). 스트리밍 클립은 비어 있다.
         shared_ptr<const AudioStreamSource> _pStream{};         ///< 스트리밍 클립의 압축 바이트다(통째로 푼 클립은 nullptr).
