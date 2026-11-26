@@ -313,11 +313,7 @@ namespace sw
             // 앞 단계의 사본 폴더를 거둔다 — 패널 · 문서를 새로 만든 뒤라 연 파일이 없다. 남기면 이 프로세스의 색인 · Quick Open 이 원본과 같은 이름의 사본을 집는다.
             for ( const AutomationScratchFolder& folder : _pRunner->getScenario().getTestOptions()._listScratchFolder )
                 (void)AutomationScratchWorkspace::discard( folder ); // 못 지우면 경고가 남는다 — 다음 단계의 prepare 는 자기 사본만 새로 만든다
-            // 뷰 대상(풀 · TAA · 노출 · 깊이 기록 · 지터 순번)은 되돌릴 목록에 두지 않고 통째로 버린다 — 다음 단계의 첫 프레임은 새 프로세스처럼 기록이 없다.
-            // 앞 단계의 기록이 남으면 같은 시나리오가 체인 위치에 따라 다른 그림을 냈다(언리얼 `FSceneViewState` 를 버리는 자리, 설계 D5).
-            // 되돌리기 뒤에 둔다 — 렌더 스레드가 앞 단계의 남은 패킷을 끝내기를 기다리는 동안 위 일이 이미 겹쳐 돌았다.
-            if ( _pRenderDriver != nullptr )
-                _pRenderDriver->discardViewTargets();
+            // 뷰 대상(풀 · 시간 누적 기록)은 여기서 버리지 않는다. 앞 단계의 기록도 이 단계의 로딩 프레임도 시나리오 시작 프레임에 한 번 버린다(`onFrameBegin`).
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
             SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( MonotonicClock::nowSeconds() - resetStartSeconds ) * 1000.0 ) );
         }
@@ -471,8 +467,15 @@ namespace sw
     void AutomationSession::onFrameBegin( const EngineFrameContext& context )
     {
         startRecordingWhenReady();
-        if ( _pRunner != nullptr && context._pInput != nullptr )
-            _pRunner->onFrameBegin( *context._pInput );
+        if ( _pRunner == nullptr || context._pInput == nullptr )
+            return;
+        const bool bWasStarted = _pRunner->hasStarted();
+        _pRunner->onFrameBegin( *context._pInput );
+        // 시작 프레임에 뷰 대상(풀 · TAA · 기록 첨부 · 노출 · 깊이 기록 · 지터 순번)을 통째로 버린다. 시작 전 프레임(로딩 · 셰이더 굽기 · 앞 단계)은 실행마다 수가 달라,
+        // 남기면 사진에 든 기록과 정지 프레임 수(사진 앞 정착)가 그 수를 따라 바뀌었다. 이 프레임의 패킷부터 새 프로세스처럼 기록 없이 그린다
+        // (언리얼 레벨 시작 · `bCameraCut` 에서 `FSceneViewState` 를 새로 세우는 자리, 설계 D5). 게임 시간도 이 프레임부터 흐른다(`AutomationRunner::holdGameTimeUntilStart`).
+        if ( bWasStarted == false && _pRunner->hasStarted() && _pRenderDriver != nullptr )
+            _pRenderDriver->discardViewTargets();
     }
 
     EngineFrameExit AutomationSession::onFrameEnd( const EngineFrameContext& context )

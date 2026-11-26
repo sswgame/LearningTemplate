@@ -54,7 +54,7 @@ namespace sw
         void retire( uint32 sceneKey );
         /** @brief 셰이더 핫 리로드를 렌더러마다 알립니다. 주 렌더러가 PSO 캐시를 다시 채운 뒤에 부른다(함께 쓰는 캐시의 새 PSO 를 집는다). */
         void onShaderRecompiled( const vector<string>& listShaderPath );
-        /** @brief 렌더러마다 뷰 대상을 버립니다(`FrameRenderer::discardViewTargets` — 자동화 단계 시작). 렌더러 · 파이프라인은 그대로 둔다. */
+        /** @brief 렌더러마다 뷰 대상을 버립니다(`FrameRenderer::discardViewTargets`, 시나리오 시작 프레임). 렌더러 · 파이프라인은 그대로 둔다. */
         void discardViewTargets();
         /** @brief 렌더러를 모두 내립니다(디바이스가 살아 있을 때, 주 렌더러보다 먼저 — 주 렌더러의 PSO 캐시를 빌려 쓴다). */
         void shutdown();

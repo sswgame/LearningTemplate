@@ -77,14 +77,41 @@ SW_TEST_CASE( FrameViewTargetTest, KeptHistoryAlternatesAndSurvivesIdleFrames )
     SW_EXPECT_TRUE( view._autoExposureHistory.isReset() );
 }
 
-/** @brief [FrameViewTargetTest] 컷이 든 프레임은 기록을 버린다 */
+/**
+ * @brief [FrameViewTargetTest] 컷이 든 프레임은 뷰 기록과 기록 첨부(XML 이 더한 것도)를 모두 버리고, 다음 프레임부터 다시 잇는다
+ * @details 변이: `beginViewHistory` 가 기록 첨부에 뷰의 버림을 넘기지 않으면 지난 프레임에 쓴 첨부가 컷 프레임에 지난 그림을 읽어 둘째 단언이 진다.
+ */
 SW_TEST_CASE( FrameViewTargetTest, CutResetsHistory )
 {
     FrameViewTarget view;
+    view._listAttachmentHistory.emplace_back()._attachment = hashed_string( "TrailColor" );
+    FrameViewHistory& trailHistory                         = *view.findAttachmentHistory( hashed_string( "TrailColor" ) );
     view.beginViewHistory();
+    trailHistory.markWritten();
     view._settings._bCut = SW_TRUE;
     view.beginViewHistory();
     SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE );
+    SW_EXPECT_TRUE( trailHistory.isReset() );
+    trailHistory.markWritten();
+    view._settings._bCut = SW_FALSE;
+    view.beginViewHistory();
+    SW_EXPECT_FALSE( trailHistory.isReset() );
+}
+
+/**
+ * @brief [FrameViewTargetTest] 새로 세운 뷰 대상(시나리오 시작 프레임의 `FrameRenderer::discardViewTargets`)은 첫 프레임에 기록이 없고 정지 프레임도 0 부터 센다
+ * @details 시작 전 프레임 수가 실행마다 달라도 사진이 같으려면 시작 프레임의 뷰 상태가 늘 같아야 한다. 변이: 새 뷰 대상의 `_bHasHistory` 를 세우면 첫 단언이 진다.
+ */
+SW_TEST_CASE( FrameViewTargetTest, FreshViewTargetStartsWithoutHistory )
+{
+    FrameViewTarget view;
+    view._listAttachmentHistory.emplace_back()._attachment = hashed_string( "TrailColor" );
+    view.beginViewHistory();
+    SW_EXPECT_TRUE( view._bHistoryReset == SW_TRUE );
+    SW_EXPECT_TRUE( view.findAttachmentHistory( hashed_string( "TrailColor" ) )->isReset() );
+    SW_EXPECT_TRUE( view._autoExposureHistory.isReset() );
+    SW_EXPECT_EQUAL( 0u, view._stillFrameCount );
+    SW_EXPECT_EQUAL( 0u, view._cameraStillFrameCount );
 }
 
 /**
