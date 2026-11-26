@@ -14,8 +14,8 @@
 
 ### 통합 중
 
-- main(push 전): w-integrate(shaderreload · pimpl · cpp-reflect · devtools-merge)를 합쳤다. Release · Server 빌드와 단위 134 개가 통과했고, 원본 .meta 1384 개에 산출물 GUID 표를 채웠다(asset-ids 결함 0). 파서 이름공간 건너뛰기는 되돌렸다(248.2 → 240.3 초, 잡음 안). preflight 전체가 남았다.
-- 다음 묶음: 이름 바로잡기 w-naming1(LT-wt/naming1 — 1 물결 N1 · N3 · N5 · N6 · N7 · N8a를 합쳤고, 2 물결 N2 · N4(+GUID) · N10 · N9(LogicCircuit)를 합치는 중). main push 뒤 합쳐 빌드 오류(헤더 나누기로 빠진 include)를 잡고 preflight. N8a 가 preflight 경로를 `Scripts/verify/preflight.sh` 로 옮겼다(기억 파일도 고친다).
+- main(push 전): 이름 · 폴더 바로잡기 세 물결(N1 · N2 · N3 · N4+GUID · N5 · N6 · N7 · N8a · N8b · N9 LogicCircuit · N10 Digest)과 재발 방지 N11 을 합쳤다. 병합 빌드의 빠진 include · 지운 X-macro 줄 · 잘못 나뉜 개발 소스 · Host/Client 경로를 고쳐 Release · Server 빌드와 단위 133 개가 통과한다. preflight 전체(`bash Scripts/verify/preflight.sh --no-linux`)가 남았다.
+- 다음 묶음: 사용자 요청(2026-11-27) "이름 정리가 끝나면 전체를 확인해 구조적 리팩토링" — push 뒤 층마다 조사 갈래를 맡겨(상용 엔진과 견준 구조 결함 · 중복 · 주인 없는 Util · 층 위반 후보) 계획을 세우고 물결로 고친다.
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`), 메모리 추적기 · 로그 글 철자(`Allocation size` 등).
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
 
@@ -23,13 +23,13 @@
 
 | 누가 | 몫 |
 | --- | --- |
-| w-naming1 · LT-wt/naming1 | 2 물결 네 갈래(n2suffix · n4asset · n10digest · n9circuit)를 합치고 쌍 표를 다시 맞춘다 |
+| (없음) | |
 
 ### 이름 바로잡기에서 남긴 몫
 
 - EditorStability → EditorSettle 은 하지 않는다(11-13 settle → stable 결정). 에디터 Job 파일 · Commands 값 형식 옮기기는 층 껍데기에 걸려 남았다. 메인 폴더의 빈 폴더 Core/Console · Core/Diagnostics/Dev 를 지운다.
 - N4 밖의 resourceRoot · resourceID · _listResourceFolder · EditorResourceCatalog* · CookInputKind::Resource, 시나리오 이름 resourcecondition · resourcesave · netresourcedigest. Vulkan SamplerSpec · RigIKNodes LimitSpec. 키트 Dev/ 의 `*GameModeComponentDevTools` · `*DevCommands` 접미. VocabularyCheck(Engine/Behavior 와 함께). — N11 기준선 또는 다음 묶음.
-- 3 물결: N8b 층 낱말, N11 재발 방지(10 절).
+- N11 기준선(NamingWordsBaseline · FolderLayoutBaseline)에 올라간 옛 이름 · 파일 이름은 그 파일을 고칠 때 줄인다(`--ratchet`). 린트 규칙 id 와 파일 이름이 다른 곳(feature_references.py ↔ feature-refs).
 
 ## 1. 다음 순서
 
@@ -99,13 +99,10 @@
 
 ## 10. 이름 · 폴더 바로잡기
 
-조사 여섯(Core · Engine 둘 · GameFramework · Editor · Scripts/CMake)을 합쳐 판정했다. 기준: 이름은 기전으로, 한 개념에는 저장소 전체(C++ · 파이썬 · CMake · 데이터)에서 낱말 하나. 묶음마다 옛 → 새 쌍을 `Config/Rules/Renames/<묶음>.json` 에 두고 `rename-symbol --pairs` · `move-source` · `move-asset` 으로 바꾸며, 병합 뒤 `--reapply` 로 맞춘다. 옛 이름은 `_bannedNames` 에.
+세 물결과 재발 방지(N11)를 2026-11-27 에 합쳤다. 낱말 규칙의 정본은 naming-words 표 · docs/agents/NamingCpp 다. 남은 몫은 0 절 "이름 바로잡기에서 남긴 몫".
 
 - 낱말 결정: Def(데이터 저작) · Desc(생성 · 등록 서술, 생성 상수 표) · Info(정적 사실) · Spec(GAS 뜻만) · Params. Config · Settings · Preferences(에디터 사용자 환경). Manager(집합 수명) · Controller(FSM 하나) · Subsystem. 온라인 끝점 Service · 업무 Logic · 프로세스 Server. HotReload(Live 금지). layer(tier 금지) · guard/allow(gate · stub · ban · open 금지). require(멈춤) · validate(오류 반환) · check(CMake 탐지만). Asset · Content · Resource(GPU 만). Digest(Fingerprint 금지). Schema(배치 표) · Codec(부호화가 있을 때만). Layout(옛 Fixed). Cache(옛 Ephemeral). Simulation(한 판 규칙, World 는 공간만). NetEmulation. OutputLog. GUID 하나(옛 UUID — 글 표기는 소문자 16진 32 자).
 - 사용자 결정(2026-11-27): GlobalVariable 은 그대로(낱말 표에 까닭 한 줄). Gimmick → LogicCircuit · 폴더 Gameplay/Mechanism(콘텐츠 63 move-asset). 훅 ToolPolicyRules.json 의 명령 이름 맞추기와 새 헤더 경로 규칙은 고쳐도 된다.
-- 1 물결(병렬): N1 Fixed* → Layout*(FixedCodec → LayoutSchema, FixedLayout → LayoutSerializer …) · FormatDef → FormatDesc · Serialization 폴더(Serializer · Format · Reference · XML · Layout) · ReflectionParser 폴더(Config · Parse · TypeMap · Emit · Run). N3 그래픽(FrameBufferTable → RenderGraphImportedResourceTable, FramePassExecutor → FrameRecorder, FrameGraphExecutor → FramePassRecorder, RenderPass* → RenderFeature* 와 renderpass XML, RHIDescriptors.h 나누기 …). N5 에디터(HotReload · Preferences · PropertyGrid · NetEmulation · EditModel/ViewModel · Workspace 하위 폴더 · Panels/Settings 나누기 …). N6 GameFramework(온라인 Service/Logic, LocalStore Backend/Factory, *World → *Simulation, EphemeralStore → CacheStore, Severing → Dismember, Foundation/Service → Subsystem …). N7 Core(ILogSink → ILogBackend · Log/Output, BusyClock, CommandLineManager → CommandLine, NetTypes · TaskTypes 나누기 …). N8a 스크립트 · CMake(명령 pack → package · linux-scenarios → linux-verify …, ExitCode, sw_verify/check → sw_require, Scripts/dev → verify · refactor · scaffold · content, net → sessions, lint/rules …).
-- 2 물결: N2 Desc/Def/Spec 접미어. N4 Resource → Asset(+Serialization/Compose, `sw::UUID` → `sw::GUID` 와 AssetGUID 가 그것을 듦, 씬 uuid 칸 5 파일 이전). N10 Digest. N9 Gimmick → LogicCircuit.
-- 3 물결: N8b 층 낱말(tier → layer, stub/gate/ban/open → guard/allow — 폴더 이동이 끝난 뒤 층 표를 한 번만). N11 재발 방지(파일 이름 = 주 형식, 명령 이름 = 파일 이름, 금지어를 파이썬 · CMake 에도, `_bannedPhrases`, `_scopedWords`, 접미어 모양, `_bannedFileStems`, CMake 동사 표, `_concepts` 개념표, 새 헤더 경로 훅).
 - 그대로: GameObjectManager · Kit · GameFeature · EditorContext · Engine/Reflection 평평한 폴더 · Graphics/RHI 뿌리 · Window/Windows · RHI/GL · DX · Graphics/DebugDraw · Content/ 대 Asset/.
 
 ## 11. 리소스
