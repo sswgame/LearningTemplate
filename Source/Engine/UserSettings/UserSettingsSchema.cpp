@@ -559,7 +559,7 @@ namespace sw
         const string_view assetPath = assetID.view();
         XMLDocument       doc;
         string            absPath;
-        if ( doc.loadResource( assetID, &absPath ) == false )
+        if ( doc.loadAsset( assetID, &absPath ) == false )
         {
             SW_LOG_ERROR_ID( "UserSettingsSchema.FailedReadUserSettings", "Failed to read the user settings schema '%#'", assetPath );
             return false;

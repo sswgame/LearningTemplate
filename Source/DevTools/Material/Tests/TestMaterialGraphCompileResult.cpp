@@ -77,7 +77,7 @@ namespace
             return false;
         }
 
-        /** @brief 층 파일 하나를 쓰고 리소스 id 를 돌려줍니다(못 쓰면 빈 글): 색 칸 `_color` 를 BaseColor 로 내고, 아래 거칠기의 반을 Roughness 로 낸다. @p extraNodes 는 더 붙일 노드입니다. */
+        /** @brief 층 파일 하나를 쓰고 에셋 id 를 돌려줍니다(못 쓰면 빈 글): 색 칸 `_color` 를 BaseColor 로 내고, 아래 거칠기의 반을 Roughness 로 낸다. @p extraNodes 는 더 붙일 노드입니다. */
         [[nodiscard]] static string writeLayer( const test::ScopedScratchDomain& domain, string_view fileName, string_view extraNodes = {} )
         {
             string nodes = makeNode( "Color", "ColorParameter", {}, "Parameter=_color,Default=0.4 0.3 0.2 1" );

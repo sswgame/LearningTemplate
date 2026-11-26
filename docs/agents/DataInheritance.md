@@ -1,6 +1,6 @@
 # DataInheritance
 
-데이터 파일 상속의 규칙. 상속은 루트에 `_base="<리소스 id>"`(카탈로그 항목은 `_base="<id>"`)를 적고 다른 칸만 쓴다 — 형식마다 합치기 코드를 쓰지 않는다(리플렉션 형식 `PROPERTY( InheritKey )`, 손 XML 형식은 스키마, 카탈로그는 설정 표 한 줄). 모든 리소스 글은 `ResourceComposer::compose` 한 길(부모 → 조건 → 덮어쓰기 층)을 지나고 런타임은 쿠킹이 펼친 결과만 읽는다. 경로 · 리소스 읽기 · 데이터 칸 읽기는 [AssetLoading](AssetLoading.md).
+데이터 파일 상속의 규칙. 상속은 루트에 `_base="<에셋 id>"`(카탈로그 항목은 `_base="<id>"`)를 적고 다른 칸만 쓴다 — 형식마다 합치기 코드를 쓰지 않는다(리플렉션 형식 `PROPERTY( InheritKey )`, 손 XML 형식은 스키마, 카탈로그는 설정 표 한 줄). 모든 에셋 글은 `AssetComposer::compose` 한 길(부모 → 조건 → 덮어쓰기 층)을 지나고 런타임은 쿠킹이 펼친 결과만 읽는다. 경로 · 에셋 읽기 · 데이터 칸 읽기는 [AssetLoading](AssetLoading.md).
 
 ## 파일에 적는 법
 
@@ -17,9 +17,9 @@
 
 ## 새 형식을 올리는 법
 
-1. `SW_ASSET_TYPE` 한 줄([AssetLoading](AssetLoading.md) "리소스 읽기 입구"). 다른 리소스를 가리키는 칸은 `AssetRef<T>`.
-2. 리플렉션 형식: 목록 원소의 이름 칸에 `PROPERTY( InheritKey )`(본보기 `RenderGraphPassDesc`). **Engine 형식도 문서 표에 한 줄**(`<Document root="…"><Field name="_listStage" key="_name"/></Document>`) — 팩 쿠커는 게임 모듈 전에 돌아 리플렉션을 읽지 않는다. 빠지면 `DataInheritance.NoSchema`, 코드와 다르면 `ResourceComposerTest` 가 진다.
-3. Engine 손 XML 형식: `SW_DATA_INHERITANCE_SCHEMA` + `ResourceComposer::compose`(본보기 `MaterialXML::makeInheritanceSchema`). 게임 · 키트 손 형식은 문서 표 줄만으로 된다. DevTools 가 처음 `SW_DATA_INHERITANCE_SCHEMA` 를 쓰는 커밋에서 `DataInheritance.h` 의 `SW_REGISTRAR_MODULE == "Engine"` 단언을 `DataInheritance::isCookVisibleModule( string_view )`(Engine · DevTools 만 참)로 바꾼다.
+1. `SW_ASSET_TYPE` 한 줄([AssetLoading](AssetLoading.md) "에셋 읽기 입구"). 다른 에셋을 가리키는 칸은 `AssetRef<T>`.
+2. 리플렉션 형식: 목록 원소의 이름 칸에 `PROPERTY( InheritKey )`(본보기 `RenderGraphPassDesc`). **Engine 형식도 문서 표에 한 줄**(`<Document root="…"><Field name="_listStage" key="_name"/></Document>`) — 팩 쿠커는 게임 모듈 전에 돌아 리플렉션을 읽지 않는다. 빠지면 `DataInheritance.NoSchema`, 코드와 다르면 `AssetComposerTest` 가 진다.
+3. Engine 손 XML 형식: `SW_DATA_INHERITANCE_SCHEMA` + `AssetComposer::compose`(본보기 `MaterialXML::makeInheritanceSchema`). 게임 · 키트 손 형식은 문서 표 줄만으로 된다. DevTools 가 처음 `SW_DATA_INHERITANCE_SCHEMA` 를 쓰는 커밋에서 `DataInheritance.h` 의 `SW_REGISTRAR_MODULE == "Engine"` 단언을 `DataInheritance::isCookVisibleModule( string_view )`(Engine · DevTools 만 참)로 바꾼다.
 4. 칸 덮어쓰기로 안 풀리는(차이가 쌓이는) Engine 형식만 `SW_DATA_INHERITANCE_MERGE`.
 5. 카탈로그(한 파일에 항목 여럿)는 `Content/engine/settings/datacataloginheritance.xml` 에 `<Entry name key>` 한 줄 — 읽는 코드는 고치지 않는다.
 6. 조건 · 동작은 등록된 어휘를 쓴다(아래 "행동 어휘"). 칸을 더하면 실행이 읽고 시나리오가 효과를 확인한다 — 읽히지 않는 칸은 넣지 않는다.
@@ -27,10 +27,10 @@
 
 ## 저장
 
-- **부모와의 차이로 쓴다** — 펼친 한 벌을 쓰면 `_base` 가 끊긴다. 리플렉션 형식 `ReflectedXMLFile::saveDescAsChild` · `saveDesc`, 손 형식 `ResourceComposer::saveDelta`, 카탈로그 `DataCatalogInheritance::makeFileDelta` + `validateDeltaReadsBack`. 차이로 적을 수 없는 편집은 오류이고 부모 없는 한 벌로 쓰는 대체는 두지 않는다.
-- 새 형식의 저장은 `FileUtil::writeTextFile` 이 아니라 `ResourceComposer::saveText` 를 쓴다 — 조건(`_when`)을 지킨다.
+- **부모와의 차이로 쓴다** — 펼친 한 벌을 쓰면 `_base` 가 끊긴다. 리플렉션 형식 `ReflectedXMLFile::saveDescAsChild` · `saveDesc`, 손 형식 `AssetComposer::saveDelta`, 카탈로그 `DataCatalogInheritance::makeFileDelta` + `validateDeltaReadsBack`. 차이로 적을 수 없는 편집은 오류이고 부모 없는 한 벌로 쓰는 대체는 두지 않는다.
+- 새 형식의 저장은 `FileUtil::writeTextFile` 이 아니라 `AssetComposer::saveText` 를 쓴다 — 조건(`_when`)을 지킨다.
 - 부모(없으면 형식 기본값)와 같은 칸은 쓰지 않는다. **코드에서 기본값을 바꾸면 그 칸을 적지 않은 모든 데이터가 바뀐다** — 바뀌면 안 되는 값은 데이터에 적는다. 이름 · 경로 칸의 C++ 문자열 기본값은 `PROPERTY( Required )` 이거나 헤더 초기값 + `PROPERTY( DefaultName )`(리플렉션 파서 강제).
-- 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다(`ResourceLayer.SaveWouldBake`).
+- 층을 얹어 읽은 에셋은 원본 자리에 쓰지 않는다(`AssetLayer.SaveWouldBake`).
 
 ## 쿠킹
 
@@ -46,12 +46,12 @@
 ```
 
 - 조건은 자기를 품은 원소 하나만 고친다(속성 · 빼기). 자식 원소를 품으면 오류 — 조건부로 더하려면 원소를 적고 반대 조건으로 뺀다.
-- `_if` 는 리소스 태그(`축.값`)만 묻는다. 게임 상태 · 모르는 축은 읽기 오류. 게임 플래그는 `flag` 축 태그로 넣는다.
-- 축: `platform` · `target` 은 쿠킹(쿠킹본에서 풀린다), `quality` · `locale` · `region` · `feature` · `flag` · `layer` 는 로드(태그가 바뀌면 그 리소스를 다시 읽는다).
+- `_if` 는 에셋 태그(`축.값`)만 묻는다. 게임 상태 · 모르는 축은 읽기 오류. 게임 플래그는 `flag` 축 태그로 넣는다.
+- 축: `platform` · `target` 은 쿠킹(쿠킹본에서 풀린다), `quality` · `locale` · `region` · `feature` · `flag` · `layer` 는 로드(태그가 바뀌면 그 에셋을 다시 읽는다).
 - 부모의 조건을 지운 차이 저장은 오류(`DataInheritance.WhenDropped`).
-- 덮어쓰기 층은 게임 팩 설정 `<Engine _listResourceLayer>`. 층 파일은 원본을 암묵적 부모로 가진 차이 — 층 파일에 `_base` 를 적으면 오류. 쿠킹 때 펼치지 않고 읽을 때 얹는다.
-- 바이너리(텍스처 · 오디오 · 메시)는 `<Engine _resourceRemap>` 경로 교체. 사슬은 오류, 쿠킹 안에서는 바꾸지 않는다.
-- **네트워크 게임플레이 값을 로드 축에 기대지 않는다** — 서버가 리소스 합성 해시를 대조해 다르면 끊는다(`Net.ResourceDigestMismatch`). `PerClient` 축(품질 · 언어)만 달라도 된다. 시뮬레이션 데이터에 쿠킹 축과 로드 축 조건을 섞지 않는다.
+- 덮어쓰기 층은 게임 팩 설정 `<Engine _listAssetLayer>`. 층 파일은 원본을 암묵적 부모로 가진 차이 — 층 파일에 `_base` 를 적으면 오류. 쿠킹 때 펼치지 않고 읽을 때 얹는다.
+- 바이너리(텍스처 · 오디오 · 메시)는 `<Engine _assetRemap>` 경로 교체. 사슬은 오류, 쿠킹 안에서는 바꾸지 않는다.
+- **네트워크 게임플레이 값을 로드 축에 기대지 않는다** — 서버가 에셋 합성 해시를 대조해 다르면 끊는다(`Net.AssetDigestMismatch`). `PerClient` 축(품질 · 언어)만 달라도 된다. 시뮬레이션 데이터에 쿠킹 축과 로드 축 조건을 섞지 않는다.
 - 한 프로세스의 태그 문맥은 하나다(캐시 열쇠가 경로뿐). 플레이어마다 다른 값은 데이터 키로 나눈다.
 
 ## 카탈로그 항목 상속
@@ -59,8 +59,8 @@
 | 적는 것 | 뜻 |
 |---|---|
 | 항목 `_base="<id>"` | 같은 파일 · 같은 종류 항목(뒤에 있어도 된다) |
-| 항목 `_base="<리소스 id>#<id>"` | 다른 파일 항목(게임 팩이 `common` 을 부모로) |
-| 루트 `_base="<리소스 id>"` | 파일 전체를 물려받고 항목을 더하거나 `_op="Remove"` |
+| 항목 `_base="<에셋 id>#<id>"` | 다른 파일 항목(게임 팩이 `common` 을 부모로) |
+| 루트 `_base="<에셋 id>"` | 파일 전체를 물려받고 항목을 더하거나 `_op="Remove"` |
 | 규칙에 없는 자식 | 통째로 바뀐다. `<X _op="Clear"/>` 는 비운다 |
 
 - 규칙에 없는 종류의 `_base` 는 오류(`KindNotListed`). 두 파일이 서로의 항목을 부모로 삼으면 핫 리로드 순환 오류.
@@ -86,7 +86,7 @@
 - 내부 씬의 코드는 멤버를 이름으로 찾지 않는다(멤버 이름은 `앵커/내부`). 멤버는 지울 수 없다.
 - 참조 대상의 레이어가 가리키는 쪽의 레이어에 없으면 쿠킹 실패(`SceneCooker.DataLayerCrossReference`).
 
-## 행동 어휘와 행동 리소스 변형
+## 행동 어휘와 행동 에셋 변형
 
 행동 트리 · 스케줄 · 대화 · 어빌리티 · 기믹 회로는 실행기를 합치지 않고 조건 · 동작 이름만 공유한다.
 

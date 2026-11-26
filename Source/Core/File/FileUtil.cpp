@@ -1279,7 +1279,7 @@ namespace sw
             return true;
 
         const AbsolutePath directory = directoryPath.join( {} );
-        // 새 폴더도 새 자리라 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`bindWriteFilter`).
+        // 새 폴더도 새 자리라 이름 규칙(콘텐츠 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`bindWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )

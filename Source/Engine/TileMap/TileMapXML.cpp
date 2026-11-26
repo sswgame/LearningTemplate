@@ -11,7 +11,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -322,7 +322,7 @@ namespace sw
              *          적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 셀은 읽기 쪽 기본값으로 적는다. `loadFromXML` 이 `<t>` 가 없을 때 넣는 값과 같아서
              *          왕복이 어긋나지 않는다(통행 가능, 조우 없음, 기본 틴트).
              */
-            static void appendTiles( const XMLNode& tiles, const TileMapXMLData& data, ResourceFieldWrite fieldWrite )
+            static void appendTiles( const XMLNode& tiles, const TileMapXMLData& data, AssetFieldWrite fieldWrite )
             {
                 const size_t count     = static_cast<size_t>( data._width ) * static_cast<size_t>( data._height );
                 size_t       tileCount = MathUtil::min( count, data._listVisual.size() );
@@ -347,10 +347,10 @@ namespace sw
                         const uint8 value = bHasTile ? data.getFlagLayer( info._layer )[tileIndex] : info._defaultValue;
                         if ( info._pXMLAttribute == nullptr )
                             pTextFlag = value != 0 ? "1" : "0";
-                        else if ( ( value != 0 ) != ( info._defaultValue != 0 ) || fieldWrite == ResourceFieldWrite::WriteAll )
+                        else if ( ( value != 0 ) != ( info._defaultValue != 0 ) || fieldWrite == AssetFieldWrite::WriteAll )
                             tileNode.appendAttribute( info._pXMLAttribute, value != 0 ? 1 : 0 );
                     }
-                    if ( tileVisual._atlasID != 0 || fieldWrite == ResourceFieldWrite::WriteAll )
+                    if ( tileVisual._atlasID != 0 || fieldWrite == AssetFieldWrite::WriteAll )
                         tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasID ) );
                     tileNode.appendAttribute( "tr", static_cast<int32>( tileVisual._tintR ) );
                     tileNode.appendAttribute( "tg", static_cast<int32>( tileVisual._tintG ) );
@@ -440,9 +440,9 @@ namespace sw
             SW_LOG_ERROR_ID( "TileMap.FileNotFound", "TileMap file not found: %#", path );
             return false;
         }
-        // 리소스 id 를 실어 읽는다 — 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 타일맵도 본다(글 입구로 넘기면 조용히 빠졌다).
+        // 에셋 id 를 실어 읽는다 — 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 타일맵도 본다(글 입구로 넘기면 조용히 빠졌다).
         XMLDocument doc;
-        if ( doc.parseResourceText( text, assetID ) == false || loadFromDocument( doc ) == false )
+        if ( doc.parseAssetText( text, assetID ) == false || loadFromDocument( doc ) == false )
             return false;
         _sourcePath = path;
         return true;
@@ -667,8 +667,8 @@ namespace sw
         const string xml = toXML();
         if ( xml.empty() )
             return false;
-        const string completeXML = toXML( ResourceFieldWrite::WriteAll );
-        const bool   bOk         = ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( xml, completeXML ) );
+        const string completeXML = toXML( AssetFieldWrite::WriteAll );
+        const bool   bOk         = AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( xml, completeXML ) );
         if ( bOk )
             SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;
@@ -680,10 +680,10 @@ namespace sw
 
     string TileMapXMLData::toXML() const
     {
-        return toXML( ResourceFieldWrite::OmitDefaults );
+        return toXML( AssetFieldWrite::OmitDefaults );
     }
 
-    string TileMapXMLData::toXML( ResourceFieldWrite fieldWrite ) const
+    string TileMapXMLData::toXML( AssetFieldWrite fieldWrite ) const
     {
         XMLDocument         doc;
         const XMLNode       root = doc.appendRoot( "TileMap" );

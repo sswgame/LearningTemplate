@@ -14,9 +14,9 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -172,7 +172,7 @@ namespace sw
         CharacterDataReader reader( assetID.view() );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.parseResourceRoot( document, text, assetID, "SocketSet", root ) )
+        if ( reader.parseAssetRoot( document, text, assetID, "SocketSet", root ) )
             readRoot( root, kinds, reader );
         return finishLoad( reader, pBones );
     }
@@ -197,18 +197,18 @@ namespace sw
                 SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kTableAssetID );
                 return false;
             }
-            const expected<void> isBackRead = ResourceComposer::validateDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
+            const expected<void> isBackRead = AssetComposer::validateDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
             {
                 SocketSet reread;
                 return reread.loadFromXMLText( deltaText, absPath.str(), kinds ) ? reread.saveToXMLText() : string{};
             } );
             if ( isBackRead.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", absPath.str(), isBackRead.error().message(), isBackRead.error().detail() );
+                SW_LOG_ERROR_ID( "AssetSave.DeltaNotSaved", "'%#': %# '%#' - not saved", absPath.str(), isBackRead.error().message(), isBackRead.error().detail() );
                 return false;
             }
         }
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
+        if ( AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
         {
             SW_LOG_ERROR_ID( "SocketSet.WriteFailed", "Socket set could not be written: %#", absPath.str() );
             return false;

@@ -40,12 +40,12 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -119,7 +119,7 @@ namespace sw
                 vector<uint8>  _listGeneratedByte; ///< `Generated` 의 바이트
             };
 
-            /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 리소스 id), 스테이징 산출물의 고르기입니다. */
+            /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 에셋 id), 스테이징 산출물의 고르기입니다. */
             struct PackSelection
             {
                 unordered_set<string>         _setIncluded;
@@ -127,7 +127,7 @@ namespace sw
                 PackStagedSelection           _staged;
                 vector<PackSceneReach>        _listSceneReach;    ///< 씬 청크로 미룬 씬마다의 닿음(`PackSplitConfig::_listScenePattern` 이 비면 빈 목록)
                 PackSceneChunkPlan            _scenePlan;         ///< 기동 필수가 아닌 에셋의 청크
-                vector<vector<string>>        _listGameLayerRoot; ///< 굽는 게임마다의 덮어쓰기 층 뿌리(`PackEngineSettings::_listResourceLayer` — 정규화, 아래 층이 먼저)
+                vector<vector<string>>        _listGameLayerRoot; ///< 굽는 게임마다의 덮어쓰기 층 뿌리(`PackEngineSettings::_listAssetLayer` — 정규화, 아래 층이 먼저)
                 unordered_map<string, string> _mapStemChunk;      ///< `<폴더 id>/<줄기>` → 청크 — 스테이징 산출물(씬 쿠킹본 · 프리로드 목록)이 원본의 청크를 따른다
             };
 
@@ -135,7 +135,7 @@ namespace sw
             class PackDiskReachSource final : public IPackReachSource
             {
             public:
-                unordered_map<string, AbsolutePath> _mapAbsolutePath; ///< 리소스 id → 디스크 절대 경로(리눅스는 대소문자를 가린다 — 정규화한 id 로 열지 않는다)
+                unordered_map<string, AbsolutePath> _mapAbsolutePath; ///< 에셋 id → 디스크 절대 경로(리눅스는 대소문자를 가린다 — 정규화한 id 로 열지 않는다)
 
                 bool readText( const string& assetID, string& outText ) const override
                 {
@@ -169,7 +169,7 @@ namespace sw
                 return PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) && AssetCookPath::isCookedOutput( relativePath ) == false;
             }
 
-            /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/playground/maps/a.scene.xml`)입니다. */
+            /** @brief 도메인 기준 상대 경로의 정규화 에셋 id(`game/playground/maps/a.scene.xml`)입니다. */
             static string makeAssetID( string_view domain, string_view relativePath ) { return FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ).str(); }
 
             /** @brief 원소 @p node 나 그 아래에 조건(`_when`)이 있으면 true 입니다. 주석 · 글에 적힌 이름은 조건이 아니다. */
@@ -185,7 +185,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief @p assetID 가 굽는 게임의 덮어쓰기 층 파일(`<층 뿌리>/<리소스 id>`)이면 true 입니다. 층은 원본과의 차이라 혼자서는 완전한 문서가 아니다. */
+            /** @brief @p assetID 가 굽는 게임의 덮어쓰기 층 파일(`<층 뿌리>/<에셋 id>`)이면 true 입니다. 층은 원본과의 차이라 혼자서는 완전한 문서가 아니다. */
             [[nodiscard]] static bool isLayerFile( const PackSelection& selection, string_view assetID )
             {
                 for ( const vector<string>& listRoot : selection._listGameLayerRoot )
@@ -205,7 +205,7 @@ namespace sw
                 string         resolvedText;
                 bool           bResolved = false;
                 vector<string> listLoadTag;
-                if ( ResourceComposer::resolveConditions( inoutText, id, ResourceTagTiming::Cook, engine::getSubsystem<ResourceTags>().capture(), resolvedText, bResolved, listLoadTag ) == false )
+                if ( AssetComposer::resolveConditions( inoutText, id, AssetTagTiming::Cook, engine::getSubsystem<AssetTags>().capture(), resolvedText, bResolved, listLoadTag ) == false )
                     return false;
                 if ( bResolved )
                     inoutText = std::move( resolvedText );
@@ -228,7 +228,7 @@ namespace sw
                         return false;
                     }
                     vector<string>& listRoot = outSelection._listGameLayerRoot.emplace_back();
-                    for ( const string& root : settings._listResourceLayer )
+                    for ( const string& root : settings._listAssetLayer )
                         listRoot.push_back( FileUtil::normalizePath( root ).str() );
                 }
                 return true;
@@ -236,14 +236,14 @@ namespace sw
 
             /**
              * @brief 층이 얹히는 카탈로그를 게임마다 층까지 합쳐 참조 규칙을 봅니다 — 층의 행은 원본의 행을 가리킬 수 있어 층 파일 하나만 보면 답할 수 없다. 깨진 참조가 있으면 false 입니다.
-             * @details 합치기는 런타임의 층 단계와 같은 함수(`ResourceComposer::mergeLayer`)다. 원본이 굽는 도메인에 없는 층은 경고만 한다(일부 도메인만 굽는 실행).
+             * @details 합치기는 런타임의 층 단계와 같은 함수(`AssetComposer::mergeLayer`)다. 원본이 굽는 도메인에 없는 층은 경고만 한다(일부 도메인만 굽는 실행).
              */
             [[nodiscard]] static bool validateLayeredCatalogs( const PackCookParams& params, const PackDiskReachSource& files, const PackSelection& selection )
             {
                 DataCatalogReferenceRules references;
                 if ( references.loadFromAsset() == false )
                     return false;
-                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() };
                 bool                      bValid = true;
                 for ( const vector<string>& listRoot : selection._listGameLayerRoot )
                 {
@@ -275,14 +275,14 @@ namespace sw
                             continue;
                         string flatText;
                         bool   bComposed = false;
-                        bool   bMerged   = ResourceComposer::compose( mergedText, target, ResourceContext::forPackCook( source ), flatText, bComposed );
+                        bool   bMerged   = AssetComposer::compose( mergedText, target, AssetComposeContext::forPackCook( source ), flatText, bComposed );
                         if ( bComposed )
                             mergedText = std::move( flatText );
                         for ( const string& layerID : mapTargetLayer[target] )
                         {
                             string layerText;
                             bMerged = bMerged && files.readText( layerID, layerText ) && resolveCookConditions( layerText, layerID ) &&
-                                      ResourceComposer::mergeLayer( layerText, layerID, ResourceContext::forDocument(), target, mergedText );
+                                      AssetComposer::mergeLayer( layerText, layerID, AssetComposeContext::forDocument(), target, mergedText );
                         }
                         XMLDocument doc;
                         if ( bMerged && doc.parse( mergedText, target ) && references.validateDocument( doc.getRoot(), target ) )
@@ -341,7 +341,7 @@ namespace sw
                 if ( references.getFieldRows().empty() )
                     return true;
                 DataCatalogKeyCheck       check( references );
-                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() };
                 bool                      bRead = true;
                 for ( const PackDomainCandidates& candidates : listCandidates )
                 {
@@ -356,7 +356,7 @@ namespace sw
                         string flatText;
                         bool   bComposed = false;
                         if ( AssetCookPath::isCookableSource( file._assetID ) == false && isLayerFile( selection, file._assetID ) == false &&
-                             ResourceComposer::compose( text, file._absolutePath.str(), ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
+                             AssetComposer::compose( text, file._absolutePath.str(), AssetComposeContext::forPackCook( source ), flatText, bComposed ) == false )
                         {
                             SW_LOG_ERROR_ID( "PackCooker.CatalogKeyFlattenFailed", "Pack cook: could not flatten '%#' to check catalog keys", file._absolutePath.str() );
                             bRead = false;
@@ -401,7 +401,7 @@ namespace sw
                         bool           bResolved = false;
                         vector<string> listLoadTag;
                         const bool     bRead = AssetIO::readTextFile( file._absolutePath, text ) &&
-                                           ResourceComposer::resolveConditions( text, file._assetID, ResourceTagTiming::Load, engine::getSubsystem<ResourceTags>().capture(), resolvedText, bResolved, listLoadTag );
+                                           AssetComposer::resolveConditions( text, file._assetID, AssetTagTiming::Load, engine::getSubsystem<AssetTags>().capture(), resolvedText, bResolved, listLoadTag );
                         if ( bRead && listLoadTag.empty() )
                             continue;
                         if ( bRead )
@@ -763,7 +763,7 @@ namespace sw
 
             /**
              * @brief 파일 하나를 읽어 팩에 담습니다. 디스크 읽기 입구(`AssetIO::readBinaryFile`)가 읽기와 작업 입력 기록(`CookJob::allowDiskRead`)을 함께 한다.
-             * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(리소스 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
+             * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(콘텐츠 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
              *          읽기 시간에는 입력 해시가 들어 있다.
              */
             [[nodiscard]] static bool readStagedFile( const AbsolutePath& absPath, PackCookTiming& ioTiming, vector<uint8>& outBytes )
@@ -810,10 +810,10 @@ namespace sw
                     bytes.assign( layerText.begin(), layerText.end() );
                     return true;
                 }
-                DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() };
                 string                    flatText;
                 bool                      bComposed = false;
-                if ( ResourceComposer::compose( text, absPath.str(), ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
+                if ( AssetComposer::compose( text, absPath.str(), AssetComposeContext::forPackCook( source ), flatText, bComposed ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNotFlatten", "Pack cook: could not flatten '%#'", absPath.str() );
                     return false;
@@ -915,7 +915,7 @@ namespace sw
                     return meta.parseXML( text, AssetMeta::makePath( assetID ) );
                 if ( rules.isUnderDerivedFolder( assetID ) == false )
                     return nullopt;
-                const AbsolutePath          contentRoot = FileUtil::toDiskPath( string_view( absPath.str() ).substr( 0, absPath.str().size() - assetID.size() ) ); // 원본 경로는 리소스 id 로 끝난다(`makeAssetID`)
+                const AbsolutePath          contentRoot = FileUtil::toDiskPath( string_view( absPath.str() ).substr( 0, absPath.str().size() - assetID.size() ) ); // 원본 경로는 에셋 id 로 끝난다(`makeAssetID`)
                 vector<AssetImportedSource> listSource;
                 rules.collectImportedSources( assetID, listSource );
                 for ( const AssetImportedSource& source : listSource )

@@ -70,7 +70,7 @@ class Rules:
 
 @dataclass(frozen=True)
 class Issue:
-    """결함 하나(C++ `AssetIdentityIssue`). `asset_id` 는 Content 기준 리소스 id."""
+    """결함 하나(C++ `AssetIdentityIssue`). `asset_id` 는 Content 기준 에셋 id."""
 
     kind: str
     asset_id: str
@@ -111,7 +111,7 @@ def load_rules(project_root: Path) -> Rules:
 
 
 def iterate_imported_sources(output_id: str, list_imported: tuple[ImportedFolder, ...]) -> Iterator[tuple[str, str]]:
-    """산출물 자리의 (원본 후보 리소스 id, 산출물 이름)을 가까운 것부터 낸다(있는지는 보지 않는다) — C++ `AssetIdentityRules::collectImportedSources` 와 같은 규칙.
+    """산출물 자리의 (원본 후보 에셋 id, 산출물 이름)을 가까운 것부터 낸다(있는지는 보지 않는다) — C++ `AssetIdentityRules::collectImportedSources` 와 같은 규칙.
 
     원본은 산출물 자리의 어느 조상이다: `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서다.
     그 원본에서 나오지 않는 종류의 파일(`listOutputSuffix` 밖)은 내지 않는다 — 손으로 적은 파일이 원본 이름을 빌려 지나가지 않게 한다. 폴더는 접미사를 보지 않는다."""
@@ -172,7 +172,7 @@ def make_output_guid(source_guid: str, output_name: str) -> str:
 
 
 def make_output_id(source_id: str, output_name: str, list_imported: tuple[ImportedFolder, ...]) -> str | None:
-    """원본 리소스 id 와 산출물 표의 이름이 가리키는 산출물 자리(소문자) — `iterate_imported_sources` 의 짝이다. 그 원본에서 나올 수 없는 이름(접미사 · 자리)이면 None.
+    """원본 에셋 id 와 산출물 표의 이름이 가리키는 산출물 자리(소문자) — `iterate_imported_sources` 의 짝이다. 그 원본에서 나올 수 없는 이름(접미사 · 자리)이면 None.
 
     `<…>/models_raw/a/b.glb` + `/materials/x.material` → `<…>/models/a/b/materials/x.material`. 산출물이 디스크에 없어도 된다."""
     lowered = source_id.lower()
@@ -355,7 +355,7 @@ def read_identity(asset_id: str, text: str | None, rules: Rules) -> str | None:
 
 
 def collect_issues(map_text: dict[str, str | None], rules: Rules) -> tuple[list[Issue], dict[str, str]]:
-    """C++ `AssetDatabase::build` 와 같은 규칙. `mapText` 는 리소스 id → 글(머리 글 · .meta 만, 읽지 못하면 None). 반환은 (결함, GUID → 리소스 id)."""
+    """C++ `AssetDatabase::build` 와 같은 규칙. `mapText` 는 에셋 id → 글(머리 글 · .meta 만, 읽지 못하면 None). 반환은 (결함, GUID → 에셋 id)."""
     list_issue: list[Issue] = []
     map_guid: dict[str, str] = {}
     set_source = {asset_id.lower() for asset_id in map_text if classify(asset_id, rules) == SOURCE}
@@ -441,7 +441,7 @@ def _decode(data: bytes | None) -> str | None:
 
 
 def list_worktree_ids(project_root: Path) -> list[str]:
-    """작업 트리에 있는 Content 파일(추적 + 무시하지 않는 새 파일)의 리소스 id — 무시하는 임포트 산출물은 보지 않는다."""
+    """작업 트리에 있는 Content 파일(추적 + 무시하지 않는 새 파일)의 에셋 id — 무시하는 임포트 산출물은 보지 않는다."""
     output = _git(project_root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", CONTENT_FOLDER])
     prefix = CONTENT_FOLDER + "/"
     list_id = {path[len(prefix):] for path in output.decode("utf-8").split("\0") if path.startswith(prefix)}
@@ -457,7 +457,7 @@ def read_worktree_texts(project_root: Path, list_id: list[str], rules: Rules) ->
 
 
 def read_head_identities(project_root: Path, list_id: list[str], rules: Rules) -> dict[str, str]:
-    """HEAD 의 같은 경로에 있던 GUID — 리소스 id(머리 글 · .meta) → GUID."""
+    """HEAD 의 같은 경로에 있던 GUID — 에셋 id(머리 글 · .meta) → GUID."""
     list_spec = [f"HEAD:{CONTENT_FOLDER}/{asset_id}" for asset_id in list_id]
     map_blob = read_blobs(project_root, list_spec)
     map_guid: dict[str, str] = {}
@@ -482,7 +482,7 @@ def _pair_of(asset_id: str, rules: Rules) -> str | None:
 
 
 def _find_guid_owners(project_root: Path, list_guid: list[str], rules: Rules) -> dict[str, list[str]]:
-    """인덱스에서 GUID 들을 든 파일: GUID → 정체성을 든 리소스 id 목록. `git grep` 이 인덱스를 훑는다(전체 블롭을 읽지 않으므로 에셋이 수십만이어도 커밋마다 돈다)."""
+    """인덱스에서 GUID 들을 든 파일: GUID → 정체성을 든 에셋 id 목록. `git grep` 이 인덱스를 훑는다(전체 블롭을 읽지 않으므로 에셋이 수십만이어도 커밋마다 돈다)."""
     if not list_guid:
         return {}
     # 패턴은 파일로 넘긴다 — 한 커밋의 GUID 가 수천이면 명령줄 길이(Windows 32K)를 넘는다.
@@ -702,7 +702,7 @@ def add_identity_redirect(table_text: str, from_guid: str, to_guid: str) -> str:
 
 
 def redirect_identity(project_root: Path, from_id: str, to_id: str) -> str:
-    """`--redirect` — 지울 에셋의 도메인 표에 줄을 더하고 그 표의 리소스 id 를 돌려준다."""
+    """`--redirect` — 지울 에셋의 도메인 표에 줄을 더하고 그 표의 에셋 id 를 돌려준다."""
     rules = load_rules(project_root)
     _, map_guid = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
     map_path_to_guid = {asset_id.lower(): guid for guid, asset_id in map_guid.items()}

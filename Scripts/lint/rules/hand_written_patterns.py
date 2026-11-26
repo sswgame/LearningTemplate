@@ -13,20 +13,20 @@ Scripts/lint/rules/hand_written_patterns.py
    형식으로 못 막는 까닭: `forEachComponentOfType` 은 모든 순회가 쓰는 공개 함수이고, 걸리는 것은 람다 본문의 모양이다.
 3. 스키마만 읽는 한 줄 검사 함수: `AutomationStep::validateProperties<TParams>` 가 맡는다.
    형식으로 못 막는 까닭: `readProperties` 는 실행 함수도 쓰는 공개 함수이고, 걸리는 것은 "그것만 하는 함수" 라는 본문 모양이다.
-4. 저장 글 칸 · 부모 차이 손 저장: `string _savedText` 는 `EditorDocumentState`, `DataInheritance::makeDelta` 는 `ResourceComposer::saveDelta` 가 맡는다.
+4. 저장 글 칸 · 부모 차이 손 저장: `string _savedText` 는 `EditorDocumentState`, `DataInheritance::makeDelta` 는 `AssetComposer::saveDelta` 가 맡는다.
    형식으로 못 막는 까닭: 칸 이름이고, `makeDelta` 의 정당한 사용처(카탈로그 · 머티리얼 · 오디오 · 에디터 임포트)가 엔진과 에디터 층에 걸쳐 friend 로 묶으면 엔진이 에디터를 안다.
-5. id 를 버리는 리소스 입구: 이름이 `load…` 인 입구(`loadFromAsset` · `loadFromFile` · `loadFromPack` · `load` …)가 리소스 글(`AssetIO::readTextAsset`)을 읽은 뒤
-   id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다). id 를 싣는 길(`ResourceContext::withAsset` ·
-   `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
+5. id 를 버리는 에셋 입구: 이름이 `load…` 인 입구(`loadFromAsset` · `loadFromFile` · `loadFromPack` · `load` …)가 리소스 글(`AssetIO::readTextAsset`)을 읽은 뒤
+   id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다). id 를 싣는 길(`AssetComposeContext::withAsset` ·
+   `XMLDocument::parseAssetText` · `XMLReadUtil::parseAssetRoot` · `loadAsset…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
    예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다. 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
    형식으로 못 막는 까닭: 읽은 글과 id 가 같은 함수 안에서 이어지는지(자료 흐름)다.
 6. 엔진 자식 손 명령: `ProcessCommand::at(` 은 `ProcessCommand::forEngineChild` 가 맡는다 — 자동화 실행의 자식에 `-unattended` 를 넘긴다.
    빠지면 넷 플레이 클라이언트가 사람의 실행으로 떠 사양으로 품질을 골라 서버와 합성이 갈렸다. 엔진이 아닌 도구(Tracy · tint · 편집기)는 예외 표에 까닭과 함께.
    형식으로 못 막는 까닭: 띄우는 실행 파일이 엔진인지는 실행 때의 값이고, 정당한 사용처(Core 테스트 실행기 · 엔진 · 에디터 도구)가 층에 걸쳐 Core 가 friend 로 알 수 없다.
-7. 에디터의 리소스 트리 손 훑기: 에디터 코드(`/Editor/` 아래)의 `FileUtil::collectFiles(` · `collectFolders(` 는 `EditorContentScan` 이 맡는다 —
-   다른 프로세스의 시나리오 사본을 뺀다. 빠지면 Quick Open 이 남의 사본을 집고 임포터가 남의 사본에 임포트했다. 리소스 트리 밖(Saved · Config · 소스) 폴더는
+7. 에디터의 콘텐츠 트리 손 훑기: 에디터 코드(`/Editor/` 아래)의 `FileUtil::collectFiles(` · `collectFolders(` 는 `EditorContentScan` 이 맡는다 —
+   다른 프로세스의 시나리오 사본을 뺀다. 빠지면 Quick Open 이 남의 사본을 집고 임포터가 남의 사본에 임포트했다. 콘텐츠 트리 밖(Saved · Config · 소스) 폴더는
    예외 표에 `경로|첫 인자` 와 까닭으로 둔다. 쿠커 · 팩(`AssetPaths::collectContentFiles`)은 에디터 밖이라 보지 않는다(scratch 전체를 뺀다).
-   형식으로 못 막는 까닭: 걸리는 것은 훑는 폴더(첫 인자)가 리소스 트리인지이고, 같은 함수로 트리 밖 폴더를 훑는 정당한 자리가 많다.
+   형식으로 못 막는 까닭: 걸리는 것은 훑는 폴더(첫 인자)가 콘텐츠 트리인지이고, 같은 함수로 트리 밖 폴더를 훑는 정당한 자리가 많다.
 8. 이름 해시를 손으로 키로 쓰는 표: `hashed_string::getHash()`(32 비트) 결과를 맵 첨자 · `emplace` · `insert…` · `find` · `count` · `contains` · `tryClaim` 의
    키로 넘기거나 `…key` · `…Key` · `…_id` 변수에 넣는 모양. 같은 해시의 두 이름을 가리지 못해 나중 것이 조용히 이긴다(감사 C-8) — 저장 · 조회 키는
    `NameHashIndex`(공용 충돌 검사 색인)로 넣는다. 섞기 · 씨앗 · `LogOnce` 처럼 겹쳐도 데이터가 바뀌지 않는 자리는 예외 표에 까닭과 함께 둔다.
@@ -73,8 +73,8 @@ ENGINE_CHILD_PATTERN = re.compile(r"\bProcessCommand::at\(")
 EDITOR_SCAN_PATTERN = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*((?:sw::)?FileUtil::toDiskPath\(\s*)?([^,]+?)\s*,")
 # 첨자는 getHash() 로 끝나는 안쪽만(`list[ i ]._id.getHash()` 의 앞 첨자는 아니다), 호출은 첫 인자 안의 getHash() 만 본다.
 NAME_HASH_KEY_PATTERN = re.compile(r"\[\s*[^\[\]\n]*\bgetHash\(\s*\)\s*\]|\b(?:emplace|try_emplace|insert|insert_or_assign|find|count|contains|tryClaim)\(\s*[^;\n]*?\bgetHash\(\s*\)|\b\w*(?:[Kk]ey|_id)\s*=\s*[^;=\n]*\bgetHash\(\s*\)")
-ASSET_ENTRANCE_NAME = re.compile(r"\w+::load\w*")   # 리소스 입구 이름(정의는 FunctionSpans 가 찾는다)
-ASSET_CARRIER_PATTERN = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
+ASSET_ENTRANCE_NAME = re.compile(r"\w+::load\w*")   # 에셋 입구 이름(정의는 FunctionSpans 가 찾는다)
+ASSET_CARRIER_PATTERN = re.compile(r"withAsset\(|parseAssetText\(|parseAssetRoot\(|loadAsset(?:As)?\(|loadFromAsset\(")
 STATE_ENTRY_FILE = "Source/Engine/Serialization/Serializer/StateIO.h"   # 입구 자신
 STATE_SIGNATURE = re.compile(r"\b(?:(\w+)\s*::\s*)?(writeState|readState)\s*\(\s*(?:sw::|::sw::)?Archive\s*&[^)]*\)\s*(?:const\s*)?(?:override\s*)?(?:=\s*0\s*)?([;{])")
 STATE_ENTRY_CALL = re.compile(r"\bStateIO\s+\w+\s*\(|\bStateIO::(?:writeObject|readAtomic|readInPlace)\s*\(")
@@ -104,7 +104,7 @@ def find_same_spelling_switches(code: str) -> list[str]:
 
 
 def find_id_dropping_entrances(code: str) -> list[str]:
-    """글을 읽은 뒤 id 를 싣지 않는 리소스 입구(`형식::함수`)를 돌려준다."""
+    """글을 읽은 뒤 id 를 싣지 않는 에셋 입구(`형식::함수`)를 돌려준다."""
     list_entrance: list[str] = []
     for span in find_function_spans(code):
         if ASSET_ENTRANCE_NAME.fullmatch(span.name) is None:
@@ -161,16 +161,16 @@ def collect_violations(file: SourceFile) -> list[tuple[str, str, str]]:
     if SAVED_TEXT_PATTERN.search(code):
         list_violation.append(("savedText", path, "저장 글 칸 — EditorDocumentState"))
     if MAKE_DELTA_PATTERN.search(code):
-        list_violation.append(("makeDelta", path, "부모 차이 손 저장 — ResourceComposer::saveDelta"))
+        list_violation.append(("makeDelta", path, "부모 차이 손 저장 — AssetComposer::saveDelta"))
     for entrance in find_id_dropping_entrances(code):
-        list_violation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 리소스 입구({entrance}) — ResourceContext::withAsset · parseResourceText · parseResourceRoot"))
+        list_violation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 에셋 입구({entrance}) — AssetComposeContext::withAsset · parseAssetText · parseAssetRoot"))
     if ENGINE_CHILD_PATTERN.search(code):
         list_violation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 ProcessCommand::forEngineChild"))
     if NAME_HASH_KEY_PATTERN.search(code):
         list_violation.append(("nameHashKey", path, "getHash() 를 손으로 키로 쓴다 — 저장 · 조회 키는 NameHashIndex(같은 해시의 다른 이름을 거절)"))
     if "/Editor/" in path:
         for argument in sorted(set(get_scan_key(match) for match in EDITOR_SCAN_PATTERN.finditer(code))):
-            list_violation.append(("editorContentScan", f"{path}|{argument}", f"FileUtil 손 훑기({argument}) — 리소스 트리는 EditorContentScan"))
+            list_violation.append(("editorContentScan", f"{path}|{argument}", f"FileUtil 손 훑기({argument}) — 콘텐츠 트리는 EditorContentScan"))
     if is_our_cpp(path) and path != STATE_ENTRY_FILE:
         for line, name, message in find_state_pairs(file.code):
             list_violation.append(("statePair", f"{path}|{name}", f"{line}줄: {message}"))
@@ -223,7 +223,7 @@ class HandWrittenPatternsRule(LintRule):
         validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readProperties( params );\n}"
         assert [v[0] for v in violations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
         dropping = "bool A::loadFromAsset( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return loadFromXMLText( text, assetID.view() );\n}"
-        carrying = dropping.replace("loadFromXMLText( text, assetID.view() )", "loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) )")
+        carrying = dropping.replace("loadFromXMLText( text, assetID.view() )", "loadComposed( text, assetID.view(), AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) )")
         assert find_id_dropping_entrances(dropping) == ["A::loadFromAsset"], find_id_dropping_entrances(dropping)
         assert find_id_dropping_entrances(carrying) == []
         other_name = "bool B::loadFromPack( const DataPath& root )\n{\n    string text;\n    if ( AssetIO::readTextAsset( AssetID{ path }, text ) == false )\n        return false;\n    return loadFromXMLText( text, path );\n}"

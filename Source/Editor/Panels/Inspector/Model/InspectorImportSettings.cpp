@@ -34,7 +34,7 @@ namespace sw::editor
             /** @brief 규칙을 고르는 칸 — 예외로 쓸 수 없고 표에도 보이지 않는다(임포터가 거절하는 키와 같다). */
             static bool isSelectorKey( string_view key ) { return key == "name" || key == "filter" || key == "inherits"; }
 
-            /** @brief 원본 @p assetID 의 서술 디스크 경로입니다. 리소스 id 가 아니면 빈 글입니다. */
+            /** @brief 원본 @p assetID 의 서술 디스크 경로입니다. 에셋 id 가 아니면 빈 글입니다. */
             static DiskPath findMetaPath( string_view assetID )
             {
                 const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );

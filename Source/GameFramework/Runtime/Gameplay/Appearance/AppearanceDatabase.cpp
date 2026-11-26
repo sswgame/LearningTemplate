@@ -97,7 +97,7 @@ namespace sw
             const string path = FileUtil::joinPath( folder, file._pFileName );
             XMLDocument  doc;
             string       absolutePath;
-            if ( doc.loadResource( AssetID{ path }, &absolutePath ) == false )
+            if ( doc.loadAsset( AssetID{ path }, &absolutePath ) == false )
             {
                 if ( file._bRequired == SW_TRUE || AppearanceDatabaseInternal::isNotFound( doc.getLastError() ) == false )
                     _content._report.addErrorWithID( "Appearance.DataUnreadable", "%#: cannot read appearance data (%#)", path, doc.getLastError() );
@@ -172,7 +172,7 @@ namespace sw
     {
         const string_view path = presetID.view();
         XMLDocument       doc;
-        if ( doc.loadResource( presetID ) == false )
+        if ( doc.loadAsset( presetID ) == false )
         {
             _content._report.addErrorWithID( "Appearance.DataUnreadable", "%#: cannot read the appearance preset (%#)", path, doc.getLastError() );
             return false;

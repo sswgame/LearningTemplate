@@ -2,7 +2,7 @@
 // 게임 범위 서비스 충돌의 초기화 실패 전파. 세이브 슬롯은 메모리 로컬 저장소라 사용자 데이터 폴더를 쓰지 않는다(nogpu, 디스크 없음).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 세션을 직접 세우느라 엔진 서비스(`ResourceComposition`)를 찾는다
+#define SW_TEST_INTERNAL // 세션을 직접 세우느라 엔진 서비스(`AssetComposition`)를 찾는다
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/GameTimeScale.h"
@@ -11,7 +11,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Network/GameNetSession.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/IGame.h"
@@ -304,8 +304,8 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     SW_EXPECT_LOG( "GameSaveSlots.SaveSlotCouldNot2" ); // 세션이 닫힌 뒤의 불러오기는 없는 칸까지 간다
     GameTimeScale timeScale;
     timeScale.setUnscaledDeltaTime( RealSeconds{ 1.0f / 60.0f } );
-    GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
-    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession server{ engine::getSubsystem<AssetComposition>() };
+    GameNetSession session{ engine::getSubsystem<AssetComposition>() };
     ServerConfig   config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0; // 운영체제가 고른다

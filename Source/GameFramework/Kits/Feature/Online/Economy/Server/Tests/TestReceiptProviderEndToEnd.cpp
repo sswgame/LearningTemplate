@@ -14,7 +14,7 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"

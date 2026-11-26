@@ -42,7 +42,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
@@ -336,7 +336,7 @@ namespace sw
                 // 교차 쿠킹(호스트 App 이 Android · 웹 팩을 굽는다)은 대상 플랫폼의 조건을 푼다 — 주지 않으면 이 기계의 플랫폼이다(`Engine` 기동). 쿠킹 입력을 읽기 전에 둔다.
                 string cookPlatform;
                 commandLine.getArgument( CommandLineArgument::COOK_PLATFORM, cookPlatform );
-                if ( cookPlatform.empty() == false && engine::getSubsystem<ResourceTags>().setAxisValue( "platform", cookPlatform ) == false )
+                if ( cookPlatform.empty() == false && engine::getSubsystem<AssetTags>().setAxisValue( "platform", cookPlatform ) == false )
                     return false; // 모르는 플랫폼 — 이유는 setAxisValue 가 남겼다
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessCook", "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir.str() );
                 AnimationCrowdSettings crowdSettings{};

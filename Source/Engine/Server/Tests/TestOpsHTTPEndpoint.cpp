@@ -13,7 +13,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Server/OpsHTTPEndpoint.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
@@ -254,7 +254,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
 SW_TEST_CASE( OpsHTTPEndpointTest, GameNetSessionMetricsReachTheMetricsPath )
 {
     MetricRegistry metrics;
-    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession session{ engine::getSubsystem<AssetComposition>() };
     session.setRunWireContent( GameNetWireContent{} );
     session.bindMetricRegistry( &metrics );
     GameNetSessionParams params;

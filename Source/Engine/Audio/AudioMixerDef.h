@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     /**
      * @brief 버스 하나의 채널 구성입니다. Wwise 버스의 Channel Configuration, 언리얼 서브믹스의 채널 형식에 해당합니다.
@@ -307,14 +307,14 @@ namespace sw
         PROPERTY( Required, Tooltip = "Extra slots stolen voices fade out in; steals beyond this within one fade cut at once" )
         uint32 _maxStealFadeVoiceCount{ 0 };
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 펼쳐(`_base`) 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     public:
         /** @brief 이름, 루트, 부모, 센드, 고리를 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */

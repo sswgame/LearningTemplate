@@ -88,7 +88,7 @@ namespace sw
      *          - `Action` (`task` 필수, `ActionRegistry` 에 등록된 동작 이름, 나머지 속성은 그 동작의 칸) · `Condition` (`test` 필수): 잎이라 자식이 없다.
      *          - `Wait` (`seconds` 필수) · `MoveTo` (`key` 필수, `repathDistance` 기본 0.5) — 잎이다.
      *          - `SubTree` (`tree` 또는 `slot`) — `tree` 는 읽을 때 그 자리에 펼친다(순환은 오류). `slot` 은 쓰는 쪽이 `BehaviorTreeRunner::setSlotTree` 로 채운다.
-     *          어느 노드든 `id` · `name` 을 적을 수 있다. 루트의 `_base="<리소스 id>"` 는 부모 트리에서 `id` 가 같은 노드만 고친다(`_op` · `_before` · `_after` — `docs/agents/DataInheritance.md`).
+     *          어느 노드든 `id` · `name` 을 적을 수 있다. 루트의 `_base="<에셋 id>"` 는 부모 트리에서 `id` 가 같은 노드만 고친다(`_op` · `_before` · `_after` — `docs/agents/DataInheritance.md`).
      *          모르는 원소 · 속성 · 중단 이름, 틀린 식, 등록되지 않은 `task` 는 오류이고 트리를 읽지 않는다(기본 노드로 바꾸지 않는다). 읽은 트리는 `BehaviorTree::isValid` 를 지나야 한다.
      */
     class SW_GF_API BehaviorTreeAsset : public XMLCatalog<BehaviorTreeAsset>
@@ -125,7 +125,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "BehaviorTree"; ///< 루트 원소(`XMLCatalog`)
 
         /**
-         * @brief 리소스 경로의 트리를 읽습니다. `_base` 를 펼치고 하위 트리를 읽을 때 부모와 하위 파일을 리소스에서 찾습니다. 없으면 false 입니다.
+         * @brief 에셋 경로의 트리를 읽습니다. `_base` 를 펼치고 하위 트리를 읽을 때 부모와 하위 파일을 리소스에서 찾습니다. 없으면 false 입니다.
          * @details 베이스(`XMLCatalog`)의 보호된 읽기를 가리는 자기 읽기라 공개하면 사본을 읽는 길이 다시 열린다 — 종류의 로더(공유 캐시)만 부른다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

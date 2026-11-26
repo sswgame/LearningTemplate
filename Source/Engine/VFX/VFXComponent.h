@@ -114,7 +114,7 @@ namespace sw
         void setEffectPath( string_view path );
         /** @brief 파일이 아닌 효과 @p pEffect 를 겁니다(언리얼 `UNiagaraComponent::SetAsset` 자리 — 코드 · 에디터가 지은 효과). 효과 파일 칸은 비고 재생은 멈춥니다. nullptr 이면 효과를 뗍니다. */
         void setEffect( shared_ptr<const VFXEffectDef> pEffect );
-        /** @brief 효과 파일(리소스 id)입니다. */
+        /** @brief 효과 파일(에셋 id)입니다. */
         const string& getEffectPath() const { return _effectPath.path(); }
         /** @brief 씨앗을 바꿉니다. 효과를 다시 만들고 재생은 멈춥니다. */
         void setSeed( uint32 seed );

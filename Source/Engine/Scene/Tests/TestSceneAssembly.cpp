@@ -16,7 +16,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -292,7 +292,7 @@ SW_TEST_CASE( SceneAssemblyTest, UnloadedSceneKeepsTheNextScenesLayerTags )
                  Util::makeScene( "Tagged", { Util::makeEntity( "1", "Always", "0,0,0" ) }, "<_listDataLayer><SceneDataLayerDef _name=\"TagWinter\" _bInitiallyActive=\"true\" /></_listDataLayer>" ) );
     SceneDocument doc{};
     SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "tagged.scene.xml" ) ) );
-    const ResourceTags& tags = engine::getSubsystem<ResourceTags>();
+    const AssetTags& tags = engine::getSubsystem<AssetTags>();
 
     unique_ptr<Scene> previous = make_unique<Scene>( "Previous" );
     SW_REQUIRE_TRUE( previous->instantiate( doc ) );
@@ -571,12 +571,12 @@ SW_TEST_CASE( ObjectStateBatchTest, ResolverIsAskedOnlyForWhatTheBatchLacks )
     batch.abandon();
 }
 
-/** @brief [SceneAssemblyTest] 디스크 입구(쿠커가 쓴다)도 리소스 id 입구처럼 조건을 푼다 — 날것으로 읽으면 개발 실행에서 빠진 엔티티가 쿠킹본에만 남는다 */
+/** @brief [SceneAssemblyTest] 디스크 입구(쿠커가 쓴다)도 에셋 id 입구처럼 조건을 푼다 — 날것으로 읽으면 개발 실행에서 빠진 엔티티가 쿠킹본에만 남는다 */
 SW_TEST_CASE( SceneAssemblyTest, DiskReadResolvesConditionsLikeTheResourceRead )
 {
     const test::ScopedScratchDomain domain;
-    ResourceTags&                   tags     = engine::getSubsystem<ResourceTags>();
-    const ResourceTagSet            previous = tags.exchange( tags.capture() );
+    AssetTags&                      tags     = engine::getSubsystem<AssetTags>();
+    const AssetTagSet               previous = tags.exchange( tags.capture() );
     SW_EXPECT_TRUE( tags.setAxisValue( "platform", "android" ) );
     Util::write( domain, "conditional.scene.xml",
                  Util::makeScene( "Conditional", { Util::makeEntity( "1", "Kept", "0,0,0" ), Util::makeEntity( "2", "DesktopOnly", "0,0,0", "", "<_when _if=\"platform.android\" _op=\"Remove\"/>" ) } ) );

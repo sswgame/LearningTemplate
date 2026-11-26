@@ -19,8 +19,8 @@ namespace sw::editor
         struct EditorContentScanInternal
         {
             /**
-             * @brief @p path 가 리소스 루트 안의 작업 도메인 옛 자리(`Content/scratch/`)면 true 입니다 — 지금의 작업 도메인은 실행 뿌리 아래다.
-             * @details 훑는 뿌리가 리소스 루트가 아닐 때(실행 뿌리를 뿌리로 쓰는 작업 도메인 임포트)도 같은 자리를 뺀다 — 그래서 훑는 뿌리가 아니라 프로세스의 리소스 루트로 견준다.
+             * @brief @p path 가 콘텐츠 루트 안의 작업 도메인 옛 자리(`Content/scratch/`)면 true 입니다 — 지금의 작업 도메인은 실행 뿌리 아래다.
+             * @details 훑는 뿌리가 콘텐츠 루트가 아닐 때(실행 뿌리를 뿌리로 쓰는 작업 도메인 임포트)도 같은 자리를 뺀다 — 그래서 훑는 뿌리가 아니라 프로세스의 콘텐츠 루트로 견준다.
              */
             static bool isLeftoverScratch( string_view path )
             {

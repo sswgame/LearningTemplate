@@ -61,7 +61,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
     const ScopedScratchDomain domain;
     const AbsolutePath        recordPath = test::makeScratchPath( "staleness.cookrec" );
 
-    // 리소스: 리소스 id 로 읽은 파일의 내용이 바뀌면 낡는다.
+    // 리소스: 에셋 id 로 읽은 파일의 내용이 바뀌면 낡는다.
     {
         const AbsolutePath diskPath = domain.makeDiskPath( "resource.txt" );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "one" ) );
@@ -77,7 +77,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         Internal::expectStale( record, CookInputKind::Resource );
     }
 
-    // 디스크 파일: 리소스 루트 밖 파일의 내용이 바뀌면 낡는다.
+    // 디스크 파일: 콘텐츠 루트 밖 파일의 내용이 바뀌면 낡는다.
     {
         const AbsolutePath folder   = test::makeScratchPath( "Disk" );
         const AbsolutePath diskPath = folder.join( "disk.bin" );

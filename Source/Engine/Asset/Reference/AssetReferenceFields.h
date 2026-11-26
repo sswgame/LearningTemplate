@@ -46,7 +46,7 @@ namespace sw
         string              _field;       ///< 칸 이름(속성 · 요소 · 키 · CMake 인자)
         size_t              _offset{ 0 }; ///< 글 안 자리
         size_t              _length{ 0 }; ///< 글 안 길이(바꿀 때 쓴다)
-        string              _path;        ///< 정규화한 리소스 id
+        string              _path;        ///< 정규화한 에셋 id
         optional<AssetGUID> _guid;        ///< GUID 참조면 그 GUID(글이 틀렸으면 없음 — `_path` 가 글 그대로다)
     };
 
@@ -58,11 +58,11 @@ namespace sw
         bool   _bPrefix{ false };
     };
 
-    /** @brief 있는 리소스 id(소문자)와 그 폴더들입니다 — 파일 또는 폴더를 가리키는 참조가 있는지 봅니다. */
+    /** @brief 있는 에셋 id(소문자)와 그 폴더들입니다 — 파일 또는 폴더를 가리키는 참조가 있는지 봅니다. */
     class SW_API AssetIDSet
     {
     public:
-        /** @brief 파일 리소스 id 하나를 넣고 그 위 폴더들도 넣습니다. */
+        /** @brief 파일 에셋 id 하나를 넣고 그 위 폴더들도 넣습니다. */
         void addFile( string_view assetID );
         /** @brief 파일이거나 파일을 가진 폴더면 true 입니다. */
         bool contains( string_view assetID ) const;
@@ -107,7 +107,7 @@ namespace sw
 
         /** @brief @p name 이 경로 칸이면 true 입니다(대소문자를 가린다 — 리플렉션 이름 · 속성 이름 그대로). */
         bool isField( string_view name ) const;
-        /** @brief 참조를 훑는 글 에셋이면 true 입니다(리소스 id — 확장자, 검사하지 않는 도메인 밖, 임포터가 쓴 산출물 밖). */
+        /** @brief 참조를 훑는 글 에셋이면 true 입니다(에셋 id — 확장자, 검사하지 않는 도메인 밖, 임포터가 쓴 산출물 밖). */
         bool isReferrer( string_view assetID ) const;
         /**
          * @brief 글 에셋 확장자(`listTextExtension`)면 true 입니다 — 참조를 담을 수 있는 파일입니다.

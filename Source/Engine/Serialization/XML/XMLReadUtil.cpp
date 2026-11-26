@@ -66,7 +66,7 @@ namespace sw
 {
     XMLRootStatus XMLReadUtil::loadRoot( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot, string* pOutAbsPath )
     {
-        if ( outDocument.loadResource( assetID, pOutAbsPath ) == false )
+        if ( outDocument.loadAsset( assetID, pOutAbsPath ) == false )
             return XMLRootStatus::NotLoaded;
         outRoot = outDocument.getRoot( pRootName );
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;
@@ -81,9 +81,9 @@ namespace sw
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;
     }
 
-    XMLRootStatus XMLReadUtil::parseResourceRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot )
+    XMLRootStatus XMLReadUtil::parseAssetRoot( XMLDocument& outDocument, string_view xmlText, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot )
     {
-        if ( outDocument.parseResourceText( xmlText, assetID ) == false )
+        if ( outDocument.parseAssetText( xmlText, assetID ) == false )
             return XMLRootStatus::NotLoaded;
         outRoot = outDocument.getRoot( pRootName );
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;

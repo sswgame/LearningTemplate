@@ -39,7 +39,7 @@ namespace sw::editor
                     item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
                 }
 
-                // 리소스 id(소문자) — 리소스 루트 아래와 작업 도메인(실행 뿌리 아래 `scratch/`)을 한 규칙으로 푼다(`AssetPaths::toAssetID`, 대소문자는 OS 규칙).
+                // 에셋 id(소문자) — 콘텐츠 루트 아래와 작업 도메인(실행 뿌리 아래 `scratch/`)을 한 규칙으로 푼다(`AssetPaths::toAssetID`, 대소문자는 OS 규칙).
                 item._relativePath = assetPaths.toAssetID( item._absolutePath );
                 if ( item._relativePath.empty() )
                     item._relativePath = FileUtil::normalizePath( item._name ).str();

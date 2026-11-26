@@ -3,10 +3,10 @@
 #include "Games/Playground/Hub/HubCardTableComponent.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Math/SecureRandom.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Serialization/ByteStream.h"
 #include "Core/Time/MonotonicClock.h"
-#include "Core/UUID/UUID.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -31,9 +31,7 @@ namespace sw
             /** @brief 섞기의 비밀 키입니다(운영체제 난수 16 바이트). */
             static SipHashKey makeShuffleKey()
             {
-                const UUID uuid = UUID::generate();
-                ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
-                return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
+                return SipHashKey{ SecureRandom::nextUint64(), SecureRandom::nextUint64() };
             }
         };
     } // namespace

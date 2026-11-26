@@ -75,7 +75,7 @@ namespace sw
         // 파일 머리말 참고.
         /**
          * @brief @p graph 를 컴파일합니다. 순환 · 끊긴 필수 핀 · 형식 불일치 · 모르는 종류 · 없는 노드는 노드 이름과 함께 @p outResult 의 문제가 됩니다.
-         * @param sourceName 생성물 머리말에 적을 그래프의 리소스 id 입니다(내용 해시에 든다).
+         * @param sourceName 생성물 머리말에 적을 그래프의 에셋 id 입니다(내용 해시에 든다).
          * @return 문제가 없으면 true 입니다.
          */
         [[nodiscard]] static bool compile( const MaterialGraphDef& graph, string_view sourceName, MaterialGraphCompileResult& outResult );

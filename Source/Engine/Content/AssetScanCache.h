@@ -38,7 +38,7 @@ namespace sw
          */
         [[nodiscard]] expected<void> save( const AbsolutePath& cachePath ) const;
 
-        /** @brief @p key(리소스 id)의 줄이 있고 도장이 @p stamp 와 같으면 뽑은 바이트, 아니면 nullptr 입니다. 다음 `record` 까지 유효합니다. */
+        /** @brief @p key(에셋 id)의 줄이 있고 도장이 @p stamp 와 같으면 뽑은 바이트, 아니면 nullptr 입니다. 다음 `record` 까지 유효합니다. */
         [[nodiscard]] const vector<uint8>* find( const string& key, const FileStamp& stamp );
         /** @brief 읽은 파일의 줄을 적습니다. 막 쓴 파일(`ContentHash::isStampStable` 가 아닌 것)은 적지 않습니다. */
         void record( const string& key, const FileStamp& stamp, vector<uint8> payload );

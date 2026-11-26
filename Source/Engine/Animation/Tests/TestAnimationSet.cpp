@@ -22,7 +22,7 @@ namespace
             return pPath != nullptr ? *pPath : string{};
         }
 
-        /** @brief 공유 파일 두 줄(idle · walk)인 셋 파일을 씁니다. 리소스 경로를 돌려줍니다. */
+        /** @brief 공유 파일 두 줄(idle · walk)인 셋 파일을 씁니다. 에셋 경로를 돌려줍니다. */
         static string writeBaseSet( const test::ScopedScratchDomain& domain, const utf8* pFileName )
         {
             AnimationSet animationSet;

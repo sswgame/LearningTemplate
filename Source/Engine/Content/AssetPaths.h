@@ -1,6 +1,6 @@
 /**
  * @file AssetPaths.h
- * @brief 엔진, 공통, 게임, 에디터 리소스의 루트 경로를 해석합니다.
+ * @brief 엔진, 공통, 게임, 에디터 에셋의 루트 경로를 해석합니다.
  * @note
  *   - `Content/` 는 표시와 감시용 최상위일 뿐, findLooseFile 의 검색 루트가 아닙니다.
  *   - 검색 루트는 `game/<pack>/`, `common/`, `engine/`, `editor/` 이고, 파일은 항상 이들 아래에 있습니다.
@@ -9,7 +9,7 @@
  *     - 전역 ID: `engine/...`, `common/...`, `game/<pack>/...`, `editor/...` 는 그 도메인 루트만 봅니다.
  *   - 없으면 빈 문자열을 반환합니다. Content/ 에 붙여 억지로 성공시키지 않습니다.
  *   - 비교와 맵 키에는 FileUtil::normalizePath(전체 경로)를 씁니다.
- *   - 상태(경로 표 · 검색 우선순위 · 붙인 디스크 도메인 · 해석 캐시)는 이 객체 하나가 가진다 — 프로세스 정적이 아니다. 엔진에서는 리소스 루트 서브시스템
+ *   - 상태(경로 표 · 검색 우선순위 · 붙인 디스크 도메인 · 해석 캐시)는 이 객체 하나가 가진다 — 프로세스 정적이 아니다. 엔진에서는 콘텐츠 루트 서브시스템
  *     (`ContentRootSubsystem`)이 하나를 소유하고 코어 범위에 걸어, 엔진 코드는 `engine::getSubsystem<AssetPaths>()`(모듈은 `editor::` · `game::` 창구)로 닿는다.
  *     서비스 표가 서기 전의 기동 코드는 그 객체를 참조로 받고, 엔진 없이 도는 도구는 제 객체를 만들어 넘긴다.
  *     언리얼은 경로 규칙(`FPaths`)만 정적 함수이고 마운트 · 검색 상태는 플랫폼 파일 사슬(`IPlatformFile`) · 마운트 지점과 `UAssetManager` 의 검색 경로가
@@ -29,7 +29,7 @@ namespace sw
 {
     /**
      * @class AssetPaths
-     * @brief 리소스 도메인 루트와 검색 루트를 해석하고, 논리 경로와 절대 경로를 서로 바꾸며, 저장 경로를 정합니다.
+     * @brief 콘텐츠 도메인 루트와 검색 루트를 해석하고, 논리 경로와 절대 경로를 서로 바꾸며, 저장 경로를 정합니다.
      * @note 읽기는 AssetIO 가 맡습니다. 에셋 소유권은 AssetManager 에 있습니다. 상태는 객체마다 따로다(파일 머리말) — 읽는 함수는 const 이고 여러 스레드가 같이 부른다.
      */
     class SW_API AssetPaths
@@ -37,7 +37,7 @@ namespace sw
     public:
         /**
          * @brief 실행이 쓰고 버리는 로컬 작업 도메인입니다 — 시나리오 사본 · 편집기 테스트 · 머티리얼 미리보기가 쓴다. 콘텐츠가 아니다.
-         * @details 디스크 자리는 리소스 트리 밖, 이 프로세스의 실행 뿌리 아래다(`getScratchFolderPath`) — 같은 체크아웃에서 나란히 도는 실행의 사본이 이 프로세스의 리소스 트리에
+         * @details 디스크 자리는 콘텐츠 트리 밖, 이 프로세스의 실행 뿌리 아래다(`getScratchFolderPath`) — 같은 체크아웃에서 나란히 도는 실행의 사본이 이 프로세스의 콘텐츠 트리에
          *          없어 이름에 pid 꼬리를 달거나 남의 사본을 거를 일이 없다. 언리얼 자동화의 임시 마운트 지점(`FPackageName::RegisterMountPoint`)과 같은 자리다.
          *          예전 자리(`Content/scratch/`, .gitignore)에 남은 것은 찌꺼기다 — 쿠킹 · 기동 색인 · 에디터 훑기가 그 폴더를 뺀다. 이름은 여기 하나다(`AutomationScratch` 가 이것을 가리킨다).
          */
@@ -61,7 +61,7 @@ namespace sw
         [[nodiscard]] static bool collectGamePackDomains( const AbsolutePath& contentRoot, vector<string>& outListDomain );
 
         /**
-         * @brief 리소스 id 에 `..` 성분이 있으면 true 입니다. 리소스 루트 밖으로 나가는 id 입니다.
+         * @brief 에셋 id 에 `..` 성분이 있으면 true 입니다. 콘텐츠 루트 밖으로 나가는 id 입니다.
          * @details `findLooseFile` 과 `AssetIO` 의 읽기가 이런 id 를 해석하지 않는 기준 하나다.
          */
         static bool hasParentDirectoryComponent( string_view path );
@@ -95,35 +95,35 @@ namespace sw
         bool isInitialized() const;
 
         /**
-         * @brief 리소스 id 를 디스크에 있는 낱개 파일 · 폴더로 풉니다(있을 때만). 팩은 보지 않습니다.
+         * @brief 에셋 id 를 디스크에 있는 낱개 파일 · 폴더로 풉니다(있을 때만). 팩은 보지 않습니다.
          * @param resourceID 팩 상대 키(검색 순서로 이긴 것) 또는 `engine/`/`common/`/`game/<pack>/`/`editor/` 전역 ID. 디스크 경로는 받지 않는다(빈 값).
-         * @return 있으면 디스크 경로, 없으면 빈 값입니다. 런타임 리소스 읽기 · 나열은 이 결과가 아니라 팩까지 보는 `AssetIO` 를 씁니다.
+         * @return 있으면 디스크 경로, 없으면 빈 값입니다. 런타임 에셋 읽기 · 나열은 이 결과가 아니라 팩까지 보는 `AssetIO` 를 씁니다.
          *         없는 파일의 자리(만들 곳)는 `toDiskPath` 다.
          * @note 소문자 키로 먼저 찾고, 못 찾으면 원래 표기로 한 번 더 찾습니다(대소문자를 가리는 파일시스템).
          */
         [[nodiscard]] optional<DiskPath> findLooseFile( string_view resourceID ) const;
 
         /**
-         * @brief 리소스 폴더 id 에 맞는 디스크 폴더 전부를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
-         * @details 도메인이 붙은 id 는 그 도메인 폴더 하나, 도메인 없는 키는 검색 순서의 모든 리소스 폴더 아래 같은 하위 폴더다 — 팩 나열(우선순위 순 합집합)과 같은 규칙.
+         * @brief 에셋 폴더 id 에 맞는 디스크 폴더 전부를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
+         * @details 도메인이 붙은 id 는 그 도메인 폴더 하나, 도메인 없는 키는 검색 순서의 모든 에셋 폴더 아래 같은 하위 폴더다 — 팩 나열(우선순위 순 합집합)과 같은 규칙.
          *          `findLooseFile` 은 이긴 하나만 돌려줘, 나열에 쓰면 소스 구성에서만 다른 도메인의 파일이 빠졌다.
          */
         void collectLooseFolders( string_view folderID, vector<DiskPath>& outListFolder ) const;
 
         /**
-         * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝). 낱개 파일 · 폴더의 자리를 정하는 입구 하나다. 결과는 읽기 경로이고 쓰는 자리는 문을 지난다(에디터 `AssetWriter`, 나머지는 `AssetWriteAccess` 의 친구).
+         * @brief 에셋 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝). 낱개 파일 · 폴더의 자리를 정하는 입구 하나다. 결과는 읽기 경로이고 쓰는 자리는 문을 지난다(에디터 `AssetWriter`, 나머지는 `AssetWriteAccess` 의 친구).
          *        에디터 · 쿠커 · 도구가 디스크 자리를 알 때 쓴다. 런타임 내용 읽기는 팩까지 보는 `AssetIO` 다.
          * @param resourceID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인)는 그 도메인 루트 아래(파일이 아직 없어도),
          *        상대 키는 검색 순서로 이긴 있는 파일이다(읽은 그 파일에 쓴다).
          * @return 디스크 경로입니다. 디스크 경로(절대) · `..` · 아직 없는 상대 키(어느 도메인에 만들지 모른다)는 이유를 오류로 남기고 빈 값입니다 — 작업 폴더로 물러나지 않는다.
-         * @details 예전에는 문자열 하나가 리소스 id 이거나 디스크 경로였고(`getWritePath`), 저장 함수마다 어느 쪽을 받는지가 달랐다(같은 이름 `saveToFile`).
-         *          대소문자. 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
-         *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
+         * @details 예전에는 문자열 하나가 에셋 id 이거나 디스크 경로였고(`getWritePath`), 저장 함수마다 어느 쪽을 받는지가 달랐다(같은 이름 `saveToFile`).
+         *          대소문자. 에셋 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
+         *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 콘텐츠 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
         [[nodiscard]] optional<DiskPath> toDiskPath( string_view resourceID ) const;
         /**
-         * @brief 새로 만드는 디스크 자리 @p diskPath 가 리소스 트리(`Content/`) 아래면 그 아래 부분이 소문자인지 봅니다(`FileUtil::setCreateRule` — `initialize` 가 건다).
-         * @return 대문자가 있으면 그 상대 경로가 대상인 오류입니다. 리소스 트리 밖은 늘 통과합니다.
+         * @brief 새로 만드는 디스크 자리 @p diskPath 가 콘텐츠 트리(`Content/`) 아래면 그 아래 부분이 소문자인지 봅니다(`FileUtil::setCreateRule` — `initialize` 가 건다).
+         * @return 대문자가 있으면 그 상대 경로가 대상인 오류입니다. 콘텐츠 트리 밖은 늘 통과합니다.
          */
         [[nodiscard]] static expected<void> validateLowercaseResourceName( string_view diskPath );
         /**
@@ -133,16 +133,16 @@ namespace sw
         [[nodiscard]] static bool isUnderSourceControl( string_view diskPath );
 
         /**
-         * @brief 디스크 경로를 리소스 id(전역 id. 예: `game/playground/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
+         * @brief 디스크 경로를 에셋 id(전역 id. 예: `game/playground/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
          * @param diskPath 디스크 경로입니다.
-         * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 리소스 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
-         * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 리소스 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크
+         * @return 에셋 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 콘텐츠 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
+         * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 에셋 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크
          *          경로(`Saved/…`)가 id 로 읽혀 쿠킹 기록 · 버그 리포트 저장이 다른 파일을 가리켰다. 이제 글 정규화는 `normalizeAssetID` 이고, 둘 다 받는 입구는 없다
          *          (언리얼 `FPackageName::TryConvertFilenameToLongPackageName` 과 이름 검사가 따로인 것과 같다).
          */
         string toAssetID( const DiskPath& diskPath ) const;
         /**
-         * @brief 리소스 id 글을 맞춥니다(소문자 · `/` · 앞의 `./` 를 뗀다). 디스크를 보지 않는 순수 글 변환입니다.
+         * @brief 에셋 id 글을 맞춥니다(소문자 · `/` · 앞의 `./` 를 뗀다). 디스크를 보지 않는 순수 글 변환입니다.
          * @return 맞춘 id 입니다. 비었거나 `..` 로 올라가거나 디스크 경로(절대)면 빈 문자열입니다.
          */
         static string normalizeAssetID( string_view id );
@@ -155,16 +155,16 @@ namespace sw
          *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(테스트 하네스).
          */
         void setHostTarget( string_view buildTargetName );
-        /** @brief @p assetPath(리소스 id, 팩 상대 키, 절대 경로)가 이 호스트가 읽지 않는 에셋 종류면 true 입니다(`setHostTarget`). */
+        /** @brief @p assetPath(에셋 id, 팩 상대 키, 절대 경로)가 이 호스트가 읽지 않는 에셋 종류면 true 입니다(`setHostTarget`). */
         bool isExcludedForHost( string_view assetPath ) const;
 
         /**
-         * @brief 리소스 루트 밖의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
-         * @details 리소스 입구(`AssetIO::read*Resource` · `hasAsset`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다.
-         *          루트 밖 디스크 파일(테스트 케이스 임시 폴더, 도구 작업 폴더)을 캐시 · 로더가 리소스로 읽어야 할 때 이 함수로 붙이고 id 로 부릅니다.
+         * @brief 콘텐츠 루트 밖의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
+         * @details 에셋 입구(`AssetIO::read*Resource` · `hasAsset`)는 에셋 id 만 받고 OS 경로는 오류로 거절합니다.
+         *          루트 밖 디스크 파일(테스트 케이스 임시 폴더, 도구 작업 폴더)을 캐시 · 로더가 에셋으로 읽어야 할 때 이 함수로 붙이고 id 로 부릅니다.
          *          붙인 도메인은 낱개 파일 금지 구성(배포본)에서도 디스크에서 읽습니다 — 붙인 쪽이 고른 것이고, 팩에는 없습니다.
-         *          리소스 루트 안의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).
-         * @return 이름이 비었거나 `/` · `:` · `..` 가 들었거나, 폴더가 없거나, 리소스 루트 안이거나, 같은 이름이 다른 폴더에 붙어 있으면 false 입니다(오류 로그).
+         *          콘텐츠 루트 안의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).
+         * @return 이름이 비었거나 `/` · `:` · `..` 가 들었거나, 폴더가 없거나, 콘텐츠 루트 안이거나, 같은 이름이 다른 폴더에 붙어 있으면 false 입니다(오류 로그).
          *         같은 이름을 같은 폴더에 다시 붙이면 true 입니다.
          */
         [[nodiscard]] bool mountDiskDomain( string_view domainName, const AbsolutePath& diskFolder );
@@ -181,14 +181,14 @@ namespace sw
         /** @brief `Content/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. 참조는 이 객체가 사는 동안 유효합니다. */
         const AbsolutePath& getRootFolderPath() const;
         /**
-         * @brief 리소스 id @p resourceID 가 상대 경로로 놓이는 뿌리입니다 — 작업 도메인(`scratch/…`)은 실행 뿌리(`getScratchFolderPath` 의 부모), 나머지는 `getRootFolderPath`.
+         * @brief 에셋 id @p resourceID 가 상대 경로로 놓이는 뿌리입니다 — 작업 도메인(`scratch/…`)은 실행 뿌리(`getScratchFolderPath` 의 부모), 나머지는 `getRootFolderPath`.
          * @details `<뿌리>/<id>` 로 디스크 자리를 잇고 `원본 경로 - 뿌리` 로 id 를 되돌리는 코드(임포트 스탬프 · 임포터)가 작업 도메인 id 도 같은 규칙으로 다루게 한다.
          *          붙인 디스크 도메인(`mountDiskDomain`)은 이 모양이 아니다(그 폴더 이름이 도메인 이름과 다르다) — 그 id 는 `toDiskPath` 로 푼다.
          */
         [[nodiscard]] const AbsolutePath& getRootFolderPathFor( string_view resourceID ) const;
 
         /**
-         * @brief 리소스 검색 루트 우선순위를 설정합니다(예: EngineConfig._listResourcePriority).
+         * @brief 에셋 검색 루트 우선순위를 설정합니다(예: EngineConfig._listResourcePriority).
          * @param listPriority 우선순위 토큰 목록(예: "game", "common", "engine", "editor", "dlc/expansion1")
          * @return 우선순위를 다시 설정했으면 true 입니다.
          * @note 기존 경로 해석 캐시는 저절로 비워집니다.
@@ -201,15 +201,15 @@ namespace sw
         const vector<string>& getSearchPriority() const;
 
         /**
-         * @brief 캐시해 둔 리소스 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다.
-         * @details 부르는 때: 검색 목록이 바뀔 때, 에디터의 파일 감시가 리소스 트리의 변경을 알릴 때(`FileWatchService`). 이 프로세스의 `FileUtil` 이 만들거나 지운 파일은
+         * @brief 캐시해 둔 에셋 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다.
+         * @details 부르는 때: 검색 목록이 바뀔 때, 에디터의 파일 감시가 콘텐츠 트리의 변경을 알릴 때(`FileWatchService`). 이 프로세스의 `FileUtil` 이 만들거나 지운 파일은
          *          부르지 않아도 된다 — 캐시 칸이 `FileUtil::getCreationEpoch` · `getRemovalEpoch` 로 스스로 낡음을 안다. 바깥 프로세스가 바꾼 파일만 이 호출이 필요하다.
          */
         void clearPathCache();
 
         /**
-         * @brief 쿠킹 세션을 열고 닫습니다(`CookSession` 만 부른다 — 겹쳐 열 수 있다). 열린 동안 작업 범위(`CookJob`) 밖의 리소스 읽기가 오류가 된다.
-         * @details 리소스를 읽는 길의 상태라 경로 상태와 같은 주인이 든다(언리얼 쿠커의 `IsCookingInEditor` 상태가 쿠커 객체에 있는 자리).
+         * @brief 쿠킹 세션을 열고 닫습니다(`CookSession` 만 부른다 — 겹쳐 열 수 있다). 열린 동안 작업 범위(`CookJob`) 밖의 에셋 읽기가 오류가 된다.
+         * @details 에셋을 읽는 길의 상태라 경로 상태와 같은 주인이 든다(언리얼 쿠커의 `IsCookingInEditor` 상태가 쿠커 객체에 있는 자리).
          */
         void openCookSession();
         void closeCookSession();

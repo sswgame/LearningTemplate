@@ -18,7 +18,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
@@ -158,7 +158,7 @@ namespace sw
         _listDomainScratch.clear();
         engine::getSubsystem<AssetPaths>().collectMountedDiskDomains( _listDomainScratch );
         snapshot._domainHash                 = Internal::hashTexts( _listDomainScratch );
-        snapshot._tagHash                    = Internal::hashTexts( engine::getSubsystem<ResourceTags>().capture().getTags() );
+        snapshot._tagHash                    = Internal::hashTexts( engine::getSubsystem<AssetTags>().capture().getTags() );
         const DeterministicRunPolicy& policy = engine::getSubsystem<DeterministicRun>().getPolicy();
         const uint64                  flags  = uint64{ policy._bFinishAssetJobsEachFrame } | ( uint64{ policy._bWaitForAnimationClips } << 1 ) | ( uint64{ policy._bFreezeEnvironmentTime } << 2 ) |
                              ( uint64{ policy._bSkipLoadingScreenMinimum } << 3 ) | ( static_cast<uint64>( static_cast<uint32>( policy._realTimeFrameRate ) ) << 8 );

@@ -397,7 +397,7 @@ namespace sw
         return true;
     }
 
-    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, const ResourceContext& composeContext, UIStyleSheetAsset& outSheet )
+    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, const AssetComposeContext& composeContext, UIStyleSheetAsset& outSheet )
     {
         using Internal = UIStyleSheetInternal;
         UIStyleSheetAsset sheet{};

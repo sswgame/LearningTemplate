@@ -94,7 +94,7 @@ namespace sw
         const string_view relativePath = assetID.view();
         XMLDocument       doc;
         string            absPath;
-        if ( doc.loadResource( assetID, &absPath ) == false )
+        if ( doc.loadAsset( assetID, &absPath ) == false )
         {
             SW_LOG_WARNING_ID( "InputMap.FailedLoadInputMap", "Failed to load InputMap %#", relativePath );
             return false;

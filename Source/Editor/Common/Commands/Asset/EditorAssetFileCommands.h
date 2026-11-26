@@ -24,7 +24,7 @@ namespace sw::editor
     /**
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
-     * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorAssetIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
+     * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorAssetIndex`)이 아는 텍스트 에셋의 글을 새 에셋 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
      *          참조 칸은 아직 경로로 가리키므로 고치는 자리는 경로 칸(`AssetReferenceFields` —
      *          커밋 전 검사 · `py -3 -m Scripts move-asset` 과 같은 `Config/Dev/AssetReferenceFields.json`)의 값이다.
      *          정체성(GUID — `AssetDatabase.h`)의 짝을 지킨다: 옮기기 · 이름 바꾸기 · 휴지통 · 지우기는 원본 곁 `.meta` 를 함께 다루고, 새로 만들기 · 복제 · 가져오기는 새 GUID 를,
@@ -36,9 +36,9 @@ namespace sw::editor
         static bool isValidAssetName( string_view name );
         /** @brief 파일 이름을 줄기와 붙은 확장자로 나눕니다. 확장자는 첫 `.` 부터입니다(`a.scene.xml` → `a`, `.scene.xml`). */
         static void splitAssetName( string_view fileName, string& outStem, string& outSuffix );
-        /** @brief 리소스 id 가 가리키는 있는 파일 · 폴더의 자리입니다 — 옮기기 · 지우기 · 복제 · 가져오기의 대상(내용을 쓰는 자리는 `AssetWriter` 다). 없으면 빈 값입니다. */
+        /** @brief 에셋 id 가 가리키는 있는 파일 · 폴더의 자리입니다 — 옮기기 · 지우기 · 복제 · 가져오기의 대상(내용을 쓰는 자리는 `AssetWriter` 다). 없으면 빈 값입니다. */
         [[nodiscard]] static optional<AbsolutePath> findOperationPath( string_view resourceID );
-        /** @brief 리소스 id 의 새 자리입니다(옮길 곳 · 가져올 폴더 — 아직 없어도 된다). 풀지 못하면 빈 값입니다. */
+        /** @brief 에셋 id 의 새 자리입니다(옮길 곳 · 가져올 폴더 — 아직 없어도 된다). 풀지 못하면 빈 값입니다. */
         [[nodiscard]] static optional<AbsolutePath> makeOperationPath( string_view resourceID );
         /** @brief @p folderAbs 안에 `<stem><suffix>`(있으면 `<stem>_2<suffix>` 부터)를 만들어 자리를 잡고 그 경로를 돌려줍니다(`FileUtil::reserveUniquePath`, 접미사가 비면 폴더). 못 잡으면 빈 글입니다. */
         static AbsolutePath makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix );
@@ -78,7 +78,7 @@ namespace sw::editor
          *          언리얼은 로드된 참조자를 메모리에서 고치고 dirty 로 표시한다. 이 엔진은 문서마다 메모리 꼴이 달라 고칠 수단이 없으니 거절이 그 자리다.
          */
         [[nodiscard]] static optional<string> findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen );
-        /** @brief 지우려는 리소스 id(파일, 또는 폴더면 그 아래 전부)에 열린 문서가 있으면 그 문서 id 입니다 — 연 문서를 지우면 다음 저장이 파일을 되살린다(감사 P0-4). */
+        /** @brief 지우려는 에셋 id(파일, 또는 폴더면 그 아래 전부)에 열린 문서가 있으면 그 문서 id 입니다 — 연 문서를 지우면 다음 저장이 파일을 되살린다(감사 P0-4). */
         [[nodiscard]] static optional<string> findOpenDocumentAtOrUnder( string_view deletedID, const vector<EditorOpenDocument>& listOpen );
         /**
          * @brief 옮기기 묶음을 트랜잭션으로 적용합니다. 계획을 다시 세우고, 고칠 글을 모두 미리 만든 뒤 파일을 옮기고 글을 쓴다.
@@ -98,7 +98,7 @@ namespace sw::editor
         [[nodiscard]] static bool deleteAsset( const AbsolutePath& absolutePath );
         /**
          * @brief 에셋 @p targetAbs 의 내용을 파일 @p newContentAbs 의 것으로 바꾸고 GUID 는 지킵니다(`AssetIdentityRules::replaceContentKeepingIdentity`) — 지우고 다시 만들면 새 GUID 가 된다.
-         * @return 리소스 트리 밖이거나 대상에 정체성이 없거나 쓰기가 지면 오류를 남기고 false 입니다(디스크는 시작 상태).
+         * @return 콘텐츠 트리 밖이거나 대상에 정체성이 없거나 쓰기가 지면 오류를 남기고 false 입니다(디스크는 시작 상태).
          */
         [[nodiscard]] static bool replaceAssetContent( const AbsolutePath& targetAbs, const AbsolutePath& newContentAbs );
         /**
@@ -107,7 +107,7 @@ namespace sw::editor
          */
         static uint32 importFiles( const AbsolutePath& destFolderAbs, const vector<AbsolutePath>& listSourcePath );
         /**
-         * @brief 콘솔 명령의 원본 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 리소스 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
+         * @brief 콘솔 명령의 원본 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 에셋 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
          * @details 예전에는 리소스로 찾아보고 없으면 작업 폴더 상대 경로로 다시 풀었다(같은 글이 작업 폴더에 따라 다른 파일). `scene.open` · `asset.import` 가 같은 입구로 읽는다.
          */
         [[nodiscard]] static bool readSourceFileArgument( const string& argument, AbsolutePath& outAbsolutePath, string& outReply );

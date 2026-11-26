@@ -72,9 +72,9 @@ namespace sw
      */
     struct SW_API AssetPathRule
     {
-        string_view _prefix{};   ///< 리소스 id 가 이것으로 시작해야 합니다(`game/`)
-        string_view _contains{}; ///< 리소스 id 가 이것을 담아야 합니다(`/data/appearance/`)
-        string_view _suffix{};   ///< 리소스 id 가 이것으로 끝나야 합니다(`/data/items.xml`)
+        string_view _prefix{};   ///< 에셋 id 가 이것으로 시작해야 합니다(`game/`)
+        string_view _contains{}; ///< 에셋 id 가 이것을 담아야 합니다(`/data/appearance/`)
+        string_view _suffix{};   ///< 에셋 id 가 이것으로 끝나야 합니다(`/data/items.xml`)
 
         /** @brief 규칙이 하나도 없으면 true 입니다 — 어떤 파일에도 맞지 않습니다(카탈로그가 아닌 종류). */
         [[nodiscard]] constexpr bool isEmpty() const { return _prefix.empty() && _contains.empty() && _suffix.empty(); }

@@ -79,7 +79,7 @@ namespace sw
         void makeBytes( vector<uint8>& outBytes ) const;
         /** @brief 바이트를 밉 0 으로 읽습니다(밉 사슬은 `buildMips`). 매직, 버전, 길이, 범위가 틀리면 그 까닭이고 비운다. */
         [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
-        /** @brief 리소스 경로에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        /** @brief 에셋 경로에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
         [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
     };
 
@@ -146,7 +146,7 @@ namespace sw
         [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        /** @brief 에셋 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
         [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
 
         /** @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). */

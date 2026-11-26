@@ -27,7 +27,7 @@ namespace sw::editor
     class EditorAssetClassifier
     {
     public:
-        /** @brief 파일 하나를 퀵 런처 항목으로 만듭니다. 리소스 트리 밖이거나 알려진 종류가 아니면 false 이고 항목은 쓰지 않습니다. */
+        /** @brief 파일 하나를 퀵 런처 항목으로 만듭니다. 콘텐츠 트리 밖이거나 알려진 종류가 아니면 false 이고 항목은 쓰지 않습니다. */
         [[nodiscard]] static bool classifyFile( const AssetPaths& assetPaths, const AbsolutePath& filePath, EditorAssetIndexEntry& outEntry );
         /** @brief Resource 트리 전체를 분류해 채웁니다. 워커(`EditorAssetIndexJob`)에서도 돌아 경로 상태 @p assetPaths 는 부른 쪽이 넘긴다. */
         static void collectEntries( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken = {} );

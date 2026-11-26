@@ -26,7 +26,7 @@ namespace sw::editor
             /** @brief 검사 출처 번호의 표시 비트입니다(오브젝트 id 는 이 비트를 쓰지 않는다). */
             static constexpr uint64 kCheckSourceBit = 1ull << 63u;
 
-            /** @brief 활성 팩의 데이터 XML 을 리소스 id 로 모읍니다. 팩이 없으면 비어 있습니다. */
+            /** @brief 활성 팩의 데이터 XML 을 에셋 id 로 모읍니다. 팩이 없으면 비어 있습니다. */
             static void collectPackAssets( vector<string>& outListAsset )
             {
                 const DataPath& packRoot = editor::getSubsystem<const GameConfig>()._packRoot;

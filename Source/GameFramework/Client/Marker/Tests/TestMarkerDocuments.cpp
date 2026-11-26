@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -46,7 +46,7 @@ SW_TEST_CASE( MarkerDocumentTest, ObjectiveMarkerFillsTheEngineDocument )
     const expected<shared_ptr<const UIDocumentAsset>> document = cache.acquire( game::getSubsystem<EngineDefaultAssets>()._uiObjectiveMarker.get() );
     SW_REQUIRE_TRUE( document.has_value() );
     vector<UIBindingDef>     listBinding;
-    const unique_ptr<Widget> content = ( **document ).instantiate( cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
+    const unique_ptr<Widget> content = ( **document ).instantiate( cache, AssetTagSet{}, listBinding ).value_or( nullptr );
     SW_REQUIRE_NOT_NULL( content.get() );
     SW_EXPECT_TRUE( listBinding.empty() );
     SW_REQUIRE_TRUE( Access::onDocumentCreated( *pMarker, *content ) );

@@ -26,8 +26,8 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
@@ -866,7 +866,7 @@ namespace sw
 
     string PrefabCache::findFieldOrigin( string_view assetRelativePath, string_view componentKey, string_view fieldName )
     {
-        const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+        const optional<uint32> maxDepth = engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth();
         if ( maxDepth.has_value() == false )
         {
             DataInheritance::reportNoDepthLimit( assetRelativePath );

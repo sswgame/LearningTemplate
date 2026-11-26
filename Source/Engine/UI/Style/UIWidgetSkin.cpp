@@ -140,7 +140,7 @@ namespace sw
                 }
             };
 
-            static expected<shared_ptr<const void>> parseSkin( string_view text, string_view path, const ResourceContext& context )
+            static expected<shared_ptr<const void>> parseSkin( string_view text, string_view path, const AssetComposeContext& context )
             {
                 UIStyleSheetAsset sheet;
                 if ( expected<void> parsed = UIStyleSheetAsset::parse( text, path, context, sheet ); parsed.has_value() == false )
@@ -301,7 +301,7 @@ namespace sw
     bool UIWidgetSkinService::applySheet()
     {
         const string_view                sheetPath = engine::getSubsystem<EngineDefaultAssets>()._uiWidgetSkin.get();
-        expected<shared_ptr<const void>> skin      = _cache.acquireAsset( sheetPath, ResourceTagSet{} );
+        expected<shared_ptr<const void>> skin      = _cache.acquireAsset( sheetPath, AssetTagSet{} );
         if ( skin.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UIWidgetSkin.SheetNotUsable", "[UI] Engine widget skin '%#': %# (%#)", sheetPath, skin.error().message(), skin.error().detail() );

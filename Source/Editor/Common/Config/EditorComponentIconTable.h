@@ -55,7 +55,7 @@ namespace sw::editor
         PROPERTY( Required, Tooltip = "Icons of reflection categories" )
         vector<EditorComponentCategoryIcon> _listCategory;
 
-        /** @brief 리소스 경로의 XML 을 엄격하게 읽고 검사합니다(Category 가 겹치지 않는다). 실패하면 오류를 남기고 false 이며 표는 비어 있습니다. */
+        /** @brief 에셋 경로의 XML 을 엄격하게 읽고 검사합니다(Category 가 겹치지 않는다). 실패하면 오류를 남기고 false 이며 표는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief Category 의 줄입니다. 없으면 nullptr 입니다. */
         const EditorComponentCategoryIcon* findCategory( string_view category ) const;

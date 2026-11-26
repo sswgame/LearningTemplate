@@ -143,7 +143,7 @@ namespace sw
         /**
          * @brief 디스크 경로를 이 OS 의 비교용 글로 만듭니다 — 구분자 `/`, 끝 구분자 없음, 대소문자는 Windows 만 소문자로 접는다.
          * @details 같은 형식끼리 `startsWithPathComponent` · `==` 로 견주면 포함 · 같음 판정이 OS 규칙을 따른다(감시 접두사처럼 미리 만들어 두는 자리). `normalizePath` 는
-         *          리소스 id · 맵 키용(늘 소문자)이라 디스크 경로의 포함 판정에 쓰지 않는다 — 두 결과는 다른 형식이라 섞이지 않는다.
+         *          에셋 id · 맵 키용(늘 소문자)이라 디스크 경로의 포함 판정에 쓰지 않는다 — 두 결과는 다른 형식이라 섞이지 않는다.
          */
         [[nodiscard]] static ComparableDiskPath makeComparableDiskPath( string_view path );
         /**
@@ -162,7 +162,7 @@ namespace sw
         [[nodiscard]] static optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
          * @brief 문자열에서 디스크 경로(`AbsolutePath`)를 만드는 명시적 입구입니다 — 디스크 I/O(`exists` · `readTextFile` · `writeFile` …)는 이 형식만 받는다(R2).
-         * @details 리소스 id · `DataPath` · `PathKey` 같은 논리 경로를 글로 꺼내 I/O 에 넘기는 자리가 눈에 보이게 한다(`string_view` 라면 무엇이든 들어간다).
+         * @details 에셋 id · `DataPath` · `PathKey` 같은 논리 경로를 글로 꺼내 I/O 에 넘기는 자리가 눈에 보이게 한다(`string_view` 라면 무엇이든 들어간다).
          *          엄격한 절대 경로면 구분자를 `/` 로 맞춘 값이다. 상대 · `C:foo` · `\foo` 는 OS 경계와 같은 오류(`File.RelativePath`)를 남기고 빈 경로 — 그 값을 받은 I/O 는 실패한다(폴백 없음).
          *          빈 글은 오류 없이 빈 경로다(없는 파일처럼 실패한다 — 예전 빈 글 인자와 같다). 실패를 갈라야 하면 `requireAbsolutePath`(빈 값을 돌려준다)를 쓴다.
          */
@@ -179,7 +179,7 @@ namespace sw
         static string toNativeSeparators( string_view path );
         /**
          * @brief 두 디스크 경로가 같은지 이 OS 의 규칙(`makeComparableDiskPath` — 구분자 · 끝 구분자 무시, 대소문자는 Windows 만 무시)으로 봅니다.
-         * @details 예전 `pathsEqualNormalized` 는 `normalizePath`(늘 소문자)로 견줘 리눅스에서 대소문자만 다른 두 파일을 같다고 봤다. 리소스 id 끼리는 `normalizePath` 결과를 `==` 로 견준다.
+         * @details 예전 `pathsEqualNormalized` 는 `normalizePath`(늘 소문자)로 견줘 리눅스에서 대소문자만 다른 두 파일을 같다고 봤다. 에셋 id 끼리는 `normalizePath` 결과를 `==` 로 견준다.
          */
         static bool isSameDiskPath( string_view lhs, string_view rhs );
         /**
@@ -188,7 +188,7 @@ namespace sw
          */
         static string trimTrailingSlashes( string_view path );
         /**
-         * @brief 글 경로(리소스 id · 설정이 적는 프로젝트 상대 경로 · 폴더 이름)를 `/` 로 이어 붙입니다.
+         * @brief 글 경로(에셋 id · 설정이 적는 프로젝트 상대 경로 · 폴더 이름)를 `/` 로 이어 붙입니다.
          * @details 디스크 경로는 받지 않는다 — 절대 루트면 오류(`File.JoinDiskPath`)를 남기고 빈 글이다. 디스크 경로는 `AbsolutePath::join` 이 잇는다(`..` · 널을 거절하고 형식이 남는다).
          * @param root 글 루트(끝 슬래시와 구분자는 정규화합니다)
          * @param relative 루트 아래 상대 경로(앞 슬래시 허용, 비어 있으면 root 만)
@@ -201,9 +201,9 @@ namespace sw
          *       형식을 만들어 두지 않은 한 번의 판정은 `isPathAtOrUnderRoot` 를 쓴다.
          */
         [[nodiscard]] static bool startsWithPathComponent( const ComparableDiskPath& path, const ComparableDiskPath& root );
-        /** @brief 리소스 id @p path 가 id 구간 @p component(늘 소문자 상수 — `AssetPaths::kScratchDomain` 등) 자체이거나 `component/` 로 시작하는지 봅니다. */
+        /** @brief 에셋 id @p path 가 id 구간 @p component(늘 소문자 상수 — `AssetPaths::kScratchDomain` 등) 자체이거나 `component/` 로 시작하는지 봅니다. */
         [[nodiscard]] static bool startsWithPathComponent( const PathKey& path, string_view component );
-        /** @brief 리소스 id @p path 의 `component/` 뒤 부분입니다(`component` 만 있으면 빈 글). 앞이 `component` 인지는 `startsWithPathComponent` 로 먼저 본다. */
+        /** @brief 에셋 id @p path 의 `component/` 뒤 부분입니다(`component` 만 있으면 빈 글). 앞이 `component` 인지는 `startsWithPathComponent` 로 먼저 본다. */
         static string suffixAfterPathComponent( const PathKey& path, string_view component );
         /**
          * @brief 대상 파일이 들어갈 상위 디렉터리가 있게 합니다(없으면 재귀적으로 만듭니다). 폴더 부분이 없는 이름이면 할 일이 없어 true 입니다.
@@ -312,7 +312,7 @@ namespace sw
         [[nodiscard]] static WriteFilterSubscription bindWriteFilter( WriteFilter filter );
         /**
          * @brief 새로 만드는 자리의 이름 규칙을 겁니다(있는 파일을 덮어쓰거나 지우는 것은 보지 않는다). 자동화 쓰기 게이트와 따로 늘 선다. nullptr 이면 규칙이 없습니다.
-         * @details 리소스 트리(`Content/`)의 새 파일은 소문자다 — 엔진의 `AssetPaths` 가 건다(Core 는 리소스 루트를 모른다). 입구마다 이름을 접는 대신(`toDiskPath` · 임포트 · 새 에셋)
+         * @details 콘텐츠 트리(`Content/`)의 새 파일은 소문자다 — 엔진의 `AssetPaths` 가 건다(Core 는 콘텐츠 루트를 모른다). 입구마다 이름을 접는 대신(`toDiskPath` · 임포트 · 새 에셋)
          *          쓰기 경로 하나가 막으므로, 접지 않고 이은 새 입구도 대문자 파일을 만들지 못한다.
          */
         static void setCreateRule( WriteFilter rule );
@@ -328,7 +328,7 @@ namespace sw
         [[nodiscard]] static bool isCreateAllowed( const AbsolutePath& path );
         /**
          * @brief 이 자리의 읽기 전용 파일이 "체크아웃하지 않음"(버전 관리 잠금 — git LFS lockable 은 잠그기 전까지 읽기 전용)을 뜻하면 true 를 돌려주는 규칙입니다.
-         * @details 버전 관리 트리(리소스 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
+         * @details 버전 관리 트리(콘텐츠 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
          *          git 개체 · 작업 폴더)은 잠금이 아니라 정리가 지워야 하는 파일이다 — 그래서 지우기를 모든 읽기 전용에서 막지 않고 규칙 안에서만 막는다.
          */
         using CheckoutRule = bool ( * )( string_view path );
@@ -445,7 +445,7 @@ namespace sw
         }
         /**
          * @brief 소문자 키(`normalizePath` 한 상대 경로)의 실제 디스크 표기를 찾습니다.
-         * @details 리소스 id 는 소문자인데 디스크 폴더는 대소문자가 섞일 수 있다(테스트 임시 폴더, 붙인 디스크 도메인). 대소문자를 구분하는 파일 시스템에서는
+         * @details 에셋 id 는 소문자인데 디스크 폴더는 대소문자가 섞일 수 있다(테스트 임시 폴더, 붙인 디스크 도메인). 대소문자를 구분하는 파일 시스템에서는
          *          소문자 키를 그대로 이으면 "파일 없음" 이라 성분마다 폴더를 훑어 소문자가 같은 항목을 고른다. 이름만 대소문자가 다른 항목이 여럿이면
          *          정렬 순으로 앞선 것이다(훑는 순서에 기대지 않는다).
          * @param root 실제 표기의 절대 폴더

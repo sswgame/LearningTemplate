@@ -41,7 +41,7 @@ namespace sw
             _handler.setContextValue( CrashContextStore::kLogFileKey, fixedLogFile );
         _handler.install();
 
-        // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 게임은 리소스 루트 단계가, 백엔드는 RHI 단계가 덧붙인다.
+        // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 게임은 콘텐츠 루트 단계가, 백엔드는 RHI 단계가 덧붙인다.
         _handler.setContextValue( "Build", build::kConfigName );
         _handler.setContextValue( "Platform", build::kPlatformName );
         // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.

@@ -35,7 +35,7 @@ namespace sw::editor
          */
         void query( const EditorAssetIndex& index, const AbsolutePath& absolutePath, bool bDependencies );
 
-        /** @brief 마지막 질의의 대상 리소스 id 를 반환합니다. */
+        /** @brief 마지막 질의의 대상 에셋 id 를 반환합니다. */
         const string& getQueryID() const { return _queryID; }
         /** @brief 마지막 질의가 Show Dependencies 였으면 true 입니다. */
         bool isDependencyQuery() const { return _bDependencyQuery == SW_TRUE; }
@@ -43,7 +43,7 @@ namespace sw::editor
         const vector<EditorAssetReference>& getResultList() const { return _listResult; }
 
     private:
-        string                       _queryID; ///< 마지막 질의의 대상 리소스 id
+        string                       _queryID; ///< 마지막 질의의 대상 에셋 id
         vector<EditorAssetReference> _listResult;
         uint8                        _bDependencyQuery : 1; ///< 마지막 질의가 Show Dependencies 였다
     };
@@ -165,15 +165,15 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 0) 에디터 창구 — MVVM View(`ContentBrowserPanel`)가 작업 공간 · 명령 헤더를 보지 않게 서비스 접근을 여기 모은다(`docs/agents/EditorUI.md`)
         // ------------------------------------------------------------------------------
-        /** @brief 에셋 @p assetPath(리소스 id 또는 디스크 경로)를 그 종류의 도구로 엽니다. 열지 못하면 false 이고 이유는 알림 · 로그에 남는다. */
+        /** @brief 에셋 @p assetPath(에셋 id 또는 디스크 경로)를 그 종류의 도구로 엽니다. 열지 못하면 false 이고 이유는 알림 · 로그에 남는다. */
         static bool openAsset( string_view assetPath );
-        /** @brief 리소스 id 가 가리키는 있는 파일 · 폴더의 자리입니다(`EditorAssetFileCommands::findOperationPath`). 없으면 빈 경로입니다. */
+        /** @brief 에셋 id 가 가리키는 있는 파일 · 폴더의 자리입니다(`EditorAssetFileCommands::findOperationPath`). 없으면 빈 경로입니다. */
         [[nodiscard]] static AbsolutePath findAssetFile( string_view resourceID );
         /** @brief OS 파일 탐색기에서 @p absolutePath 를 보입니다. */
         static void showInFileExplorer( string_view absolutePath );
         /** @brief 버전 관리 창구입니다(잠금 배지 · 체크아웃 메뉴). */
         [[nodiscard]] static EditorSourceControl& getSourceControl();
-        /** @brief 메인 씬 선택이 가리키는 에셋의 리소스 id 입니다(선택 동기화 — 미리보기 창의 선택은 따르지 않는다). 없으면 빈 글입니다. */
+        /** @brief 메인 씬 선택이 가리키는 에셋의 에셋 id 입니다(선택 동기화 — 미리보기 창의 선택은 따르지 않는다). 없으면 빈 글입니다. */
         [[nodiscard]] static string findMainSelectionAssetID();
         /** @brief 게임 팩 루트(`GameConfig::_packRoot`)입니다(즐겨찾기 폴더). */
         [[nodiscard]] static string getGamePackRoot();
@@ -249,7 +249,7 @@ namespace sw::editor
         /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
         void selectAssetPath( const AbsolutePath& absolutePath );
         /**
-         * @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고릅니다(언리얼 "Browse to Asset" · Ctrl+B). 메인 씬에서 고른 오브젝트의 애셋(`EditorSelectionSync`)을 찾아갈 때 쓴다.
+         * @brief 에셋 id @p assetID 의 폴더로 가서 그 애셋을 고릅니다(언리얼 "Browse to Asset" · Ctrl+B). 메인 씬에서 고른 오브젝트의 애셋(`EditorSelectionSync`)을 찾아갈 때 쓴다.
          * @return 디스크에 없는 애셋(쿠킹 묶음에만 있다)이면 false 이고 아무것도 바꾸지 않는다.
          */
         [[nodiscard]] bool revealAsset( string_view assetID );

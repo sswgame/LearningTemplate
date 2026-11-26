@@ -182,7 +182,7 @@ namespace sw::editor
         /**
          * @brief 에셋을 캔버스에 놓으면 표 @p listRule 이 정한 노드 종류를 돌려줍니다(언리얼 머티리얼 그래프의 텍스처 놓기 → Texture Sample). 캔버스 안에서 프레임마다 부릅니다.
          * @details 표에 맞는 줄이 없는 에셋이면 놓을 자리를 열지 않는다(EditorUI R11 — 강조 없음, 끄는 쪽 금지 표시). 놓은 순간에만 true 이고,
-         *          종류 · 에셋 리소스 id · 놓은 캔버스 좌표를 돌려준다. 노드를 넣고 에셋을 채우는 일(되돌리기 한 단계)은 패널 모델이 한다.
+         *          종류 · 에셋 에셋 id · 놓은 캔버스 좌표를 돌려준다. 노드를 넣고 에셋을 채우는 일(되돌리기 한 단계)은 패널 모델이 한다.
          */
         bool acceptAssetDrop( const vector<EditorGraphAssetNodeRule>& listRule, uint32& outKindID, string& outAssetPath, float2& outCanvasPosition );
         /**

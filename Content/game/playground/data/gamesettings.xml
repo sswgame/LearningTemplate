@@ -8,11 +8,11 @@
   <!-- 컷씬 입력 레이어가 이동을 막는 동안에도 메뉴 · 옵션이 열리는지 automation/cutscenetrigger 가 본다. -->
   <!-- 사용자 설정 스키마(키 바인딩)는 미니게임들의 몫을 한 파일에 모은다(data/playground.settings.xml). -->
   <Engine _windowTitle="SWEngine" _userSettingsSchema="guid:b77aba8b701558d4d656f0f051fcb23f" _telemetrySchema="guid:6189150233e1fa27bea913340207ef87" _bUIPauseMenu="true">
-    <_listResourceLayer>
+    <_listAssetLayer>
       <item>game/playground/layers/zones</item>
       <!-- 발걸음 소리(사격장이 쓰던 층 — 표면 종류마다 소리 이벤트 한 칸만 얹는다) -->
       <item>game/playground/shooter3d/layers/footsteps</item>
-    </_listResourceLayer>
+    </_listAssetLayer>
   </Engine>
   <startMap>guid:57d6125ff94a46bfb947271e54e65b52</startMap>
   <autosaveSettings>guid:70b60a0f20789631bcbc0f534d22af0f</autosaveSettings>

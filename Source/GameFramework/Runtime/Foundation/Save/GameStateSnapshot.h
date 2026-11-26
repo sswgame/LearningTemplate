@@ -87,7 +87,7 @@ namespace sw
          *          2) 교체 — 검증을 지난 봉투만 활성 씬을 비우고 채운다. 언리얼 `LoadGameFromSlot` 이 별도 `USaveGame` 으로 풀고 월드는 성공 뒤에만 건드리는 나눔이다.
          *          성공하면 부르는 쪽은 읽기 훅을 부르고 `endRestore` 로 저장소를 비운다. 실패하면 훅을 부르지 않고, 까닭이 `Rejected`(아무것도 바꾸지 않았다)인지
          *          `SceneBroken`(교체 중에 졌다 — 세이브를 막아야 한다)인지 돌려준다.
-         *          머리의 씬 정체(찍을 때 활성 씬의 리소스 id)가 지금 활성 씬과 다르면 `Rejected` 다 — 그 씬을 연 뒤에 읽는다(`readSceneID` 로 먼저 본다).
+         *          머리의 씬 정체(찍을 때 활성 씬의 에셋 id)가 지금 활성 씬과 다르면 `Rejected` 다 — 그 씬을 연 뒤에 읽는다(`readSceneID` 로 먼저 본다).
          *          리플렉션 상태가 있으면 그 타입은 기본 생성할 수 있어야 한다(검증 사본) — 아니면 `Rejected` 다.
          */
         [[nodiscard]] expected<void, SnapshotRestoreFailure> readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
@@ -98,7 +98,7 @@ namespace sw
          */
         [[nodiscard]] static bool upgradeEnvelope( vector<uint8>& inoutBytes );
         /**
-         * @brief 봉투의 머리만 읽어 찍을 때 활성 씬의 지금 리소스 id 를 돌려줍니다(씬 없이 찍었으면 빈 글). 머리가 없거나 판이 다르거나 잘렸거나 그 씬이 없으면 없음입니다(까닭은 알린다).
+         * @brief 봉투의 머리만 읽어 찍을 때 활성 씬의 지금 에셋 id 를 돌려줍니다(씬 없이 찍었으면 빈 글). 머리가 없거나 판이 다르거나 잘렸거나 그 씬이 없으면 없음입니다(까닭은 알린다).
          * @details 섹션은 풀지 않는다 — 불러오기가 그 씬을 먼저 열지 정하는 자리다(언리얼 게임이 세이브의 맵 이름을 보고 `OpenLevel` 하는 것과 같다).
          */
         [[nodiscard]] static optional<string> readSceneID( const void* pInBuffer, uint32 size );
@@ -107,7 +107,7 @@ namespace sw
         /** @brief 봉투 머리에 실린 이 세이브의 정보입니다(불러오기 목록 · 이어 하기의 플레이 시간). */
         struct SaveInfo
         {
-            string           _sceneID;         ///< 찍은 씬의 지금 리소스 id(씬 없이 찍었으면 빈 글)
+            string           _sceneID;         ///< 찍은 씬의 지금 에셋 id(씬 없이 찍었으면 빈 글)
             float64          _playTime{ 0.0 }; ///< 찍을 때까지의 플레이 시간(초)
             UnixMilliseconds _savedTime{ 0 };  ///< 찍은 벽시계 시각(UTC)
         };

@@ -68,7 +68,7 @@ namespace sw
 
     bool AssetCookPath::isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
     {
-        const PathKey key = FileUtil::normalizePath( relativePath ); // 리소스 id 구간 판정 — 팩 뿌리(`game/<팩>`)는 늘 소문자다
+        const PathKey key = FileUtil::normalizePath( relativePath ); // 에셋 id 구간 판정 — 팩 뿌리(`game/<팩>`)는 늘 소문자다
         if ( activePackRoot.empty() || FileUtil::startsWithPathComponent( key, constant::path::kGamePack ) == false )
             return false;
         return FileUtil::startsWithPathComponent( key, activePackRoot ) == false;

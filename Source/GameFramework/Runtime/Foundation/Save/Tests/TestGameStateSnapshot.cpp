@@ -90,7 +90,7 @@ namespace
         return count;
     }
 
-    /** @brief 지역 씬 매니저에 리소스 id @p pSceneID 의 빈 씬을 활성으로 세우고 오브젝트 하나를 둡니다. 실패하면 nullptr 입니다. */
+    /** @brief 지역 씬 매니저에 에셋 id @p pSceneID 의 빈 씬을 활성으로 세우고 오브젝트 하나를 둡니다. 실패하면 nullptr 입니다. */
     sw::GameObjectManager* openSceneWithOneObject( sw::SceneManager& sceneManager, const utf8* pSceneID )
     {
         sw::Scene* const pScene = sceneManager.createEmptyActiveScene( pSceneID );
@@ -207,7 +207,7 @@ SW_TEST_CASE( GameStateSnapshotTest, HeaderCarriesTheContentConfiguration )
 }
 
 /**
- * @brief [GameStateSnapshotTest] 봉투 머리는 찍은 씬의 리소스 id 를 싣고, 다른 씬 위에서 읽으면 그 씬을 비우지 않고 거절한다 — 같은 씬이면 지금처럼 복원한다
+ * @brief [GameStateSnapshotTest] 봉투 머리는 찍은 씬의 에셋 id 를 싣고, 다른 씬 위에서 읽으면 그 씬을 비우지 않고 거절한다 — 같은 씬이면 지금처럼 복원한다
  * @details 언리얼 게임은 세이브의 맵을 연 뒤 적용한다. 씬 전환 뒤 적용 흐름이 들어오기 전까지 다른 씬의 세이브는 섞지 않고 거절한다.
  */
 SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
@@ -236,7 +236,7 @@ SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
 }
 
 /**
- * @brief [GameStateSnapshotTest] 머리만 읽기(`readSceneID`)는 찍은 씬의 리소스 id 를 돌려주고 활성 씬을 건드리지 않는다 — 머리가 틀리거나 잘린 버퍼는 없음이다(감사 G-7)
+ * @brief [GameStateSnapshotTest] 머리만 읽기(`readSceneID`)는 찍은 씬의 에셋 id 를 돌려주고 활성 씬을 건드리지 않는다 — 머리가 틀리거나 잘린 버퍼는 없음이다(감사 G-7)
  * @details 슬롯 불러오기는 이 값으로 그 씬을 먼저 연 뒤 적용한다(언리얼 게임이 세이브의 맵으로 `OpenLevel` 한 뒤 적용하는 것과 같다).
  */
 SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )

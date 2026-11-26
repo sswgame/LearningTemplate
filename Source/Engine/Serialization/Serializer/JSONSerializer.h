@@ -56,7 +56,7 @@ namespace sw
         /** @brief Pretty JSON 을 절대 경로에 씁니다. indentSpaces 가 0 이면 serializePretty 와 같이 4 칸을 씁니다. */
         [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
                                               const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-        /** @brief 절대 · 리소스 경로에서 JSON 을 읽어 역직렬화합니다. 빠진 필수 칸은 `deserialize` 와 같이 실패입니다. */
+        /** @brief 절대 · 에셋 경로에서 JSON 을 읽어 역직렬화합니다. 빠진 필수 칸은 `deserialize` 와 같이 실패입니다. */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo,
                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 

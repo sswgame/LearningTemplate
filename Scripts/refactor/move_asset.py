@@ -5,7 +5,7 @@
   py -3 -m Scripts move-asset game/playground/materials game/playground/surfaces
   py -3 -m Scripts move-asset <옛1> <새1> <옛2> <새2> …   # 여러 쌍을 차례로 — 끊어진 참조 검사(4)는 끝에 한 번
 
-경로는 리소스 id(`Content/` 뒤 — 앞에 `Content/` 를 붙여도 된다)다. 하는 일:
+경로는 에셋 id(`Content/` 뒤 — 앞에 `Content/` 를 붙여도 된다)다. 하는 일:
   1. `git mv`: 원본 곁의 정체성 서술(`<파일>.meta`)도 함께 옮기고 그 안의 원본 이름을 새 이름으로 쓴다(GUID 는 그대로다. 옮겨도 정체성은 같다).
   2. 참조 파일(Content 의 글 에셋 · 테스트 CMake)에서 경로 글(GUID 참조는 옮겨도 그대로다)을 담은 칸(`Config/Dev/AssetReferenceFields.json` — 커밋 전 검사 · `App --check-asset-refs` ·
      에디터 이름 바꾸기와 같은 목록)의 값만 새 경로로. 폴더면 그 아래 경로 전부, 원본(`models_raw/x.glb`)이면 그 임포트 산출물 경로(`models/x…`)도.
@@ -298,10 +298,10 @@ def report_leftovers(root: Path, list_pattern: list[str]) -> None:
 
 class MoveAssetCommand(Command):
     name = "move-asset"
-    help = "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(리소스 id old new)"
+    help = "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(에셋 id old new)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("id", nargs="+", help="옛 리소스 id(파일 또는 폴더)와 새 리소스 id — 여러 쌍이면 차례로 옮긴다")
+        parser.add_argument("id", nargs="+", help="옛 에셋 id(파일 또는 폴더)와 새 에셋 id — 여러 쌍이면 차례로 옮긴다")
         parser.add_argument("--dry-run", action="store_true", help="고칠 파일만 찍는다")
         parser.add_argument("--resume", action="store_true", help="파일은 이미 옮겼다 — 이름 · 참조 · 옛 경로 표 고치기만 다시 돈다(도구 규칙을 넓힌 뒤 같은 옮기기에 적용)")
 

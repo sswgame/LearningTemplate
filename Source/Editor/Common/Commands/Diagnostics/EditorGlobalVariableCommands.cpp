@@ -12,7 +12,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
@@ -97,7 +97,7 @@ namespace sw::editor
     {
         const string text = makePresetText( presetName );
         return writer.save( filePath, [&text]( const AbsolutePath& writable )
-        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } );
+        { return AssetComposer::saveText( writable, AssetSaveText::makeComplete( text ) ); } );
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const DiskPath& filePath )

@@ -58,7 +58,7 @@ namespace sw::editor
         static ToolAssetLoadResult loadTileSet( string_view path, TileSetContent& outData, string& outStatus );
         /** @brief 타일셋을 씁니다(`TileSetContent::saveToXMLText`). 되읽지 못하는 내용이면 원본을 덮지 않고 false 입니다. */
         [[nodiscard]] static bool saveTileSet( AssetWriter& writer, string_view path, const TileSetContent& data );
-        /** @brief 도구 문서 경로(리소스 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
+        /** @brief 도구 문서 경로(에셋 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
         [[nodiscard]] static bool hasToolDocument( string_view path );
         /**
          * @brief SpriteClip JSON 을 읽습니다. path 가 비어 있으면 에디터 설정의 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 가지입니다.

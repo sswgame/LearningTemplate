@@ -228,7 +228,7 @@ namespace sw::editor
         string text;
         if ( isBundlePath() == false )
             return _inputMap.saveToXMLText( text ) ? text : string{};
-        // 묶음은 파일마다 몫을 이어 쓴다 — 파일마다 "리소스 id \n 바이트 수 \n 글". 저장(`saveBundle`)과 같은 글이라 되돌린 뒤 저장도 같은 파일로 간다.
+        // 묶음은 파일마다 몫을 이어 쓴다 — 파일마다 "에셋 id \n 바이트 수 \n 글". 저장(`saveBundle`)과 같은 글이라 되돌린 뒤 저장도 같은 파일로 간다.
         for ( uint32 sourceIndex = 0; sourceIndex < _inputMap.getSourceCount(); ++sourceIndex )
         {
             string sourceText;

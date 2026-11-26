@@ -756,7 +756,7 @@ namespace sw
         vector<string> _listResourcePriority{}; ///< 리소스 팩 탐색 우선순위(앞이 먼저)
 
         /**
-         * @brief 기동 스플래시 이미지(압축 없는 32bpp `.dds`, 도메인을 포함한 리소스 경로)입니다.
+         * @brief 기동 스플래시 이미지(압축 없는 32bpp `.dds`, 도메인을 포함한 에셋 경로)입니다.
          * @details 스플래시는 엔진 기본 에셋 표(`EngineDefaultAssets`)와 에셋 색인보다 먼저 떠서 GUID 로 적지 못한다 — 엔진 설정의 경로다. 에디터 도메인은 팩에 담기지 않으므로
          *          낱개 파일을 읽지 않는 실행(배포 · `-cooked-content`)은 스플래시를 띄우지 않는다(`SplashSubsystem`).
          */

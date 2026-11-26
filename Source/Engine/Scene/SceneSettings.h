@@ -25,7 +25,7 @@
 
 namespace sw
 {
-    /** @brief 씬이 선언한 데이터 레이어 하나입니다. 이름은 전역 이름 집합이다 — 인스턴스의 내부 씬이 같은 이름을 쓰면 같은 레이어다(`ResourceContext` 태그가 이 이름을 켤 수 있게). */
+    /** @brief 씬이 선언한 데이터 레이어 하나입니다. 이름은 전역 이름 집합이다 — 인스턴스의 내부 씬이 같은 이름을 쓰면 같은 레이어다(`AssetComposeContext` 태그가 이 이름을 켤 수 있게). */
     REFLECT()
     struct SW_API SceneDataLayerDef
     {

@@ -101,12 +101,12 @@ namespace sw
         return MathUtil::max( scaled, MathUtil::min( fontSize, kMinScaledFontSize ) );
     }
 
-    optional<ResourceTagSet> UIScaleSettings::makeScreenTags( const UIViewport& viewport ) const
+    optional<AssetTagSet> UIScaleSettings::makeScreenTags( const UIViewport& viewport ) const
     {
         if ( viewport._size._x <= 0.0f || viewport._size._y <= 0.0f )
             return nullopt;
-        const float32  widthDp = viewport._physicalSize._x / ( viewport._contentScale > 0.0f ? viewport._contentScale : 1.0f );
-        ResourceTagSet tags;
+        const float32 widthDp = viewport._physicalSize._x / ( viewport._contentScale > 0.0f ? viewport._contentScale : 1.0f );
+        AssetTagSet   tags;
         tags.add( widthDp < _compactMaxWidth ? "screen.compact" : "screen.regular" );
         tags.add( viewport._size._y > viewport._size._x ? "orientation.portrait" : "orientation.landscape" );
         return tags;

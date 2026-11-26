@@ -147,7 +147,7 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::isPathAtOrUnderRoot( root, otherCased.view() ) );
     SW_EXPECT_EQUAL( bCaseFolds, sw::FileUtil::startsWithPathComponent( sw::FileUtil::makeComparableDiskPath( otherCased.view() ), sw::FileUtil::makeComparableDiskPath( root ) ) );
 
-    // 리소스 id 는 늘 소문자로 접은 키라 대소문자와 무관하게 구간을 가른다. 구간 경계 — `scratchpad` 는 `scratch` 아래가 아니다
+    // 에셋 id 는 늘 소문자로 접은 키라 대소문자와 무관하게 구간을 가른다. 구간 경계 — `scratchpad` 는 `scratch` 아래가 아니다
     SW_EXPECT_TRUE( sw::FileUtil::startsWithPathComponent( sw::FileUtil::normalizePath( "Scratch\\Copy/A.xml" ), "scratch" ) );
     SW_EXPECT_FALSE( sw::FileUtil::startsWithPathComponent( sw::FileUtil::normalizePath( "scratchpad/a.xml" ), "scratch" ) );
     SW_EXPECT_EQUAL( sw::string( "copy/a.xml" ), sw::FileUtil::suffixAfterPathComponent( sw::FileUtil::normalizePath( "Scratch/Copy/A.xml" ), "scratch" ) );

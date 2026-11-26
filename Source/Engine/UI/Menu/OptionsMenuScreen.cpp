@@ -8,7 +8,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Menu/KeyRebindScreen.h"
@@ -340,7 +340,7 @@ namespace sw
         UIDocumentCache&                                  documents    = engine::getSubsystem<UIDocumentCache>();
         const expected<shared_ptr<const UIDocumentAsset>> document     = documents.acquire( documentPath );
         vector<UIBindingDef>                              listBinding;
-        expected<unique_ptr<Widget>>                      built = document.has_value() ? ( **document ).instantiate( documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
+        expected<unique_ptr<Widget>>                      built = document.has_value() ? ( **document ).instantiate( documents, AssetTagSet{}, listBinding ) : unexpected( document.error() );
         if ( built.has_value() == false )
         {
             SW_LOG_ERROR_ID( "OptionsMenuScreen.OptionsRowFailed", "[UI] Options row for '%#' failed: %# (%#)", setting._id.c_str(), built.error().message(), built.error().detail() );

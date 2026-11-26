@@ -19,10 +19,10 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -546,7 +546,7 @@ namespace sw
         AssetLoadScope loadScope( "Prefab", assetID.view() );
         XMLDocument    doc;
         string         absPath;
-        const bool     bRead = doc.loadResource( assetID, &absPath );
+        const bool     bRead = doc.loadAsset( assetID, &absPath );
         return readXMLSource( doc, bRead, absPath, loadScope );
     }
 
@@ -554,7 +554,7 @@ namespace sw
     {
         JSONDocument doc;
         string       absPath;
-        const bool   bRead = doc.loadResource( assetID, &absPath );
+        const bool   bRead = doc.loadAsset( assetID, &absPath );
         return readJSONSource( doc, bRead, absPath );
     }
 
@@ -572,7 +572,7 @@ namespace sw
     bool PrefabAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         // 형식은 접미사 칸 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
-        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 에셋 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         const optional<PrefabFileFormat> format = findFileFormat( diskPath.str() );
         if ( format == PrefabFileFormat::JSON )
         {
@@ -731,7 +731,7 @@ namespace sw
             return false;
         }
         // 깊이 상한은 엔진의 사본이다(로드 워커가 `EngineConfig` 를 직접 읽으면 설정 제자리 덮기와 겹친다). 없으면 대신 읽지 않고 진다.
-        const optional<uint32> maxDepth = engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+        const optional<uint32> maxDepth = engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth();
         if ( maxDepth.has_value() == false )
         {
             DataInheritance::reportNoDepthLimit( sourceName );
@@ -936,7 +936,7 @@ namespace sw
             const string variantText  = xmlDoc.saveToString();
             const bool   bCompleteDoc = PrefabAssetInternal::writeNodesToXML( completeRoot, _listNestedInstance, PrefabAssetInternal::kRootParent );
             const bool   bWritten     = bCompleteDoc && variantText.empty() == false &&
-                                  ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( variantText, completeDoc.saveToString() ) );
+                                  AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( variantText, completeDoc.saveToString() ) );
             if ( bWritten == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML2", "Failed to write prefab XML: %#", absPath.str() );
@@ -991,7 +991,7 @@ namespace sw
         const string text         = xmlDoc.saveToString();
         const string completeText = completeDoc.saveToString();
         // 상위 폴더는 저장 입구가 만든다. 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
-        const bool writeOk = text.empty() == false && ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) );
+        const bool writeOk = text.empty() == false && AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( text, completeText ) );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML", "Failed to write prefab XML: %#", absPath.str() );

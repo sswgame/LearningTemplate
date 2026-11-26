@@ -148,7 +148,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "ShaderCompiler.EnginePolicyMissing", "%# ('%#')", error.message(), error.detail() );
                     return unexpected( error );
                 }
-                // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
+                // 소스는 에셋 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
                 const shared_ptr<const ShaderSourceResolver> pResolver = pSession != nullptr ? pSession->getResolver() : makeResolver();
                 if ( pResolver == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "Shader include domains cannot be found (see the _listResourcePriority error above)" } );

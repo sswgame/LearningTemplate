@@ -10,8 +10,8 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
@@ -25,20 +25,20 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioMixerDef.AudioMixerNotFound", "Audio mixer not found: %#", assetPath );
             return false;
         }
-        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioMixerDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool AudioMixerDef::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    bool AudioMixerDef::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
     {
         *this = AudioMixerDef{};
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
             return false;
         if ( XMLSerializer::deserialize( this, *StaticType(), flatText.empty() ? xmlText : string_view( flatText ) ) == false )
         {

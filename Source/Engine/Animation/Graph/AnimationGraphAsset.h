@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     /**
      * @enum AnimationLayerBlend
@@ -272,16 +272,16 @@ namespace sw
         vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(XML "bone_masks"). 레이어가 이름으로 가리킵니다. */
         vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(XML "layers"). 적은 순서대로 얹습니다. */
         vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
-        string                         _baseID;       /**< 부모 그래프의 리소스 id 입니다(XML "_base"). 목록은 펼친 값이고, 저장이 부모와 다른 칸만 쓴다. */
+        string                         _baseID;       /**< 부모 그래프의 에셋 id 입니다(XML "_base"). 목록은 펼친 값이고, 저장이 부모와 다른 칸만 쓴다. */
         /** @brief 이 에셋 종류입니다(등록은 `AnimationGraphAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "AnimationGraphAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 빈 그래프를 만듭니다. */
         AnimationGraphAsset() = default;
 
-        /** @brief 리소스 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
+        /** @brief 에셋 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 에셋 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 쓰지 않고 오류입니다(부모를 끊지 않는다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -306,7 +306,7 @@ namespace sw
 
     private:
         /** @brief 글을 펼치고(`_base`) 읽습니다. 세 읽기 입구의 공통 단계입니다. @p sourceLabel 은 오류에 적는 이름입니다. */
-        [[nodiscard]] bool parseText( string_view text, string_view sourceLabel, const ResourceContext& context );
+        [[nodiscard]] bool parseText( string_view text, string_view sourceLabel, const AssetComposeContext& context );
         /** @brief 노드 id 가 겹치거나, 링크 id 가 겹치거나, 링크가 없는 노드를 가리키면 오류를 남기고 false 입니다(차이 파일이 부모와 어긋난 것이 여기서 드러난다). */
         [[nodiscard]] bool validateGraphIDs( string_view sourceLabel ) const;
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */

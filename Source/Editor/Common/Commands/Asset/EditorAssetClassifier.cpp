@@ -134,7 +134,7 @@ namespace sw::editor
     {
         vector<AbsolutePath> listAllFile;
         const AbsolutePath   resourceRootPath = assetPaths.getRootFolderPath();
-        // 리소스 루트가 없거나 그새 사라졌으면 모든 종류가 0 개다.
+        // 콘텐츠 루트가 없거나 그새 사라졌으면 모든 종류가 0 개다.
         if ( resourceRootPath.empty() == false )
             (void)EditorContentScan::collectFiles( resourceRootPath, "", listAllFile, true, stopToken ); // 표시용 개수 — 도중에 멈춘 것은 collectFiles 가 알리고 모은 데까지 센다
         countFiles( listAllFile, outCounts );

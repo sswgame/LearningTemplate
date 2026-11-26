@@ -11,7 +11,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
@@ -78,12 +78,12 @@ namespace sw
 
     CookJobDesc CookStore::makeJobDesc( const CookJobDesc& desc, string_view output )
     {
-        CookJobDesc          jobDesc = desc.forOutput( output );
-        const ResourceTagSet tags    = engine::getSubsystem<ResourceTags>().capture();
+        CookJobDesc       jobDesc = desc.forOutput( output );
+        const AssetTagSet tags    = engine::getSubsystem<AssetTags>().capture();
         for ( const string& tag : tags.getTags() )
         {
-            const ResourceTagAxis* const pAxis = ResourceTags::findAxisOfTag( tag );
-            if ( pAxis != nullptr && pAxis->_timing == ResourceTagTiming::Cook )
+            const AssetTagAxis* const pAxis = AssetTags::findAxisOfTag( tag );
+            if ( pAxis != nullptr && pAxis->_timing == AssetTagTiming::Cook )
                 jobDesc._target.append( "," ).append( tag );
         }
         return jobDesc;

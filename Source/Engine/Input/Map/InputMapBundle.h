@@ -29,7 +29,7 @@ namespace sw
     struct InputMapExtension
     {
         const utf8* _pID;        ///< 등록 id(`themepark.input`). 묶음 안의 차례를 정한다
-        const utf8* _pAssetPath; ///< `*.input.xml` 리소스 경로. 더하는 파일 규칙을 따른다(`InputMap::loadBundle`)
+        const utf8* _pAssetPath; ///< `*.input.xml` 에셋 경로. 더하는 파일 규칙을 따른다(`InputMap::loadBundle`)
     };
 
     /**

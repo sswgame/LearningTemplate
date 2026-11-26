@@ -53,7 +53,7 @@ namespace sw
      */
     struct SW_API LocalizationModuleProject
     {
-        const utf8* _pProjectPath; ///< 프로젝트 리소스 id(`engine/localization/kits/chat/chat.locproject.xml`)
+        const utf8* _pProjectPath; ///< 프로젝트 에셋 id(`engine/localization/kits/chat/chat.locproject.xml`)
 
         [[nodiscard]] static bool add( const LocalizationModuleProject* pProject );
         static void               remove( const LocalizationModuleProject* pProject );
@@ -94,7 +94,7 @@ namespace sw
         /** @brief 서브시스템 이름입니다. 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)은 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "Localization";
 
-        /** @brief 엔진의 언어 관리자로 섭니다 — 이 뒤로 언어를 바꾸면 엔진의 리소스 조건(`locale` 축)이 따라간다. */
+        /** @brief 엔진의 언어 관리자로 섭니다 — 이 뒤로 언어를 바꾸면 엔진의 에셋 조건(`locale` 축)이 따라간다. */
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
@@ -133,7 +133,7 @@ namespace sw
         [[nodiscard]] bool findTimeZone( string_view zoneName, TimeZoneInfo& outZone ) const;
 
         /**
-         * @brief 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
+         * @brief 로컬라이제이션 프로젝트(`*.locproject.xml`, 에셋 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
          * @details 같은 이름의 프로젝트가 이미 있으면 바꾼다. 원문 테이블 두 개에 같은 키가 있으면 오류이고 앞의 것을 쓴다.
          *          쿠킹본을 읽는 구성(`AssetIO::usesSource` 가 거짓)은 프로젝트 파일과, 조회 사슬에 든 문화권의 쿠킹된 이진 표(`LocalizationProject::makeCookedTablePath`)만
          *          읽는다(언리얼 `.locres` — 지금 문화권 + 폴백 사슬만). 언어가 바뀌면 사슬에 새로 든 표를 읽고 빠진 표는 내린다(감사 A-16).
@@ -178,7 +178,7 @@ namespace sw
          * @details 저작 파일을 두지 않는 배포본이 쓴다. 같은 문화권의 표를 다시 로드하면 바꿉니다. 깨진 바이트는 거절하고 아무것도 바꾸지 않습니다.
          */
         [[nodiscard]] bool loadBinaryTable( const uint8* pData, size_t size );
-        /** @brief 리소스 경로(또는 절대 경로)의 이진 번역 표를 읽습니다. */
+        /** @brief 에셋 경로(또는 절대 경로)의 이진 번역 표를 읽습니다. */
         [[nodiscard]] bool loadBinaryTableResource( const AssetID& assetID );
         /**
          * @brief 로드한 프로젝트에서 그 문화권의 화면에 나오는 글(낡은 번역 · 검토 번역 제외)을 이진 번역 표 바이트로 베이크합니다(쿠킹 단계가 부른다).
@@ -316,7 +316,7 @@ namespace sw
         const utf8* findByHash( uint64 keyHash ) const;
         /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
-        /** @brief 지금 언어를 엔진의 리소스 조건(`locale` 축)에 적습니다 — 언어가 정해지는 자리(바꾸기 · 프로젝트 올리기 · 표 읽기 · 비우기)마다 부른다. `_mutex` 밖에서 부른다. */
+        /** @brief 지금 언어를 엔진의 에셋 조건(`locale` 축)에 적습니다 — 언어가 정해지는 자리(바꾸기 · 프로젝트 올리기 · 표 읽기 · 비우기)마다 부른다. `_mutex` 밖에서 부른다. */
         void syncLocaleTag() const;
         /** @brief `syncModuleProjects` 의 몸통입니다(등록 목록과 탑재를 맞춥니다). */
         [[nodiscard]] bool syncModuleProjectsInternal();
@@ -345,7 +345,7 @@ namespace sw
 
         atomic<uint32> _textRevision;
         uint32         _syncedModuleProjectGeneration; ///< 마지막 `syncModuleProjects` 가 본 등록 목록의 번호입니다(맞추는 스레드 하나만 읽고 쓴다)
-        /// @brief 엔진 서비스로 선 관리자입니다. 따로 지은 관리자(에디터 UI 미리보기 · 도구 · 테스트)가 언어를 바꿔도 엔진 전체의 리소스 조건은 바뀌지 않는다.
+        /// @brief 엔진 서비스로 선 관리자입니다. 따로 지은 관리자(에디터 UI 미리보기 · 도구 · 테스트)가 언어를 바꿔도 엔진 전체의 에셋 조건은 바뀌지 않는다.
         uint8                  _bEngineInstance         : 1;
         uint8                  _bModuleProjectsSynced   : 1; ///< `syncModuleProjects` 가 한 번이라도 맞췄다
         uint8                  _bModuleProjectsComplete : 1; ///< 그 맞추기에서 올리지 못한 등록이 없었다(같은 번호로 다시 부르면 이 결과를 돌려준다 — 오류 로그가 프레임마다 나지 않게)
@@ -358,7 +358,7 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 키트 모듈의 현지화 프로젝트를 등록합니다(그 모듈의 .cpp, 파일 범위). @p id 는 정적 이름 조각이고 @p ProjectPathLiteral 은 프로젝트 리소스 id 입니다.
+ * @brief 키트 모듈의 현지화 프로젝트를 등록합니다(그 모듈의 .cpp, 파일 범위). @p id 는 정적 이름 조각이고 @p ProjectPathLiteral 은 프로젝트 에셋 id 입니다.
  * @code
  *     SW_LOCALIZATION_PROJECT( Chat, "engine/localization/kits/chat/chat.locproject.xml" );
  * @endcode

@@ -4,7 +4,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/PackStorageSettings.h"
@@ -17,7 +17,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialDef.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModPackBuilder.h"
@@ -253,7 +253,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     StringBuilder<constant::buffer::kMax256> layerRelative;
     layerRelative.appendFormat( "%#/%#", ModManifest::makeLayerRoot( "tide" ), basePath );
     const AbsolutePath                       layerFile     = content.join( layerRelative.view() );
-    const vector<string>                     listLayerBase = engine::getSubsystem<ResourceComposition>().getLayers();
+    const vector<string>                     listLayerBase = engine::getSubsystem<AssetComposition>().getLayers();
     StringBuilder<constant::buffer::kMax512> manifestText;
     manifestText.appendFormat( R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path="%#"/></Mod>)", basePath );
     SW_REQUIRE_TRUE( Internal::writeText( modDir.join( ModManifest::kFileName ), manifestText.view() ) );
@@ -265,13 +265,13 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
         SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         vector<string> listExpected = listLayerBase;
         listExpected.push_back( "mods/tide/layer" );
-        SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listExpected );
+        SW_EXPECT_TRUE( engine::getSubsystem<AssetComposition>().getLayers() == listExpected );
         const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath ).snapshot();
         SW_REQUIRE_TRUE( pQuests != nullptr );
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "base_quest" ) ) != nullptr ); // 원본 항목은 그대로
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "tide_quest" ) ) != nullptr ); // 층이 더한 항목
     }
-    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listLayerBase );
+    SW_EXPECT_TRUE( engine::getSubsystem<AssetComposition>().getLayers() == listLayerBase );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 
     // 밝히지 않은 층 파일.
@@ -282,7 +282,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     ModSession sneaky( assets );
     SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );
     SW_EXPECT_FALSE( sneaky.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
-    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listLayerBase );
+    SW_EXPECT_TRUE( engine::getSubsystem<AssetComposition>().getLayers() == listLayerBase );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
 

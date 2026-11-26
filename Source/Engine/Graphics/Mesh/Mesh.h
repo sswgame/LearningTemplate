@@ -357,7 +357,7 @@ namespace sw
         [[nodiscard]] MeshCPUView getCPUView() const;
         /** @brief CPU 정점을 업로드 뒤에도 쥐는가입니다. `Keep` 이면 `getCPUView` 로 읽을 수 있다. */
         MeshCPUAccess getCPUAccess() const { return _cpuAccess.load( std::memory_order_acquire ); }
-        /** @brief 이 메시를 읽은 `.mesh` 의 리소스 id 입니다. 절차 메시는 비어 있다. */
+        /** @brief 이 메시를 읽은 `.mesh` 의 에셋 id 입니다. 절차 메시는 비어 있다. */
         const AssetID& getSourceAsset() const { return _sourceAsset; }
         /** @brief CPU 정점을 지금 쥐고 있으면 `Keep` 으로 바꾸고 true 입니다. 이미 놓았으면 바꾸지 않고 false 입니다(파일을 다시 읽는 것은 `retainCPUVertices`). 어느 스레드에서 불러도 된다. */
         [[nodiscard]] bool tryRetainCPUVertices();

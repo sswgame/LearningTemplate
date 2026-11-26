@@ -1,6 +1,6 @@
 /**
  * @file DataPath.h
- * @brief 데이터 파일만 값을 넣을 수 있는 리소스 경로 칸입니다(엔진 기본 에셋 · 시스템 설정 · 게임 설정의 경로).
+ * @brief 데이터 파일만 값을 넣을 수 있는 에셋 경로 칸입니다(엔진 기본 에셋 · 시스템 설정 · 게임 설정의 경로).
  * @details 값의 기준은 데이터 파일이고 헤더는 형식만 갖는다. 그래서 이 형식은
  *          문자열 · 리터럴로 만들 수 없다 — `DataPath _shaderForwardLit{ "engine/shaders/…" }` 는 컴파일되지 않는다. 값은 리플렉션 데이터 읽기
  *          (`XMLSerializer` · `JSONSerializer` 가 부르는 텍스트 처리기, `SerializeContext` 의 "DataPath" 처리기)만 넣는다.
@@ -25,7 +25,7 @@ namespace sw
 
     /**
      * @class DataPath
-     * @brief 데이터 읽기만 채우는 리소스 경로(도메인으로 시작하는 리소스 id — `engine/shaders/toon.hlsl`)입니다.
+     * @brief 데이터 읽기만 채우는 에셋 경로(도메인으로 시작하는 에셋 id — `engine/shaders/toon.hlsl`)입니다.
      */
     class SW_API DataPath
     {

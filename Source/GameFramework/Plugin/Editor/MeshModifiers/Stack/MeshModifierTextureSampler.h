@@ -28,7 +28,7 @@ namespace sw::editor
     class MeshModifierTextureSampler
     {
     public:
-        /** @brief @p assetPaths 는 리소스 id 를 디스크 파일로 풀 경로 상태다 — 표본은 작업 스레드에서 돌아 서비스를 찾지 않고, 만드는 쪽(에디터 스레드)이 넘긴다. 표본기보다 오래 산다. */
+        /** @brief @p assetPaths 는 에셋 id 를 디스크 파일로 풀 경로 상태다 — 표본은 작업 스레드에서 돌아 서비스를 찾지 않고, 만드는 쪽(에디터 스레드)이 넘긴다. 표본기보다 오래 산다. */
         explicit MeshModifierTextureSampler( const AssetPaths& assetPaths );
         ~MeshModifierTextureSampler();
         MeshModifierTextureSampler( const MeshModifierTextureSampler& )            = delete;
@@ -36,7 +36,7 @@ namespace sw::editor
 
         /**
          * @brief 이미지 파일을 UV 로 표본합니다.
-         * @param assetPath 리소스 id 또는 작업 폴더 상대 경로(이미지 파일). 절대 경로도 받습니다.
+         * @param assetPath 에셋 id 또는 작업 폴더 상대 경로(이미지 파일). 절대 경로도 받습니다.
          * @param uv [0,1] 범위 밖은 반복(Repeat)으로 감깁니다. 텍셀 중심은 (i + 0.5) / 너비 입니다.
          * @param outRGBA 이중선형 보간한 색입니다. 8 비트 원본은 0..1, HDR 원본은 디코드한 값 그대로입니다.
          * @return 경로가 비었거나 파일을 못 찾거나 디코드에 실패하면 false 이고 outRGBA 는 건드리지 않습니다.

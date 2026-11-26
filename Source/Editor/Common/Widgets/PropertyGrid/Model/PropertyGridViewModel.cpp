@@ -1376,7 +1376,7 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return;
-        // 에디터의 에셋 색인에서 읽는다 — 팝업을 열 때마다 리소스 트리를 걷지 않는다.
+        // 에디터의 에셋 색인에서 읽는다 — 팝업을 열 때마다 콘텐츠 트리를 걷지 않는다.
         EditorAssetClassifier::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), outListEntry );
         // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
         const PropertyInfo& prop = *pBinding->_pProp;
@@ -1407,7 +1407,7 @@ namespace sw::editor
         {
             listAssetID.push_back( std::move( entry._path ) );
         }
-        // 실행의 작업 도메인(`scratch/` — 리소스 트리 밖이라 색인에 없다)도 마운트된 리소스다: 시나리오가 사본 폴더로 내보낸 프리셋을 고를 수 있어야 한다
+        // 실행의 작업 도메인(`scratch/` — 콘텐츠 트리 밖이라 색인에 없다)도 마운트된 리소스다: 시나리오가 사본 폴더로 내보낸 프리셋을 고를 수 있어야 한다
         // (언리얼 임시 마운트 지점의 패키지도 에셋 레지스트리에 오른다). 폴더가 없으면 고를 것이 없다.
         vector<AbsolutePath> listScratchFile;
         const AbsolutePath&  scratchFolder = AssetPaths::getScratchFolderPath();

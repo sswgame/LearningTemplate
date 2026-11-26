@@ -43,7 +43,7 @@ namespace sw::editor
     /** @brief 문맥 하나의 칸 — 마지막으로 고른 것의 애셋과 그 오브젝트, 바뀐 번호입니다. */
     struct EditorSelectionSyncEntry
     {
-        string                 _assetPath{};                                  ///< 고른 것의 애셋 리소스 id(애셋이 없는 오브젝트 · 빈 선택이면 비어 있다)
+        string                 _assetPath{};                                  ///< 고른 것의 애셋 에셋 id(애셋이 없는 오브젝트 · 빈 선택이면 비어 있다)
         uint64                 _objectID{ 0 };                                ///< 고른 오브젝트 id(애셋 선택 · 빈 선택이면 0)
         uint64                 _sequence{ 0 };                                ///< 이 칸이 마지막으로 바뀐 채널 번호(0 이면 아직 없다)
         EditorSelectionContext _context{ EditorSelectionContext::MainScene }; ///< 칸의 문맥

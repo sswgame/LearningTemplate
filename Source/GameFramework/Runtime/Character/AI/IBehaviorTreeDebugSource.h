@@ -15,7 +15,7 @@ namespace sw
     struct BehaviorTreeDebugRunner
     {
         string                    _name{};     ///< 창에 보일 이름(예: "Player 0")
-        string                    _treePath{}; ///< 실행기가 쥔 트리를 읽은 `*.bt.xml` 의 리소스 id
+        string                    _treePath{}; ///< 실행기가 쥔 트리를 읽은 `*.bt.xml` 의 에셋 id
         const BehaviorTreeRunner* _pRunner{ nullptr };
     };
 } // namespace sw

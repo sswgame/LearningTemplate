@@ -24,7 +24,7 @@ namespace sw::editor
     /** @brief 임포트 잡이 워커에서 부를 임포터와 그 원본입니다. 임포터는 `AssetSourceBatchImporterFunc` 이며 UI 와 공유 상태를 건드리지 않는 것만 올립니다. */
     struct EditorAssetImportItem
     {
-        string                       _relativePath; ///< 리소스 루트 기준 원본 경로
+        string                       _relativePath; ///< 콘텐츠 루트 기준 원본 경로
         AssetSourceBatchImporterFunc _pfnImport{ nullptr };
     };
 } // namespace sw::editor

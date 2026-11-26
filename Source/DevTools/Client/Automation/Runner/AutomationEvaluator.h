@@ -144,7 +144,7 @@ namespace sw
         const vector<string>& getFailures() const { return _listFailure; }
         /** @brief 첫 실패 줄의 종류입니다(실패가 없으면 단언 — 읽는 쪽은 `getFailures` 가 비지 않을 때만 쓴다). */
         AutomationFailureKind getFirstFailureKind() const { return _firstFailureKind; }
-        /** @brief 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */
+        /** @brief 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)이 새로 쓰거나 바꾼 골든 파일(에셋 id)입니다. 리뷰할 목록이다. */
         const vector<string>& getUpdatedGoldens() const { return _listUpdatedGolden; }
         /** @brief 통과했지만 허용치에 가까운 골든의 비교 줄입니다(`GoldenResult::PassNearLimit`, 기록 모드가 아닐 때). 기록 모드로 다시 뜰 목록이다. */
         const vector<string>& getNearLimitGoldens() const { return _listNearLimitGolden; }
@@ -218,7 +218,7 @@ namespace sw
         shared_ptr<AutomationLogPolicy>  _pLogPolicy;                                           ///< 로그 게이트의 선언 · 허용(`<ExpectLog>` · `<AllowLog>`) — 세션이 든 한 벌을 빌린다
         vector<string>                   _listFailure;                                          ///< "frame 40 <Expect> #7: Shooter.WeaponIndex == 1, got 2"
         AutomationFailureKind            _firstFailureKind{ AutomationFailureKind::Assertion }; ///< 첫 실패 줄의 종류(`addFailure`)
-        vector<string>                   _listUpdatedGolden;                                    ///< 이 실행이 쓴 골든(리소스 id)
+        vector<string>                   _listUpdatedGolden;                                    ///< 이 실행이 쓴 골든(에셋 id)
         vector<ReferencedGolden>         _listReferencedGolden;                                 ///< 이 실행의 이미지 단언이 가리킨 골든 — 처음 가리킨 단언만 그 골든을 쓴다
         vector<string>                   _listNearLimitGolden;                                  ///< 통과했지만 허용치에 가까운 골든의 비교 줄
         vector<AutomationGoldenSample>   _listGoldenSample;                                     ///< 기록 모드가 아닌 실행의 골든 측정값
@@ -227,7 +227,7 @@ namespace sw
         vector<DeferredImageCheck>       _listDeferredImage;                                    ///< 시나리오 끝에서 판정할 `<ExpectImage>`
         vector<const AutomationStep*>    _listDeferredImagesDiffer;                             ///< 시나리오 끝에서 판정할 `<ExpectImagesDiffer>`
         vector<DeferredAtMostCheck>      _listDeferredAtMost;                                   ///< 시나리오 끝에서 판정할 값 상한(편집기 UI 캡처의 마젠타 비율)
-        string                           _goldenFolderID;                                       ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
+        string                           _goldenFolderID;                                       ///< 골든 폴더(시나리오 파일 옆 `golden/`, 에셋 id)
         string                           _goldenPrefix;                                         ///< 골든 파일 이름의 앞머리(시나리오 이름)
         expected<GoldenWriteMode>        _goldenWriteMode{ GoldenWriteMode::Off };              ///< 골든을 쓰는 범위(`-scenario-record-missing-golden` · `-scenario-update-golden`) — 두 깃발을 함께 주면 이미지 단언마다 그 이유로 진다
         vector<string>                   _listUnhandledLog;                                     ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)

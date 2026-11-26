@@ -29,7 +29,7 @@ namespace sw
     {
         struct GameSaveSlotsInternal
         {
-            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
+            /** @brief 활성 씬의 에셋 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면 빈 글입니다 — 세이브 머리의 씬 정체와 같은 뜻이다. */
             static string findActiveSceneID()
             {
                 const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();

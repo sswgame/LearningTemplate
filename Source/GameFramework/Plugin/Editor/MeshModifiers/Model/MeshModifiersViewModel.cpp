@@ -106,7 +106,7 @@ namespace sw::editor
 
     void MeshModifiersViewModel::exportWarp( const MeshModifierStack& shown ) const
     {
-        // 내보낼 자리는 에셋 슬롯이 고른 리소스 id 다 - 쓸 자리로 푼다.
+        // 내보낼 자리는 에셋 슬롯이 고른 에셋 id 다 - 쓸 자리로 푼다.
         const auto             warpFile = editor::getSubsystem<AssetPaths>().toDiskPath( _warpExportPath );
         AssetWriter            writer;
         const AssetWriteResult written = warpFile.has_value() ? WorldWarpModifier::writeWarpFile( writer, shown, *warpFile ) : AssetWriteResult::Failed;

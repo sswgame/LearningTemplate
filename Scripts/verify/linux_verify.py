@@ -9,7 +9,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   --gpu software         (어느 명령 앞에든) 시나리오를 WSL GPU(dzn Vulkan · d3d12 GL, 기본) 대신 소프트웨어(lavapipe · llvmpipe)로 돌린다
   build                  본 저장소 HEAD 를 클론으로 옮겨 Linux-Release 를 짓고 임포트 결과를 복사한다
   chain [--record] 이름… Scenario.<이름> 체인을 돌리고 진 단계와 까닭을 낸다(--record 는 .linux 골든 기록)
-  stages [--record] 묶음… 쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode — 게임 단계는 리소스 경로로)
+  stages [--record] 묶음… 쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode — 게임 단계는 에셋 경로로)
   bisect 단계 [체인]     체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
   rerun [체인]           마지막 체인 보고에서 진 단계를 혼자 → 앞을 붙여 → 이분 탐색으로 다시 돈다(scenario_bisect --rerun-failed 와 같은 함수)
@@ -368,7 +368,7 @@ def run_chain_action(arguments):
 
 def run_stage_set(names, env, log_name, record=False, extra=()):
     """단계 이름 묶음을 부분 체인으로 돌린다. 건너뜀 · 실패가 있어도 끝까지 간다 - 없으면 뒤 단계가 돌지 않아 통과로 착각한다."""
-    # 이름은 에디터 단계, `/` 가 든 것은 리소스 경로 그대로(게임 단계 — 예: game/playground/automation/gpumessages.scenario.xml). 에디터는 에디터 단계만 있을 때 켠다.
+    # 이름은 에디터 단계, `/` 가 든 것은 에셋 경로 그대로(게임 단계 — 예: game/playground/automation/gpumessages.scenario.xml). 에디터는 에디터 단계만 있을 때 켠다.
     listed = ','.join(n if '/' in n else f'engine/automation/editor/{n}.scenario.xml' for n in names)
     editor = [app_arguments.flag('EnableEditor')] if all('/' not in n for n in names) else []
     return subprocess.run(['timeout', '1200', './App', *editor, app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'),

@@ -165,12 +165,12 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument( AssetWriter& writer );
         /** @brief 경로가 맵 파일 하나가 아니라 게임의 입력 맵 묶음을 가리키면 true 입니다. */
         bool isBundlePath() const;
-        /** @brief 액션을 정한 파일의 리소스 경로입니다. 파일에서 읽지 않은 액션이면 빈 글입니다. */
+        /** @brief 액션을 정한 파일의 에셋 경로입니다. 파일에서 읽지 않은 액션이면 빈 글입니다. */
         string describeActionSource( const hashed_string& action ) const;
 
         /**
          * @brief 편집하는 맵을 저장과 같은 글로 씁니다(문서 되돌리기의 글). 형식이 담지 못하는 바인딩이 있으면 빈 글입니다.
-         * @details 묶음(게임 설정 파일)이면 파일마다 몫(`InputMap::writeSourceText`)을 리소스 id · 바이트 수와 함께 이어 쓴다 — 어느 파일이 액션을 정했는지까지 한 단계로 돌린다.
+         * @details 묶음(게임 설정 파일)이면 파일마다 몫(`InputMap::writeSourceText`)을 에셋 id · 바이트 수와 함께 이어 쓴다 — 어느 파일이 액션을 정했는지까지 한 단계로 돌린다.
          */
         string captureText() const;
         /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. 미저장 판정은 문서 패널이 글로 한다. 읽지 못하면 false 입니다(그때는 파일에서 다시 읽는다). */

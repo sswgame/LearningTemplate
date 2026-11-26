@@ -1,7 +1,7 @@
 // ParkGameModeTest — 공원 디렉터의 명령은 판이 열린 동안만 받고, 배치 데이터가 없으면 판을 열지 않으며, 배치는 디렉터 오브젝트의 자리를 원점으로 놓인다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"

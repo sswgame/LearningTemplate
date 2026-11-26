@@ -114,8 +114,8 @@ namespace sw
             const bool bThemeChanged = offscreen._theme != theme;
             offscreen._theme         = theme;
             // 화면 태그(`screen` · `orientation`)는 이 화면의 뷰포트로 정해 이 화면의 문서 변형에만 건다 — 게임 UI 와 같은 규칙(`UIScaleSettings::makeScreenTags`)이고 엔진 태그는 그대로다.
-            const optional<ResourceTagSet> screenTags = _pUI->getScaleSettings().makeScreenTags( viewport );
-            const bool                     bRebuilt   = screenTags.has_value() && _pUI->setResourceTagOverride( *offscreen._screen, *screenTags );
+            const optional<AssetTagSet> screenTags = _pUI->getScaleSettings().makeScreenTags( viewport );
+            const bool                  bRebuilt   = screenTags.has_value() && _pUI->setAssetTagOverride( *offscreen._screen, *screenTags );
             // 다시 지었으면(지금 테마로 맞췄다) 또는 테마가 바뀌었으면 그 화면의 스타일 시트만 이 화면의 테마로 다시 적용한다(게임 UI 의 테마는 그대로다).
             if ( bRebuilt || bThemeChanged )
                 _pThemes->rebuildStyleSet( *offscreen._screen, theme );

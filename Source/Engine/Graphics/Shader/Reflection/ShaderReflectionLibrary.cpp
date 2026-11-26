@@ -223,7 +223,7 @@ namespace sw
         [[nodiscard]] bool readManifestInternal( const AssetID& assetID, ShaderReflectionLibrary::EntryMap& outMapEntry )
         {
             outMapEntry.clear();
-            // 매니페스트는 리소스 id 다 — 리소스 입구로 바이트를 읽고 버퍼로 연다(`Archive` 의 파일 입구는 디스크 경로만 받는다).
+            // 매니페스트는 에셋 id 다 — 에셋 입구로 바이트를 읽고 버퍼로 연다(`Archive` 의 파일 입구는 디스크 경로만 받는다).
             vector<uint8> bytes;
             if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
                 return false;

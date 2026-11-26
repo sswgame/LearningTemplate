@@ -2,9 +2,7 @@
 
 #include "Engine/Content/AssetGUID.h"
 
-#include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Math/SecureRandom.h"
 
 namespace sw
 {
@@ -16,7 +14,6 @@ namespace sw
             static constexpr string_view kDeclaration = "<?xml";
             static constexpr string_view kEndPI       = "?>";
             static constexpr string_view kGUIDKey     = "guid=\"";
-            static constexpr uint32      kHalfLength  = static_cast<uint32>( AssetGUID::kTextLength / 2 );
             static constexpr string_view kOpening     = "<?asset";
 
             /** @brief 글 맨 앞의 머리 자리입니다. `_insertAt` 은 머리를 넣을 곳(선언 뒤), 머리가 있으면 `[_headerBegin, _headerEnd)` 가 그 처리 지시입니다. */
@@ -93,25 +90,8 @@ namespace sw
                     return nullopt;
                 return AssetGUID::tryParse( body.substr( pos, quote - pos ) );
             }
-
-            static bool isLowerHex( utf8 ch ) { return ( '0' <= ch && ch <= '9' ) || ( 'a' <= ch && ch <= 'f' ); }
         };
-
-        static_assert( static_cast<size_t>( AssetGUIDInternal::kHalfLength ) * 2 == AssetGUID::kTextLength );
     } // namespace
-
-    AssetGUID AssetGUID::create()
-    {
-        // 운영체제 난수에서 곧바로 받는다(`SecureRandom`) — 씨앗 하나로 시작한 난수열은 다른 실행이 같은 씨앗을 뽑으면 같은 GUID 열을 다시 낸다.
-        // 모두 0 은 글 표기가 받지 않으므로 다시 뽑는다(2^-128 — 사실상 한 번이다).
-        for ( ;; )
-        {
-            const uint64 high = SecureRandom::nextUint64();
-            const uint64 low  = SecureRandom::nextUint64();
-            if ( high != 0 || low != 0 )
-                return AssetGUID{ high, low };
-        }
-    }
 
     AssetGUID AssetGUID::fromName( string_view name )
     {
@@ -131,34 +111,19 @@ namespace sw
 
     AssetGUID AssetGUID::fromNameHash( uint64 highHash, uint64 lowHash )
     {
-        const uint64 high = HashUtil::mix64( highHash );
-        const uint64 low  = HashUtil::mix64( lowHash );
-        return ( high == 0 && low == 0 ) ? AssetGUID{ 0, HashUtil::kGoldenRatio64 } : AssetGUID{ high, low };
+        const GUID guid{ HashUtil::mix64( highHash ), HashUtil::mix64( lowHash ) };
+        return guid.isValid() ? AssetGUID{
+                                    guid
+        }
+                              : AssetGUID{ GUID{ 0, HashUtil::kGoldenRatio64 } };
     }
 
     optional<AssetGUID> AssetGUID::tryParse( string_view text )
     {
-        if ( text.size() != kTextLength )
+        const optional<GUID> guid = GUID::tryParse( text );
+        if ( guid.has_value() == false || guid->isValid() == false )
             return nullopt;
-        for ( const utf8 ch : text )
-        {
-            if ( AssetGUIDInternal::isLowerHex( ch ) == false )
-                return nullopt;
-        }
-        uint64 high = 0;
-        uint64 low  = 0;
-        if ( HexDigitUtil::tryParseFixed( text.substr( 0, AssetGUIDInternal::kHalfLength ), high ) == false ||
-             HexDigitUtil::tryParseFixed( text.substr( AssetGUIDInternal::kHalfLength ), low ) == false || ( high == 0 && low == 0 ) )
-            return nullopt;
-        return AssetGUID{ high, low };
-    }
-
-    string AssetGUID::toString() const
-    {
-        string out( kTextLength, '0' );
-        HexDigitUtil::writeDigits( out.data(), _high, AssetGUIDInternal::kHalfLength, HexCase::Lower );
-        HexDigitUtil::writeDigits( out.data() + AssetGUIDInternal::kHalfLength, _low, AssetGUIDInternal::kHalfLength, HexCase::Lower );
-        return out;
+        return AssetGUID{ *guid };
     }
 
     AssetGUIDHeader AssetGUIDHeader::read( string_view xmlText )

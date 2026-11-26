@@ -103,7 +103,7 @@ namespace sw::editor
      */
     struct CharacterEditorPaths
     {
-        fixed_string<constant::file::kMaxPathSize> _socketPath; ///< 문서인 소켓 파일(`*.sockets.xml`, 리소스 id)
+        fixed_string<constant::file::kMaxPathSize> _socketPath; ///< 문서인 소켓 파일(`*.sockets.xml`, 에셋 id)
         fixed_string<constant::file::kMaxPathSize> _skeletonPath;
         fixed_string<constant::file::kMaxPathSize> _refPosePath;
         fixed_string<constant::file::kMaxPathSize> _itemsPath;
@@ -111,7 +111,7 @@ namespace sw::editor
         fixed_string<constant::file::kMaxPathSize> _animationSet; ///< 미리보기 몸 애니메이터의 셋(팩 데이터의 `animationSet`)
         fixed_string<constant::file::kMaxPathSize> _rigPath;      ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
         fixed_string<constant::buffer::kMax128>    _presetName;
-        fixed_string<constant::file::kMaxPathSize> _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
+        fixed_string<constant::file::kMaxPathSize> _exportFolder; ///< 데이터 프리셋을 쓸 폴더(에셋 id). 기본은 외형 폴더의 `presets/`
         fixed_string<constant::buffer::kMax128>    _exportID;     ///< 데이터 프리셋 id — 씬의 컴포넌트가 가리키는 이름
     };
 } // namespace sw::editor
@@ -188,7 +188,7 @@ namespace sw::editor
         [[nodiscard]] bool saveFiles( AssetWriter& writer );
         /** @brief 이 문서가 읽은(쓴) 파일의 기준을 든 쓰기 문입니다(`EditorDocumentPanelBase::getAssetWriter`). */
         AssetWriter& getAssetWriter() { return _writer; }
-        /** @brief `saveFiles` 가 쓸 파일입니다(소켓 · 포즈는 리소스 id, 몸 데이터는 디스크 경로). */
+        /** @brief `saveFiles` 가 쓸 파일입니다(소켓 · 포즈는 에셋 id, 몸 데이터는 디스크 경로). */
         void collectFilesToSave( vector<string>& outListAssetID ) const;
         /** @brief 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라 건드리지 않습니다. */
         void revert();
@@ -300,7 +300,7 @@ namespace sw::editor
         BodyDataEditModel& getBodyProfilesModel() { return _bodyProfiles; }
         BodyDataEditModel& getVisualsModel() { return _visuals; }
         /**
-         * @brief 몸 데이터 파일을 엽니다 — 몸 부품의 채널 매핑 @p bodyShapesAsset(리소스 id, 비면 닫는다)과 외형 폴더의 `bodyprofiles.xml` · `itemvisuals.xml`. 고친 파일은 다시 읽지 않습니다.
+         * @brief 몸 데이터 파일을 엽니다 — 몸 부품의 채널 매핑 @p bodyShapesAsset(에셋 id, 비면 닫는다)과 외형 폴더의 `bodyprofiles.xml` · `itemvisuals.xml`. 고친 파일은 다시 읽지 않습니다.
          * @details 못 연 파일은 상태 줄에 까닭을 남긴다(그 줄의 편집 칸은 비활성). 이름 형식 그대로 받는다(빈 이름은 닫는다).
          */
         void openBodyData( const hashed_string& bodyShapesAsset );
@@ -309,7 +309,7 @@ namespace sw::editor
         bool               isBodyDataDirty() const { return _bodyShapes.isDirty() || _bodyProfiles.isDirty() || _visuals.isDirty(); }
 
     private:
-        /** @brief 리소스 id @p assetPath 의 몸 데이터 파일을 @p model 에 엽니다. 못 열면 상태 줄에 남깁니다. */
+        /** @brief 에셋 id @p assetPath 의 몸 데이터 파일을 @p model 에 엽니다. 못 열면 상태 줄에 남깁니다. */
         void openBodyDataFile( BodyDataEditModel& model, string_view assetPath );
         /** @brief 클립 폴더를 훑어 클립 이름을 모읍니다. */
         void loadClipNames();

@@ -92,11 +92,11 @@ namespace sw
          * @brief 렌더 파이프라인 에셋(pipeline XML)과 엔진 기동 데이터(enginedefaultassets.xml)를 바탕으로
          *        게임 런타임에 실제로 필요한 셰이더와 퍼뮤테이션만 네 RHI 바이너리로 한꺼번에 쿠킹합니다.
          * @param cookedDir 쿠킹 출력의 루트(`--cooked-dir`). 바이너리는 `<여기>/<domain>/shaders/bin/<rhi>` 에 쓴다 — 씬 · 프리팹 쿠킹본과 같은 스테이징이고, 팩 쿠커가 거기서 담는다
-         * @param resourceRoot 리소스 루트 디렉터리(비어 있으면 AssetPaths 기준으로 자동 탐색)
+         * @param resourceRoot 콘텐츠 루트 디렉터리(비어 있으면 AssetPaths 기준으로 자동 탐색)
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 쿠킹)
          * @param scope Sample 이면 표본(`selectSample`)만 굽는다. 쿠커는 요청 밖의 바이너리를 지우므로 표본은 빈(없는) 스테이징에만 굽는다 —
          *              채워진 스테이징이면 실패다(쿠킹본을 표본으로 덮지 않는다)
-         * @param pReachedAsset 팩이 담을 원본의 리소스 id(`PackCooker::collectReachedAssets`)입니다. 주면 출처가 하나도 닿지 않은 요청은 굽지 않는다(스테이징에서도 지워진다).
+         * @param pReachedAsset 팩이 담을 원본의 에셋 id(`PackCooker::collectReachedAssets`)입니다. 주면 출처가 하나도 닿지 않은 요청은 굽지 않는다(스테이징에서도 지워진다).
          *                      nullptr 이면 요청을 모두 굽는다(`--cook-shaders`)
          * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
@@ -109,13 +109,13 @@ namespace sw
         /** @brief 요청 @p listRequest 가 쿠킹하는 도메인(`engine` · `game/<팩>`)을 처음 나온 순서로 모읍니다. `shaders` 폴더 칸이 없는 요청은 쿠킹도 실패하므로 여기서는 건너뜁니다. */
         static void collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain );
         /**
-         * @brief 이 리소스 트리의 요청이 굽는 도메인마다 쿠킹 스테이징(@p cookedDir)의 @p targetFormat 바이너리가 소스와 맞는지 판정해 문제를 @p outListProblem 에 적습니다.
+         * @brief 이 콘텐츠 트리의 요청이 굽는 도메인마다 쿠킹 스테이징(@p cookedDir)의 @p targetFormat 바이너리가 소스와 맞는지 판정해 문제를 @p outListProblem 에 적습니다.
          * @details 굽는 것(`collectAllRequests`)과 판정하는 것이 같은 목록을 본다 — 설정의 도메인을 따로 훑으면 굽지 않는 폴더(에디터가 실행 때 컴파일하는 `editor/shaders`)를 "쿠킹되지 않음" 으로 잡는다.
          *          @p pReachedAsset 은 굽기(`cookAllShaders`)에 준 것과 같아야 한다 — 굽지 않은 변형을 빠진 것으로 잡지 않는다.
          */
         static void verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, const unordered_set<string>* pReachedAsset, vector<string>& outListProblem );
         /**
-         * @brief 이 리소스 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)와 그 출처 묶음을 모읍니다.
+         * @brief 이 콘텐츠 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)와 그 출처 묶음을 모읍니다.
          * @details 팩 쿠커가 "닿은 출처가 요청했는데 팩에서 버리는" 바이너리를 경고로 가른다(`PackCookParams::_mapRequestedShaderBinary`). 요청을 모으지 못하면 false 입니다.
          */
         [[nodiscard]] static bool collectRequestedBinaries( ShaderTargetFormat targetFormat, unordered_map<string, vector<vector<string>>>& outMapBinaryOrigin );
@@ -123,7 +123,7 @@ namespace sw
         /**
          * @brief 요청 목록을 모두 쿠킹하고, 리플렉션 매니페스트를 쓰고, 매니페스트에 없는 옛 바이너리를 지웁니다(`cookAllShaders` 의 본체).
          * @param cookedDir 쿠킹 출력의 루트(`cookAllShaders` 와 같다). 비면 실패다
-         * @details 요청의 셰이더 경로는 리소스 경로다 — 소스 · include 는 컴파일러와 같은 해석기(`ShaderSourceResolver`, 엔진 `AssetPaths`)로 푼다.
+         * @details 요청의 셰이더 경로는 에셋 경로다 — 소스 · include 는 컴파일러와 같은 해석기(`ShaderSourceResolver`, 엔진 `AssetPaths`)로 푼다.
          *          소스가 없거나 `shaders` 폴더 밖인 요청도 실패로 셉니다. 조용히 건너뛰면 요청이 어긋난 채 종료 코드 0 으로 끝난다.
          *          요청이 만들지 않는 바이너리는 지웁니다 — 요청 규칙이 바뀌면(퍼뮤테이션 해시 · 셰이더 삭제) 옛 파일이 매니페스트 밖에 남아 `--verify-shaders` 를 지게 한다.
          *          요청 × 포맷의 컴파일 · 리플렉션은 엔진의 병렬 for(`engine::runParallel`)로 나눠 돌린다. 산출물(바이너리 · 매니페스트)은 직렬로 돌 때와 바이트 단위로 같다 —

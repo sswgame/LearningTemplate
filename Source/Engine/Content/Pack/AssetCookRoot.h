@@ -20,7 +20,7 @@ namespace sw
 {
     /**
      * @struct AssetCookRoot
-     * @brief 코드 뿌리(리소스 id) 하나의 등록 줄과 그 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다. 경로는 정적 글(상수)이어야 한다.
+     * @brief 코드 뿌리(에셋 id) 하나의 등록 줄과 그 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다. 경로는 정적 글(상수)이어야 한다.
      */
     struct SW_API AssetCookRoot
     {

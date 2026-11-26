@@ -28,10 +28,10 @@ namespace sw::editor
     class SW_EDITOR_API EditorMapCheckReport
     {
     public:
-        /** @param listPackAsset 활성 팩의 데이터 XML 리소스 id 들입니다(모든 검사가 같은 목록을 본다 — 검사마다 폴더를 훑지 않는다). */
+        /** @param listPackAsset 활성 팩의 데이터 XML 에셋 id 들입니다(모든 검사가 같은 목록을 본다 — 검사마다 폴더를 훑지 않는다). */
         explicit EditorMapCheckReport( const vector<string>& listPackAsset );
 
-        /** @brief 결과 한 줄을 적습니다. @p label 은 무엇의 문제인지(리소스 id 면 줄을 두 번 눌러 콘텐츠 브라우저에서 찾는다). */
+        /** @brief 결과 한 줄을 적습니다. @p label 은 무엇의 문제인지(에셋 id 면 줄을 두 번 눌러 콘텐츠 브라우저에서 찾는다). */
         void                           add( ValidationSeverity severity, string_view label, string_view message );
         const vector<string>&          getPackAssets() const { return *_pListPackAsset; }
         const vector<ValidationIssue>& getIssues() const { return _listIssue; }

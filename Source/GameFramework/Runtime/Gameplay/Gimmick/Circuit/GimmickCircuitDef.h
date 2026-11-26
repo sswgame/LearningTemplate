@@ -141,7 +141,7 @@ namespace sw
 
     private:
         /**
-         * @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다. 이름의 뜻은 `GimmickCircuit::populate` 가 검사합니다.
+         * @brief 에셋 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다. 이름의 뜻은 `GimmickCircuit::populate` 가 검사합니다.
          * @details 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<GimmickCircuitDef>::acquire` 로 한 벌을 쥐고 회로 실행 상태(`GimmickCircuit`)는 자기가 짓는다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

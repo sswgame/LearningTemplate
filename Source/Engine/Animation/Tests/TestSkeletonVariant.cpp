@@ -14,8 +14,8 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -359,10 +359,10 @@ SW_TEST_CASE( SkeletonVariantTest, CookFlattensToAPlainSkeleton )
     variant._listBoneOverride.push_back( boneOverride );
     variant._listAddedBone.push_back( added );
 
-    DataInheritanceResourceSource source;
-    string                        flatText;
-    bool                          bComposed = false;
-    SW_REQUIRE_TRUE( ResourceComposer::compose( variant.toXML(), "variant", ResourceContext::forPackCook( source ), flatText, bComposed ) );
+    DataInheritanceAssetSource source;
+    string                     flatText;
+    bool                       bComposed = false;
+    SW_REQUIRE_TRUE( AssetComposer::compose( variant.toXML(), "variant", AssetComposeContext::forPackCook( source ), flatText, bComposed ) );
     SW_EXPECT_TRUE( bComposed );
     SW_EXPECT_TRUE( DataInheritance::findBasePath( flatText ).empty() );
 

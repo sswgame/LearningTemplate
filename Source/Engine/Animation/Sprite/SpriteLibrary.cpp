@@ -11,8 +11,8 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
@@ -25,15 +25,15 @@ namespace sw
             SW_LOG_ERROR_ID( "SpriteLibrary.CouldNotRead", "Sprite library '%#' could not be read", assetID.view() );
             return false;
         }
-        return loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, assetID.view(), AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool SpriteLibrary::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool SpriteLibrary::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool SpriteLibrary::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         clear();
         if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && resolveLoadedValues( sourceLabel ) )

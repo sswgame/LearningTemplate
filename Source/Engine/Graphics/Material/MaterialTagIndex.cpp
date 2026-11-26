@@ -69,8 +69,8 @@ namespace sw
 
             /**
              * @brief 소스 콘텐츠의 도메인 @p domain 아래(하위 폴더까지) 든 머티리얼을 모두 읽어 줄을 만듭니다(팩 쿠킹이 쓰는 줄과 같은 `makeEntry`).
-             * @details 도메인 폴더는 읽기 쪽 폴더 해석(`AssetPaths::collectLooseFolders` — 리소스 트리 · 붙인 디스크 도메인을 모두 안다)으로 푼다. 쓸 자리를 정하는 `toDiskPath` 는
-             *          없는 자리를 오류로 남기므로 쓰지 않는다. 리소스 폴더 나열(`AssetIO::collectAssets`)은 바로 아래만 보므로 쓰지 않는다 —
+             * @details 도메인 폴더는 읽기 쪽 폴더 해석(`AssetPaths::collectLooseFolders` — 콘텐츠 트리 · 붙인 디스크 도메인을 모두 안다)으로 푼다. 쓸 자리를 정하는 `toDiskPath` 는
+             *          없는 자리를 오류로 남기므로 쓰지 않는다. 에셋 폴더 나열(`AssetIO::collectAssets`)은 바로 아래만 보므로 쓰지 않는다 —
              *          머티리얼은 `materials/` · `models/<모델>/materials/` 처럼 도메인 뿌리 밑에 있어 그 나열로는 늘 비었다. 정체성은 파일이 든 것(`AssetIdentityRules::readIdentity`)이다.
              */
             [[nodiscard]] static expected<vector<MaterialTagEntry>> buildDomainFromSource( const string& domain )

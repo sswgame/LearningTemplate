@@ -30,7 +30,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -479,7 +479,7 @@ namespace sw
         closeScreen( UIScreenHandle{ static_cast<uint32>( handle ) } );
     }
 
-    unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
+    unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, const AssetTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
                                                       vector<string>& outListStyleSheet )
     {
         unique_ptr<Widget>                                root;
@@ -530,7 +530,7 @@ namespace sw
     {
         // 애니메이션은 문서의 것을 쓴다(방금 만들었으므로 캐시에 이미 있다).
         screen._animationPlayer.stopAll();
-        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->acquire( screen._documentPath, screen._resourceTagOverride );
+        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->acquire( screen._documentPath, screen._assetTagOverride );
         screen._animationPlayer.setAnimations( document.has_value() ? ( *document )->_listAnimation : vector<UIAnimation>{} );
     }
 
@@ -579,7 +579,7 @@ namespace sw
         UIScreenDef          desc{};
         vector<UIBindingDef> listBinding{};
         vector<string>       listStyleSheet{};
-        unique_ptr<Widget>   root = instantiateDocument( documentPath, ResourceTagSet{}, desc, listBinding, listStyleSheet );
+        unique_ptr<Widget>   root = instantiateDocument( documentPath, AssetTagSet{}, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return nullptr;
         unique_ptr<UIScreen> screen = sw::make_unique<UIScreen>( desc, std::move( root ) );
@@ -599,7 +599,7 @@ namespace sw
         {
             if ( listDocument[index] == usedPath )
                 return true;
-            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->acquire( listDocument[index], screen._resourceTagOverride );
+            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->acquire( listDocument[index], screen._assetTagOverride );
             if ( document.has_value() == false )
                 continue;
             for ( const string& fragment : ( *document )->_listFragment )
@@ -610,11 +610,11 @@ namespace sw
         return false;
     }
 
-    bool UISystem::setResourceTagOverride( UIScreen& screen, const ResourceTagSet& tagOverride )
+    bool UISystem::setAssetTagOverride( UIScreen& screen, const AssetTagSet& tagOverride )
     {
-        if ( screen._resourceTagOverride == tagOverride )
+        if ( screen._assetTagOverride == tagOverride )
             return false;
-        screen._resourceTagOverride = tagOverride;
+        screen._assetTagOverride = tagOverride;
         // 문서가 없는 화면(코드로 만든 것)은 다시 지을 것이 없다 — 태그만 든다.
         return screen._documentPath.empty() == false && rebuildScreenFromDocument( screen );
     }
@@ -624,7 +624,7 @@ namespace sw
         UIScreenDef          desc{};
         vector<UIBindingDef> listBinding{};
         vector<string>       listStyleSheet{};
-        unique_ptr<Widget>   root = instantiateDocument( screen._documentPath, screen._resourceTagOverride, desc, listBinding, listStyleSheet );
+        unique_ptr<Widget>   root = instantiateDocument( screen._documentPath, screen._assetTagOverride, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return false; // 기존 트리를 유지한다. 오류는 instantiateDocument 가 남겼다
 
@@ -1200,10 +1200,10 @@ namespace sw
 
     void UISystem::syncScreenTags( const UIViewport& viewport )
     {
-        const optional<ResourceTagSet> tags = _scaleSettings.makeScreenTags( viewport );
+        const optional<AssetTagSet> tags = _scaleSettings.makeScreenTags( viewport );
         if ( tags.has_value() == false || *tags == _screenTags )
             return; // 최소화는 등급을 바꾸지 않는다(돌아오면 같은 등급이라 다시 읽지 않는다)
-        if ( engine::getSubsystem<ResourceTags>().setAxisTags( *tags ) )
+        if ( engine::getSubsystem<AssetTags>().setAxisTags( *tags ) )
             _screenTags = *tags;
     }
 

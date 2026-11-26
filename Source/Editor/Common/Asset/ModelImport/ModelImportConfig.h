@@ -96,7 +96,7 @@ namespace sw::editor
         PROPERTY( Min = 0.000001 )
         float32 _animationShellDistance; ///< 코덱 껍질 거리(미터)
         PROPERTY()
-        string _bodySurface; ///< 장비 메시면 몸 `.mesh` 리소스 id — 몸의 스킨 · 체형 모프를 옮긴다(`CharacterMeshUtil::transferBodySurface`). 비면 하지 않는다
+        string _bodySurface; ///< 장비 메시면 몸 `.mesh` 에셋 id — 몸의 스킨 · 체형 모프를 옮긴다(`CharacterMeshUtil::transferBodySurface`). 비면 하지 않는다
         PROPERTY( Min = 0.000001 )
         float32 _bodySurfaceDistance; ///< 몸 표면에 묶는 최대 거리(미터). 넘는 정점이 있으면 임포트 오류다
         PROPERTY()
@@ -169,7 +169,7 @@ namespace sw::editor
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );
 
         /**
-         * @brief 리소스 루트 기준 경로(예: "game/x/models_raw/a.glb")에 맞는 규칙을 반환합니다. 맞는 규칙이 없으면 기본 규칙(`_bMatched` 거짓)입니다.
+         * @brief 콘텐츠 루트 기준 경로(예: "game/x/models_raw/a.glb")에 맞는 규칙을 반환합니다. 맞는 규칙이 없으면 기본 규칙(`_bMatched` 거짓)입니다.
          * @details 규칙 둘 이상이 맞으면 순서로 고르지 않고 `_error` 를 채웁니다. 호출부는 오류를 전해야 합니다(`[[nodiscard]]`).
          */
         [[nodiscard]] ModelImportRuleMatch findMatchingRule( string_view relativePath ) const;

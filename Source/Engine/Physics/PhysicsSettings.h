@@ -201,7 +201,7 @@ namespace sw
         PROPERTY( Tooltip = "Profiles foot and hand IK ground traces hit (the walkable world - not characters, ragdolls, debris or projectiles)", Meta = "NameSource=CollisionProfile" )
         vector<hashed_string> _listGroundQueryLayer;
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 파일이 없거나 모르는 이름이거나 이름이 겹쳐서 실패하면 오류를 남기고 false 를 반환합니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 파일이 없거나 모르는 이름이거나 이름이 겹쳐서 실패하면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );

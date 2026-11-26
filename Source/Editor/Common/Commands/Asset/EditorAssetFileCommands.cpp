@@ -130,13 +130,13 @@ namespace sw::editor
             /** @brief 참조 파일 하나에 쓸 글입니다. 적용 전에 모두 만들고, 쓰기가 하나라도 지면 `_originalText` 로 되돌린다. */
             struct PreparedRewrite
             {
-                string   _referrerID;  ///< 옮긴 뒤의 리소스 id(참조자도 함께 옮기면 새 id)
+                string   _referrerID;  ///< 옮긴 뒤의 에셋 id(참조자도 함께 옮기면 새 id)
                 DiskPath _referrerAbs; ///< 옮긴 뒤의 디스크 경로
                 string   _originalText;
                 string   _rewrittenText;
             };
 
-            /** @brief 리소스 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
+            /** @brief 에셋 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
             static string getDomainOf( string_view assetID )
             {
                 const size_t firstSlash = assetID.find( '/' );
@@ -296,7 +296,7 @@ namespace sw::editor
             /** @brief 정체성 규칙(`Config/Dev/AssetIdentity.json`)을 읽습니다. 읽지 못하면 오류를 남기고 false 입니다(규칙 없이 정체성을 쓰지 않는다). */
             [[nodiscard]] static bool loadIdentityRules( AssetIdentityRules& outRules ) { return outRules.load( ProcessRoots::get()._project ); }
 
-            /** @brief 막 생긴 파일(새로 만들기 · 복제 · 가져오기)에 새 GUID 를 줍니다. 리소스 트리 밖이면 정체성이 없다(할 일 없음). */
+            /** @brief 막 생긴 파일(새로 만들기 · 복제 · 가져오기)에 새 GUID 를 줍니다. 콘텐츠 트리 밖이면 정체성이 없다(할 일 없음). */
             [[nodiscard]] static bool assignNewIdentity( const AbsolutePath& absPath )
             {
                 const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( absPath );
@@ -348,7 +348,7 @@ namespace sw::editor
             {
                 const string deletedID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( deletedID.empty() )
-                    return false; // 리소스 트리 밖 파일은 문서로 열 수 없다
+                    return false; // 콘텐츠 트리 밖 파일은 문서로 열 수 없다
                 vector<EditorOpenDocument> listOpen;
                 EditorAssetFileCommands::collectOpenDocuments( listOpen );
                 const optional<string> openDocument = EditorAssetFileCommands::findOpenDocumentAtOrUnder( deletedID, listOpen );
@@ -918,7 +918,7 @@ namespace sw::editor
                 continue;
             }
 
-            // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
+            // 에셋 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
             const string       fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath.str() ) ).str();
             const AbsolutePath plainPath = destFolderAbs.join( fileName );
             if ( FileUtil::isSameDiskPath( sourcePath.str(), plainPath.str() ) )

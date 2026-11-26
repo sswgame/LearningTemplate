@@ -94,10 +94,10 @@ namespace sw
         void writeBytes( vector<uint8>& outBytes ) const;
         /** @brief 바이트를 읽습니다. 매직, 형식 버전, 백엔드가 다르거나 잘렸으면 오류를 남기고 false 를 반환하며 내용을 비웁니다. */
         [[nodiscard]] bool readBytes( const uint8* pData, size_t size, string_view sourceLabel );
-        /** @brief 리소스 경로의 쿠킹본을 읽습니다. */
+        /** @brief 에셋 경로의 쿠킹본을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
-         * @brief 리소스 경로의 쿠킹본에서 머리(항목 · 타일 자리 · 구간)만 구간으로 읽습니다 — 타일 바이트는 읽지 않는다(`hasTileBytes` 가 false).
+         * @brief 에셋 경로의 쿠킹본에서 머리(항목 · 타일 자리 · 구간)만 구간으로 읽습니다 — 타일 바이트는 읽지 않는다(`hasTileBytes` 가 false).
          * @details 스트리밍 씬의 내비게이션이 쓴다 — 타일은 원점 둘레에서 `NavMeshAssetEntry::_listTileRange` 의 구간으로 비동기로 읽는다(`AssetIO::readBinaryAssetRangeAsync`).
          */
         [[nodiscard]] bool loadHeadFromAsset( const AssetID& assetID );

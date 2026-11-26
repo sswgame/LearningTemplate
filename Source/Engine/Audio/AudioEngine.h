@@ -113,7 +113,7 @@ namespace sw
          */
         [[nodiscard]] bool loadMixer( const AudioMixerDef& mixerDesc );
         /**
-         * @brief 이벤트 라이브러리를 이름(보통 리소스 경로)으로 로드합니다. 같은 이름이 있으면 교체합니다(핫 리로드). 클립 디코드를 요청해 둡니다.
+         * @brief 이벤트 라이브러리를 이름(보통 에셋 경로)으로 로드합니다. 같은 이름이 있으면 교체합니다(핫 리로드). 클립 디코드를 요청해 둡니다.
          * @return 이벤트의 버스나 감쇠가 현재 그래프와 라이브러리에 없거나, 다른 라이브러리와 이벤트나 파라미터 이름이 겹치면 오류를 남기고 false 를 반환합니다.
          */
         [[nodiscard]] bool loadEventLibrary( const hashed_string& libraryName, const AudioEventLibrary& library );
@@ -122,7 +122,7 @@ namespace sw
         /** @brief 로드한 라이브러리에 그 이벤트가 있는지 반환합니다. */
         bool hasEvent( const hashed_string& eventName ) const;
         /**
-         * @brief 그 이름(보통 리소스 경로)으로 로드한 라이브러리를 찾아 로드할 때의 이름을 @p outLibraryName 에 돌려줍니다. 구분자와 대소문자를 무시하고, 이름을 intern 하지 않습니다.
+         * @brief 그 이름(보통 에셋 경로)으로 로드한 라이브러리를 찾아 로드할 때의 이름을 @p outLibraryName 에 돌려줍니다. 구분자와 대소문자를 무시하고, 이름을 intern 하지 않습니다.
          * @details 핫 리로드가 바뀐 파일마다 묻는 길이라 모르는 경로로 `hashed_string` 을 만들지 않는다. 돌려준 이름으로 다시 로드해야 같은 라이브러리를 바꾼다.
          */
         [[nodiscard]] bool findEventLibraryName( string_view libraryName, hashed_string& outLibraryName ) const;
@@ -232,7 +232,7 @@ namespace sw
         /** @brief 이벤트 라이브러리를 로드하거나 내릴 때마다 오르는 세대입니다. 이름 목록을 캐시하는 쪽(오디오 믹서 창)이 이것이 바뀔 때만 다시 모읍니다. */
         uint32 getEventLibraryGeneration() const { return _libraryGeneration.load( std::memory_order_acquire ); }
         /**
-         * @brief 로드한 라이브러리에서 이벤트 설명자를 찾아 사본을 @p outDesc 에, 라이브러리 이름(리소스 경로)을 @p outLibraryName 에 담습니다.
+         * @brief 로드한 라이브러리에서 이벤트 설명자를 찾아 사본을 @p outDesc 에, 라이브러리 이름(에셋 경로)을 @p outLibraryName 에 담습니다.
          * @details 에디터의 오디오 이벤트 창이 읽습니다. @p pOutAttenuation 이 있으면 이벤트의 감쇠 프리셋(라이브러리 것을 먼저, 없으면 믹서 그래프 것)을 담고, 감쇠가 없으면 기본값으로 둡니다.
          * @return 이벤트가 없으면 false 입니다.
          */

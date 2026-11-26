@@ -55,7 +55,7 @@ namespace sw::editor
     {
         struct AssetHotReloadInternal
         {
-            /** @brief 파일 감시가 리소스 루트 기준으로 만든 경로를 캐시 · 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다(디스크 → id 경계). */
+            /** @brief 파일 감시가 콘텐츠 루트 기준으로 만든 경로를 캐시 · 로더에 넘길 에셋 id 로 바꾸는 한 곳입니다(디스크 → id 경계). */
             [[nodiscard]] static AssetID toAssetID( string_view relativePath ) { return AssetID{ relativePath }; }
 
             /** @brief 감시 울타리 표지 파일 이름입니다(작업 도메인 폴더 바로 아래 — 이 프로세스의 실행 뿌리 안이라 다른 에디터와 겹치지 않는다). */
@@ -108,8 +108,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 디스크 경로 @p diskPath 의 리소스 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다 — 감시 사건과 저장이 같은 규칙으로 쓴다. 트리 밖이면 빈 글입니다.
-             * @details 리소스 트리는 리소스 루트와 작업 도메인 폴더(실행 뿌리 아래 — `AssetPaths::getScratchFolderPath`) 둘이다. 리소스 루트 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은
+             * @brief 디스크 경로 @p diskPath 의 에셋 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다 — 감시 사건과 저장이 같은 규칙으로 쓴다. 트리 밖이면 빈 글입니다.
+             * @details 콘텐츠 트리는 콘텐츠 루트와 작업 도메인 폴더(실행 뿌리 아래 — `AssetPaths::getScratchFolderPath`) 둘이다. 콘텐츠 루트 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은
              *          찌꺼기라 빈 글이다(그 id 는 실행 뿌리의 사본을 가리킨다). 예전에는 같은 체크아웃의 모든 App 이 `Content/scratch/` 를 나눠 써 남의 사본 사건을 pid 꼬리로 걸렀다.
              */
             static string makeTreePath( string_view diskPath )
@@ -127,7 +127,7 @@ namespace sw::editor
                 return relative;
             }
 
-            /** @brief 트리 표기 @p treePath(`makeTreePath`)의 디스크 경로입니다 — 작업 도메인은 실행 뿌리 아래, 나머지는 리소스 루트 아래. */
+            /** @brief 트리 표기 @p treePath(`makeTreePath`)의 디스크 경로입니다 — 작업 도메인은 실행 뿌리 아래, 나머지는 콘텐츠 루트 아래. */
             static AbsolutePath makeDiskPath( string_view treePath )
             {
                 // 작업 도메인 아래 부분은 원래 표기 그대로 잇는다(접은 키로 자르면 리눅스에서 다른 파일이 된다).
@@ -137,7 +137,7 @@ namespace sw::editor
                 return editor::getSubsystem<AssetPaths>().getRootFolderPath().join( treePath );
             }
 
-            /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(리소스 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`FileWatcher::pushChange`). */
+            /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(콘텐츠 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`FileWatcher::pushChange`). */
             static string makeEventPath( const FileChangeEvent& changeEvent ) { return makeTreePath( changeEvent.makePath().str() ); }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
@@ -256,7 +256,7 @@ namespace sw::editor
             return false; // 감시 창구가 이유를 남겼다
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
         _contentWatch = fileWatch.watch( rootFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
-        // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래라 따로 건다. 못 걸면 작업 도메인의 바깥 변경만 다시 읽지 않는다.
+        // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 콘텐츠 루트 밖, 실행 뿌리 아래라 따로 건다. 못 걸면 작업 도메인의 바깥 변경만 다시 읽지 않는다.
         const AbsolutePath& scratchFolder = AssetPaths::getScratchFolderPath();
         if ( FileUtil::ensureDirectoryExists( scratchFolder ) )
         {
@@ -371,7 +371,7 @@ namespace sw::editor
     {
         const string treePath = AssetHotReloadInternal::makeEventPath( changeEvent );
         if ( treePath.empty() )
-            return; // 트리 밖 — 리소스 루트 안의 옛 작업 도메인 자리(`Content/scratch/`)에 남은 찌꺼기다
+            return; // 트리 밖 — 콘텐츠 루트 안의 옛 작업 도메인 자리(`Content/scratch/`)에 남은 찌꺼기다
         ++_contentChangeSerial;
         if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent ) )
         {
@@ -538,7 +538,7 @@ namespace sw::editor
 
     void AssetHotReload::applySavedAsset( string_view assetID )
     {
-        // 문서 경로는 리소스 id 이거나 디스크 절대 경로(시나리오의 `Saved/Automation/` 임시 문서)다 — 디스크 경로를 리소스 id 변환에 넘기면 오류(`AssetPaths.WriteNotResourceID`)다.
+        // 문서 경로는 에셋 id 이거나 디스크 절대 경로(시나리오의 `Saved/Automation/` 임시 문서)다 — 디스크 경로를 에셋 id 변환에 넘기면 오류(`AssetPaths.WriteNotResourceID`)다.
         if ( AbsolutePath::isStrictAbsolute( assetID ) )
         {
             (void)reloadChangedAsset( AssetID{ assetID } );
@@ -548,7 +548,7 @@ namespace sw::editor
         const string             relativePath = diskPath.has_value() ? AssetHotReloadInternal::makeTreePath( diskPath->str() ) : string{};
         if ( relativePath.empty() )
         {
-            // 트리(리소스 루트 · 작업 도메인) 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).
+            // 트리(콘텐츠 루트 · 작업 도메인) 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }

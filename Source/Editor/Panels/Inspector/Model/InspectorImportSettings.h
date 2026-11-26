@@ -37,7 +37,7 @@ namespace sw::editor
     {
     public:
         /**
-         * @brief 리소스 id @p assetID 가 서술을 가진 모델(`models_raw/`) · 텍스처(`textures_raw/`) 원본이면 설정을 모읍니다. 아니면 false 이고 비웁니다.
+         * @brief 에셋 id @p assetID 가 서술을 가진 모델(`models_raw/`) · 텍스처(`textures_raw/`) 원본이면 설정을 모읍니다. 아니면 false 이고 비웁니다.
          * @details 같은 에셋이고 서술 글이 같으면 다시 해석하지 않는다(설정 파일은 에셋을 바꿀 때 다시 읽는다).
          */
         bool                              refresh( string_view assetID );

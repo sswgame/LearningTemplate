@@ -12,7 +12,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 
 namespace sw
 {
@@ -45,10 +45,10 @@ namespace sw
 {
     bool FacialRig::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool FacialRig::loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool FacialRig::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         *this = FacialRig{};
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
@@ -71,7 +71,7 @@ namespace sw
             *this = FacialRig{};
             return false;
         }
-        return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool FacialRig::validateFile( string_view sourceLabel ) const

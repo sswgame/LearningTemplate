@@ -32,7 +32,7 @@ namespace sw
             static constexpr uint32 kDefaultStartTimeoutFrames = 1200;
 
             /**
-             * @brief 파일을 찾지 못한 이유를 막힌 단계(`[read]`)와 함께 적습니다. 리소스 ID 가 안 풀리는 원인(리소스 루트 · 작업 폴더 · 낱개 파일 금지 구성)이 로그 한 줄에 보이게 한다.
+             * @brief 파일을 찾지 못한 이유를 막힌 단계(`[read]`)와 함께 적습니다. 리소스 ID 가 안 풀리는 원인(콘텐츠 루트 · 작업 폴더 · 낱개 파일 금지 구성)이 로그 한 줄에 보이게 한다.
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
@@ -329,7 +329,7 @@ namespace sw
     {
         const string_view path = assetID.view();
         XMLDocument       doc;
-        if ( doc.loadResource( assetID ) == false )
+        if ( doc.loadAsset( assetID ) == false )
         {
             // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 그 문장이 말한다.
             if ( AssetIO::hasAsset( assetID ) )

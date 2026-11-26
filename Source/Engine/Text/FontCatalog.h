@@ -129,7 +129,7 @@ namespace sw
                   Tooltip = "When the glyph atlas is full and a page is evicted, glyphs used within this many recent frames are copied to free space instead of being dropped and re-rasterized" )
         uint32 _glyphRetainFrameCount{ 0 };
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 검사 실패) 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 검사 실패) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );

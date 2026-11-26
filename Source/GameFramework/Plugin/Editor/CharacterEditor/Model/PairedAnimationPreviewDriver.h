@@ -28,7 +28,7 @@ namespace sw::editor
     /** @brief 역할 하나의 미리보기 오브젝트입니다(역할 인덱스와 같은 순서). */
     struct PairedAnimationRoleSlot
     {
-        fixed_string<constant::file::kMaxPathSize> _prefabPath{};     ///< 미리보기에 놓을 프리팹(리소스 id). 비면 놓지 않는다
+        fixed_string<constant::file::kMaxPathSize> _prefabPath{};     ///< 미리보기에 놓을 프리팹(에셋 id). 비면 놓지 않는다
         string                                     _spawnedPath{};    ///< 지금 놓은 오브젝트의 프리팹. 다르면 다시 놓는다
         GameObjectHandle                           _object{};         ///< 놓은 오브젝트
         float3                                     _placedPosition{}; ///< 지난 그리기에 창이 놓은 자리 — 다르면 기즈모가 옮긴 것이다

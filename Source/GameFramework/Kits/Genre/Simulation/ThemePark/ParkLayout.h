@@ -183,7 +183,7 @@ namespace sw
 
     private:
         /**
-         * @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 같은 팩의 코스터 카탈로그를 공유 캐시에서 먼저 받습니다. 놀이기구가 하나도 없으면 false 입니다.
+         * @brief 에셋 경로의 `<ParkLayout>` 을 읽습니다. 같은 팩의 코스터 카탈로그를 공유 캐시에서 먼저 받습니다. 놀이기구가 하나도 없으면 false 입니다.
          * @details 종류의 로더(공유 캐시)만 부른다. 코스터 파일 이름을 다시 적지 않는다 — 같은 팩의 코스터 종류 파일이다(`GamePackDataUtil::tryMakeSiblingKindPath`).
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

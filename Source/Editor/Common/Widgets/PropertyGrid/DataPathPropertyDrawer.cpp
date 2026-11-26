@@ -1,6 +1,6 @@
 /**
  * @file DataPathPropertyDrawer.cpp
- * @brief `DataPath` 프로퍼티의 그리기 확장입니다 — 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어 놓는 경로 칸.
+ * @brief `DataPath` 프로퍼티의 그리기 확장입니다 — 에셋 id 를 치거나 콘텐츠 브라우저에서 끌어 놓는 경로 칸.
  * @details 없던 때는 프로젝트 설정의 경로 칸 일곱이 "No inspector for DataPath" 로만 보여 고칠 수 없었다(uiaudit). 언리얼 Details 의
  *          FSoftObjectPath 칸 · 유니티 Inspector 의 오브젝트 칸처럼 글로 치기와 끌어 놓기를 함께 받는다.
  */

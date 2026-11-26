@@ -15,8 +15,8 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Reference/CatalogKey.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -172,7 +172,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, InEntryReferencesStayInTheEntry )
     SW_EXPECT_FALSE( validateText( rules, R"(<Quests><Quest id="q"><Stage id="a" next="b"/></Quest><Quest id="r"><Stage id="b"/></Quest></Quests>)" ) );
 }
 
-/** @brief [DataCatalogReferencesTest] 덮어쓰기 층의 행은 원본의 행을 가리키고 부모로 삼을 수 있다 — 층만 보면 깨진 참조이고, 원본과 합친 문서(`ResourceComposer::mergeLayer`)에서 본다 */
+/** @brief [DataCatalogReferencesTest] 덮어쓰기 층의 행은 원본의 행을 가리키고 부모로 삼을 수 있다 — 층만 보면 깨진 참조이고, 원본과 합친 문서(`AssetComposer::mergeLayer`)에서 본다 */
 SW_TEST_CASE( DataCatalogReferencesTest, LayerRowsReferToTheBaseRows )
 {
     DataCatalogReferenceRules rules;
@@ -186,7 +186,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, LayerRowsReferToTheBaseRows )
     SW_EXPECT_FALSE( validateText( rules, kLayer ) );
 
     string mergedText{ kBase };
-    SW_REQUIRE_TRUE( ResourceComposer::mergeLayer( kLayer, "layers/x/items.xml", ResourceContext::forDocument(), "items.xml", mergedText ) );
+    SW_REQUIRE_TRUE( AssetComposer::mergeLayer( kLayer, "layers/x/items.xml", AssetComposeContext::forDocument(), "items.xml", mergedText ) );
     SW_EXPECT_TRUE( validateText( rules, mergedText ) );
     XMLDocument merged;
     SW_REQUIRE_TRUE( merged.parse( mergedText ) );
@@ -195,11 +195,11 @@ SW_TEST_CASE( DataCatalogReferencesTest, LayerRowsReferToTheBaseRows )
 
     // 원본에도 층에도 없는 id 는 합쳐도 깨진 참조다. 층은 부모를 적지 않는다.
     string brokenText{ kBase };
-    SW_REQUIRE_TRUE( ResourceComposer::mergeLayer( R"(<ItemCatalog><Item id="b" upgrade="nobody"/></ItemCatalog>)", "layer", ResourceContext::forDocument(), "items.xml", brokenText ) );
+    SW_REQUIRE_TRUE( AssetComposer::mergeLayer( R"(<ItemCatalog><Item id="b" upgrade="nobody"/></ItemCatalog>)", "layer", AssetComposeContext::forDocument(), "items.xml", brokenText ) );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_FALSE( validateText( rules, brokenText ) );
-    SW_EXPECT_LOG( "ResourceLayer.HasBase" );
-    SW_EXPECT_FALSE( ResourceComposer::mergeLayer( R"(<ItemCatalog _base="items.xml"/>)", "layer", ResourceContext::forDocument(), "items.xml", mergedText ) );
+    SW_EXPECT_LOG( "AssetLayer.HasBase" );
+    SW_EXPECT_FALSE( AssetComposer::mergeLayer( R"(<ItemCatalog _base="items.xml"/>)", "layer", AssetComposeContext::forDocument(), "items.xml", mergedText ) );
 }
 
 /** @brief [DataCatalogReferencesTest] 지운 항목의 id(`absent`)는 이 파일에 없어야 한다 — 아직 있으면 하나마다 알리고 false 다. `optional` 과 함께 적으면 표 오류다 */
@@ -220,7 +220,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, AbsentReferencesMustNameRemovedEntries 
 }
 
 /**
- * @brief [DataCatalogReferencesTest] 다른 파일의 원소(`file`)는 루트가 적은 리소스에서 찾고, 값을 적지 않으면 `defaultAttribute` 의 값을 id 로 본다
+ * @brief [DataCatalogReferencesTest] 다른 파일의 원소(`file`)는 루트가 적은 에셋에서 찾고, 값을 적지 않으면 `defaultAttribute` 의 값을 id 로 본다
  * @details 격투 캐릭터의 기술(`Fighter/Move`)이 루트 `moves` 의 기술 카탈로그를 가리키는 모양이다. 대상 파일로 엔진 팩의 실제 표를 쓴다(루트의 자식 `<Catalog root>`).
  */
 SW_TEST_CASE( DataCatalogReferencesTest, FileReferencesLookInTheNamedResource )
@@ -286,7 +286,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, KeyValuesFindInheritedAndOtherPackEntri
     addDataText( otherPack, kLootScene, "game/test/maps/loot.scene.xml" );
     addDataText( otherPack, R"(<ItemCatalog><Item id="my_extra" name="Extra"/></ItemCatalog>)", "game/test/data/items.xml" );
     XMLDocument common;
-    SW_REQUIRE_TRUE( common.loadResource( AssetID{ "common/data/items.xml" } ) );
+    SW_REQUIRE_TRUE( common.loadAsset( AssetID{ "common/data/items.xml" } ) );
     otherPack.addDocument( common.getRoot(), "common/data/items.xml" );
     SW_EXPECT_TRUE( otherPack.validate() );
 }

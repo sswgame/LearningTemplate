@@ -39,7 +39,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 씬 흐름, 기본 세이브, 다국어, 입력과 범용 게임플레이 튜닝 설정입니다.
-     * @details 경로 필드는 `DataPath` 이다 — 값은 팩의 gamesettings 만 넣고 코드는 문자열로 채울 수 없다. 리소스 경로는 도메인을 포함한 전역 id 이다
+     * @details 경로 필드는 `DataPath` 이다 — 값은 팩의 gamesettings 만 넣고 코드는 문자열로 채울 수 없다. 에셋 경로는 도메인을 포함한 전역 id 이다
      *          (`game/<팩>/maps/start.scene.xml`). 시작 맵만 필수이고, 나머지 경로 칸은 적지 않으면 "읽지 않음"(`isSet` false)이며 그 뜻은 칸마다 적었다.
      *          XML 자식 요소 이름은 필드 이름에서 앞의 `_` 를 뗀 것이고(`_startMap` → `<startMap>`), 읽기는 리플렉션 칸 표를 따른다(`loadRoot`).
      *          `GameInstance` 가 읽은 뒤 게임 서비스로 등록하고 다국어와 입력 맵을 적용한다.
@@ -64,7 +64,7 @@ namespace sw
         string _defaultSaveSlot; ///< 기본 세이브 슬롯 이름(`save/slot0` - 슬롯 이름 없는 `GameSaveSlots::save` · `load`). 자리는 로컬 저장소가 정한다. 없으면 슬롯 없는 저장은 오류다
 
         PROPERTY()
-        DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
+        DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 에셋 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
 
         PROPERTY( Required )
         string _defaultLanguage; ///< 기본 활성 언어
@@ -154,7 +154,7 @@ namespace sw
          */
         map<string, string> _mapRequiredDataPack{};
 
-        /** @brief 리소스 경로(XML)에서 팩 설정 테이블을 로드합니다. */
+        /** @brief 에셋 경로(XML)에서 팩 설정 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );
         /** @brief `loadFromAsset` 의 XML 문자열 버전이며 테스트가 씁니다. 먼저 비우고 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

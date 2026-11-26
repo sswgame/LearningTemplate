@@ -54,7 +54,7 @@ namespace sw
         }
         XMLDocument document;
         XMLNode     root;
-        return loadFromRoot( XMLReadUtil::parseResourceRoot( document, text, assetID, "CharacterLODSettings", root ), root, assetID.view() );
+        return loadFromRoot( XMLReadUtil::parseAssetRoot( document, text, assetID, "CharacterLODSettings", root ), root, assetID.view() );
     }
 
     const CharacterLODSettings& CharacterLODSettings::getDefault()

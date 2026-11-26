@@ -137,7 +137,7 @@ namespace sw
         NavClusterGraph                _clusterGraph;           ///< 스트리밍 씬의 대략 그래프(쿠킹본). 오르지 않은 구역을 지나는 먼 경로를 정한다(`NavStreamRoute`)
         uint64                         _routeReplanCount{ 0 };  ///< 먼 경로의 중간 목표 · 가상 이동을 새로 정한 수(누적, 진단)
         shared_ptr<const NavMeshAsset> _pStreamAsset;           ///< 타일 자리 · 구간을 준 쿠킹본(메모리 쿠킹본이면 타일 바이트도 여기 있다)
-        string                         _streamPath;             ///< 타일을 구간으로 읽는 쿠킹본의 리소스 id
+        string                         _streamPath;             ///< 타일을 구간으로 읽는 쿠킹본의 에셋 id
         uint8                          _bFromCooked : 1;
 
         NavMeshRuntime()

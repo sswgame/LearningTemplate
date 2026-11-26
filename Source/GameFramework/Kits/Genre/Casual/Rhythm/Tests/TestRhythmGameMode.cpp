@@ -1,7 +1,7 @@
 // RhythmGameModeTest — 리듬 디렉터: 열기 전 명령 거절, 음악 시계(넘긴 시각까지만 흐르고 되감기지 않는다), 레인 명령 판정과 상태 왕복, 자동 플레이로 깬 곡의 결과(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"

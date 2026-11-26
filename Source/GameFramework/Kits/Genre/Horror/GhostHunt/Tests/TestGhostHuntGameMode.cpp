@@ -1,7 +1,7 @@
 // GhostHuntGameModeTest — 유령 사냥 디렉터: 명령은 판이 열린 동안만 받고, 손전등 → 흡입으로 유령을 잡으면 방의 불 · 열쇠가 오며, 잠긴 문을 밀면 열쇠로 열리고, 모든 방을 밝히면 이기며, 상태는 왕복한다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"

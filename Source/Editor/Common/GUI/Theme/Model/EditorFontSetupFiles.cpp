@@ -15,7 +15,7 @@ namespace sw::editor
 {
     DiskPath EditorFontSetup::findFontFile( const vector<string>& listFileName )
     {
-        // 에디터 팩의 글꼴 폴더가 먼저다(예전에는 같은 폴더를 두 길 - 도메인 폴더 · 리소스 루트 + 도메인 - 로 두 번 봤다).
+        // 에디터 팩의 글꼴 폴더가 먼저다(예전에는 같은 폴더를 두 길 - 도메인 폴더 · 콘텐츠 루트 + 도메인 - 로 두 번 봤다).
         const DiskPath fontsFolder = EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEditorPack, EditorPaths::kFontsFolderName ) );
         for ( const string& name : listFileName )
         {

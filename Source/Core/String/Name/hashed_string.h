@@ -172,7 +172,7 @@ namespace sw
 
         /**
          * @brief 사람이 읽는 글입니다. 빈 이름이면 "None" 입니다(언리얼 FName 의 `ToString`). 로그 · 에디터 표시 · 열거자 이름처럼 보이는 글은 이것으로 꺼냅니다.
-         * @details `c_str()` · `view()` 는 빈 이름이면 빈 글이다(Godot `StringName` → `String`). 그래서 경로 · 리소스 id · 키 자리에 그대로 넘겨도
+         * @details `c_str()` · `view()` 는 빈 이름이면 빈 글이다(Godot `StringName` → `String`). 그래서 경로 · 에셋 id · 키 자리에 그대로 넘겨도
          *          'None' 파일을 찾지 않는다. 돌려주는 글의 `data()` 는 늘 널로 끝난다.
          *          열거자 `None` 의 이름도 빈 이름이므로(`hashed_string( "None" )` 이 빈 이름이다) 열거자 이름을 글로 꺼내는 곳은 이것을 쓴다.
          */

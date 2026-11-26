@@ -153,7 +153,7 @@ namespace sw
          */
         [[nodiscard]] static string findBackendName();
 
-        /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
+        /** @brief 시나리오 파일(에셋 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
         void startFromPath( const AssetID& assetID, const AbsolutePath& reportPath );
         /**
          * @brief XML 글로 시작합니다(테스트). 형식 오류면 false 이고 결과는 LoadError 입니다.
@@ -273,7 +273,7 @@ namespace sw
         const optional<AutomationRunResult>& getRunResult() const { return _runResult; }
         const AutomationScenario&            getScenario() const { return _scenario; }
         const vector<string>&                getFailures() const { return _evaluator.getFailures(); }
-        /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(리소스 id)입니다. */
+        /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(에셋 id)입니다. */
         const vector<string>& getUpdatedGoldens() const { return _evaluator.getUpdatedGoldens(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _evaluator.getUnhandledLogs(); }

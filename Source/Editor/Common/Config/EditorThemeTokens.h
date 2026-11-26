@@ -62,13 +62,13 @@ namespace sw::editor
         static constexpr const utf8* kFolderName = "theme";        ///< 에디터 팩(`Content/editor`) 아래 폴더
         static constexpr const utf8* kExtension  = ".tokens.json"; ///< 토큰 파일 접미사
 
-        /** @brief 토큰 폴더의 절대 경로입니다. 리소스 루트가 없으면 빈 문자열입니다. */
+        /** @brief 토큰 폴더의 절대 경로입니다. 콘텐츠 루트가 없으면 빈 문자열입니다. */
         static DiskPath getFolderPath();
         /** @brief 폴더에 있는 벌의 이름(접미사를 뺀 파일 이름)을 이름순으로 씁니다. */
         static void listThemeNames( vector<string>& outListName );
         /** @brief @p name 벌을 읽고 해석합니다 — 코드가 쓰는 키(`EditorThemeKey.h`)가 모두 있어야 한다. 실패하면 그 이유입니다(대상은 파일 경로 · 키). */
         [[nodiscard]] static expected<EditorThemeConfig> loadTheme( string_view name );
-        /** @brief 리소스 id(`editor/theme/dark.tokens.json`)의 벌을 읽고 해석합니다(리소스 데이터 종류 `editortheme` 의 로더). */
+        /** @brief 에셋 id(`editor/theme/dark.tokens.json`)의 벌을 읽고 해석합니다(리소스 데이터 종류 `editortheme` 의 로더). */
         [[nodiscard]] static bool loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig );
         /** @brief 파일 하나를 부모(`_base`)까지 합쳐 읽어 해석합니다(테스트 · 핫 리로드). */
         [[nodiscard]] static expected<EditorThemeConfig> loadThemeFile( const DiskPath& absolutePath );

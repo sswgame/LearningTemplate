@@ -122,7 +122,7 @@ namespace sw
         PROPERTY( Required, Min = 1, Tooltip = "Async path requests handed to workers per navigation update; the rest wait for the next update in request order" )
         uint32 _maxPathRequestsPerUpdate{ 0 };
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 이름, 겹친 이름, 범위 밖) 오류를 남기고 false 를 반환합니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 이름, 겹친 이름, 범위 밖) 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );

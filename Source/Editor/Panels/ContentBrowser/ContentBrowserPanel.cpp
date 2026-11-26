@@ -39,7 +39,7 @@
 
 namespace sw::editor
 {
-    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchAsset, "", "감시 값 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchAsset, "", "감시 값 Editor.ReferenceCount 가 볼 에셋 id (시나리오용)" );
 
     namespace
     {
@@ -353,7 +353,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )
     {
-        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 리소스 id 의 에셋 페이로드 id 다(끌기와 같은 한 형식).
+        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 에셋 id 의 에셋 페이로드 id 다(끌기와 같은 한 형식).
         EditorContextMenuSubject subject{};
         subject._pPopupID  = "AssetCtx";
         subject._kind      = EditorCommandTargetKind::Asset;

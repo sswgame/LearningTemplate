@@ -67,7 +67,7 @@ namespace sw::editor
          * @details 차이를 다시 읽어 같은 트리가 나올 때만 차이를 돌려줍니다 — 열쇠(`id`) 없는 노드를 고친 편집처럼 차이로 적을 수 없으면 이유(`Error`)를 돌려준다(부모를 끊지 않는다).
          */
         [[nodiscard]] expected<string> makeSaveText() const;
-        /** @brief 읽은 글이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
+        /** @brief 읽은 글이 가리킨 부모의 에셋 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
         const string& getBaseID() const { return _baseID; }
         /** @brief 부모를 정합니다. 되돌리기가 펼친 글로 복원한 모델에 문서의 부모를 다시 단다. */
         void setBaseID( string_view baseID ) { _baseID = string{ baseID }; }

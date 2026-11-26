@@ -159,7 +159,7 @@ SW_TEST_CASE( EditorScenarioListTest, KeepsOnlyScenariosUnderAutomationSorted )
     SW_EXPECT_TRUE( list.getPaths()[1] == "game/a/automation/z.scenario.xml" );
 }
 
-// 결함: 뿌리를 글자 그대로 앞에서 잘라, 끝 빗금이 있으면 절대 경로가 리소스 id 로 나갔다(구분자 표기는 형식이 맞춘다).
+// 결함: 뿌리를 글자 그대로 앞에서 잘라, 끝 빗금이 있으면 절대 경로가 에셋 id 로 나갔다(구분자 표기는 형식이 맞춘다).
 SW_TEST_CASE( EditorScenarioListTest, RootSpellingDoesNotChangeTheID )
 {
     const AbsolutePath                       content = ProcessRoots::get()._saved.join( "Content" );

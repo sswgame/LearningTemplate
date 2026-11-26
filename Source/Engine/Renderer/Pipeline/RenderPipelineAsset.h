@@ -105,7 +105,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /**
          * @brief 디스크 파일에서 파이프라인 XML 을 로드합니다. 팩을 보지 않습니다(`ReflectedXMLFile::loadDescFromDiskFile`).
-         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 콘텐츠 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 파이프라인 디스크립터를 반환합니다. */
@@ -173,7 +173,7 @@ namespace sw
     private:
         /** @brief `_listRenderFeatureRef` 의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool mergeRenderPassRefs( string_view sourcePath );
-        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(첨부 합치기 · 검사 · 로그). 문제가 있으면 false 입니다. */
+        /** @brief 읽기 입구 둘(에셋 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(첨부 합치기 · 검사 · 로그). 문제가 있으면 false 입니다. */
         [[nodiscard]] bool finishLoad( string_view sourcePath );
 
     private:

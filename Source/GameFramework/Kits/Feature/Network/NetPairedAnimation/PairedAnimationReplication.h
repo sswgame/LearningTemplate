@@ -170,7 +170,7 @@ namespace sw
 
         /**
          * @brief 재생 중인 세션의 복제 상태를 만듭니다. 메시지와 롤백 소유 상태(`ReplicationServer::setOwnerState` 에 `PairedAnimationNetState::write` 의 바이트)가 함께 씁니다.
-         * @details 에셋을 리소스 경로에서 읽지 않았거나, 참가자에게 번호(`NetObjectTable`)가 없거나, 재생 중이 아니면 false 이고 앞의 둘은 오류를 남깁니다.
+         * @details 에셋을 에셋 경로에서 읽지 않았거나, 참가자에게 번호(`NetObjectTable`)가 없거나, 재생 중이 아니면 false 이고 앞의 둘은 오류를 남깁니다.
          */
         [[nodiscard]] bool makeSessionState( const PairedAnimationSession& session, PairedAnimationNetState& outState ) const;
 

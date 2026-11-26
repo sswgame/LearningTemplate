@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
@@ -11,21 +11,21 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 리소스 하나의 기록입니다. */
-        struct ResourceCompositionRecord
+        /** @brief 에셋 하나의 기록입니다. */
+        struct AssetCompositionRecord
         {
             vector<string> _listLoadTag;  ///< 결과가 기댄 로드 축 태그
             uint64         _hash;         ///< 합성 결과의 해시(대조)
             uint64         _revision;     ///< 결과가 마지막으로 바뀐 번호(`collectTagDependentChanges`)
             uint8          _bLayered : 1; ///< 덮어쓰기 층 파일을 얹었다
 
-            ResourceCompositionRecord()
+            AssetCompositionRecord()
                 : _listLoadTag{}
                 , _hash{ 0 }
                 , _revision{ 0 }
@@ -35,7 +35,7 @@ namespace sw
 
             /**
              * @brief 플레이어끼리 달라지면 안 되는데 달라질 수 있는 합성이면 true 입니다(접속 대조에 올린다).
-             * @details 품질 · 언어(`ResourceTagScope::PerClient`)에만 기댄 합성은 뺀다 — 머티리얼이 품질 조건을 쓴다고 그래픽 설정이 다른 손님을 끊으면 안 된다.
+             * @details 품질 · 언어(`AssetTagScope::PerClient`)에만 기댄 합성은 뺀다 — 머티리얼이 품질 조건을 쓴다고 그래픽 설정이 다른 손님을 끊으면 안 된다.
              */
             [[nodiscard]] bool isComparedBetweenPeers() const
             {
@@ -43,38 +43,38 @@ namespace sw
                     return true;
                 return VectorUtil::containsIf( _listLoadTag, []( const string& tag )
                 {
-                    const ResourceTagAxis* pAxis = ResourceTags::findAxisOfTag( tag );
-                    return pAxis == nullptr || pAxis->_scope == ResourceTagScope::Shared;
+                    const AssetTagAxis* pAxis = AssetTags::findAxisOfTag( tag );
+                    return pAxis == nullptr || pAxis->_scope == AssetTagScope::Shared;
                 } );
             }
         };
     } // namespace
 
-    struct ResourceComposition::State
+    struct AssetComposition::State
     {
-        mutex                                            _mutex{};
-        vector<string>                                   _listLayerRoot{};
-        unordered_map<string, ResourceCompositionRecord> _mapRecord{};     ///< 리소스 id 로 합성한 리소스 모두
-        unordered_map<string, vector<string>>            _mapRemapTag{};   ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
-        unordered_map<string, vector<string>>            _mapVariantTag{}; ///< 바꿔 끼운 태그로 합친 변형이 물은 로드 축 태그(`recordVariant`)
-        vector<string>                                   _listPendingReload{};
-        uint64                                           _revision{ 0 };         ///< 기록의 결과가 바뀔 때마다 는다
-        optional<uint32>                                 _inheritanceMaxDepth{}; ///< 데이터 상속 깊이 상한 사본(`setInheritanceMaxDepth`)
+        mutex                                         _mutex{};
+        vector<string>                                _listLayerRoot{};
+        unordered_map<string, AssetCompositionRecord> _mapRecord{};     ///< 에셋 id 로 합성한 에셋 모두
+        unordered_map<string, vector<string>>         _mapRemapTag{};   ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
+        unordered_map<string, vector<string>>         _mapVariantTag{}; ///< 바꿔 끼운 태그로 합친 변형이 물은 로드 축 태그(`recordVariant`)
+        vector<string>                                _listPendingReload{};
+        uint64                                        _revision{ 0 };         ///< 기록의 결과가 바뀔 때마다 는다
+        optional<uint32>                              _inheritanceMaxDepth{}; ///< 데이터 상속 깊이 상한 사본(`setInheritanceMaxDepth`)
     };
 
     namespace
     {
-        struct ResourceCompositionInternal
+        struct AssetCompositionInternal
         {
 
             /** @brief @p assetID 를 다시 읽을 목록에 올립니다(잠금 안에서 부른다). */
-            static void addPending( ResourceComposition::State& state, const string& assetID )
+            static void addPending( AssetComposition::State& state, const string& assetID )
             {
                 VectorUtil::addUnique( state._listPendingReload, assetID );
             }
 
             /** @brief 번호 @p inoutRevision 뒤에 바뀐 기록을 모읍니다. @p bVaryingOnly 면 로드 축 · 층에 기댄 것만입니다. */
-            static void collectChanges( ResourceComposition::State& state, uint64& inoutRevision, bool bVaryingOnly, vector<ResourceDigestEntry>& outListEntry )
+            static void collectChanges( AssetComposition::State& state, uint64& inoutRevision, bool bVaryingOnly, vector<AssetDigestEntry>& outListEntry )
             {
                 outListEntry.clear();
                 {
@@ -84,11 +84,11 @@ namespace sw
                     for ( const auto& [assetID, record] : state._mapRecord )
                     {
                         if ( record._revision > inoutRevision && ( bVaryingOnly == false || record.isComparedBetweenPeers() ) )
-                            outListEntry.push_back( ResourceDigestEntry{ assetID, record._hash } );
+                            outListEntry.push_back( AssetDigestEntry{ assetID, record._hash } );
                     }
                     inoutRevision = state._revision;
                 }
-                VectorUtil::sort( outListEntry, []( const ResourceDigestEntry& lhs, const ResourceDigestEntry& rhs )
+                VectorUtil::sort( outListEntry, []( const AssetDigestEntry& lhs, const AssetDigestEntry& rhs )
                 { return lhs._assetID < rhs._assetID; } );
             }
         };
@@ -98,28 +98,28 @@ namespace sw
 
 namespace sw
 {
-    ResourceComposition::ResourceComposition()
+    AssetComposition::AssetComposition()
         : _pState{ sw::make_unique<State>() }
     {
     }
 
-    ResourceComposition::~ResourceComposition() = default;
+    AssetComposition::~AssetComposition() = default;
 
-    bool ResourceComposition::setLayers( const vector<string>& listRoot )
+    bool AssetComposition::setLayers( const vector<string>& listRoot )
     {
         for ( size_t index = 0; index < listRoot.size(); ++index )
         {
             const string& root = listRoot[index];
             if ( StringUtil::trim( root ).empty() || StringUtil::endsWith( root, "/" ) )
             {
-                SW_LOG_ERROR_ID( "ResourceLayers.InvalidRoot", "Resource layer root '%#' is not a resource folder id (empty or ends with '/') - layers unchanged", root );
+                SW_LOG_ERROR_ID( "AssetLayers.InvalidRoot", "Asset layer root '%#' is not a resource folder id (empty or ends with '/') - layers unchanged", root );
                 return false;
             }
             for ( size_t other = 0; other < index; ++other )
             {
                 if ( listRoot[other] == root )
                 {
-                    SW_LOG_ERROR_ID( "ResourceLayers.DuplicateRoot", "Resource layer root '%#' is listed twice - layers unchanged", root );
+                    SW_LOG_ERROR_ID( "AssetLayers.DuplicateRoot", "Asset layer root '%#' is listed twice - layers unchanged", root );
                     return false;
                 }
             }
@@ -141,28 +141,28 @@ namespace sw
         return true;
     }
 
-    vector<string> ResourceComposition::getLayers() const
+    vector<string> AssetComposition::getLayers() const
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
         return state._listLayerRoot;
     }
 
-    void ResourceComposition::setInheritanceMaxDepth( uint32 maxDepth )
+    void AssetComposition::setInheritanceMaxDepth( uint32 maxDepth )
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
         state._inheritanceMaxDepth = maxDepth;
     }
 
-    optional<uint32> ResourceComposition::findInheritanceMaxDepth() const
+    optional<uint32> AssetComposition::findInheritanceMaxDepth() const
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
         return state._inheritanceMaxDepth;
     }
 
-    string ResourceLayers::makeLayerAssetID( string_view root, string_view assetID )
+    string AssetLayers::makeLayerAssetID( string_view root, string_view assetID )
     {
         string layerID{ root };
         layerID += '/';
@@ -170,14 +170,14 @@ namespace sw
         return layerID;
     }
 
-    void ResourceComposition::record( string_view assetID, const vector<string>& listLoadTag, bool bLayered, string_view composedText )
+    void AssetComposition::record( string_view assetID, const vector<string>& listLoadTag, bool bLayered, string_view composedText )
     {
         State&            state = *_pState;
         const string      key{ assetID };
         const uint64      hash = hashText( composedText ); // 기대지 않은 합성도 든다 - 상대가 층을 얹어 읽은 표와 맞댄다(파싱에 견주면 값싸다)
         ScopedLock<mutex> lock{ state._mutex };
-        const auto [itRecord, bInserted]  = state._mapRecord.try_emplace( key );
-        ResourceCompositionRecord& record = itRecord->second;
+        const auto [itRecord, bInserted] = state._mapRecord.try_emplace( key );
+        AssetCompositionRecord& record   = itRecord->second;
         if ( bInserted || record._hash != hash )
             record._revision = ++state._revision;
         record._listLoadTag = listLoadTag;
@@ -185,7 +185,7 @@ namespace sw
         record._bLayered    = bLayered ? SW_TRUE : SW_FALSE;
     }
 
-    void ResourceComposition::recordRemap( string_view assetID, const vector<string>& listLoadTag )
+    void AssetComposition::recordRemap( string_view assetID, const vector<string>& listLoadTag )
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
@@ -196,7 +196,7 @@ namespace sw
         }
     }
 
-    void ResourceComposition::recordVariant( string_view assetID, const vector<string>& listLoadTag )
+    void AssetComposition::recordVariant( string_view assetID, const vector<string>& listLoadTag )
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
@@ -207,7 +207,7 @@ namespace sw
         }
     }
 
-    void ResourceComposition::notifyTagsChanged( const vector<string>& listChangedTag )
+    void AssetComposition::notifyTagsChanged( const vector<string>& listChangedTag )
     {
         State&     state      = *_pState;
         const auto isAffected = [&listChangedTag]( const vector<string>& listTag )
@@ -219,23 +219,23 @@ namespace sw
         for ( const auto& [assetID, record] : state._mapRecord )
         {
             if ( isAffected( record._listLoadTag ) )
-                ResourceCompositionInternal::addPending( state, assetID );
+                AssetCompositionInternal::addPending( state, assetID );
         }
         for ( const auto& [assetID, listTag] : state._mapRemapTag )
         {
             if ( isAffected( listTag ) )
-                ResourceCompositionInternal::addPending( state, assetID );
+                AssetCompositionInternal::addPending( state, assetID );
         }
         for ( const auto& [assetID, listTag] : state._mapVariantTag )
         {
             if ( isAffected( listTag ) )
-                ResourceCompositionInternal::addPending( state, assetID );
+                AssetCompositionInternal::addPending( state, assetID );
         }
     }
 
-    void ResourceComposition::notifyLayersChanged( const vector<string>& listRoot )
+    void AssetComposition::notifyLayersChanged( const vector<string>& listRoot )
     {
-        // 층 파일이 있는지는 잠금 밖에서 본다(파일 · 팩 색인을 읽는다). 후보는 리소스 id 로 합성한 적이 있는 것 — 읽지 않은 리소스는 다음 읽기가 새 층을 본다.
+        // 층 파일이 있는지는 잠금 밖에서 본다(파일 · 팩 색인을 읽는다). 후보는 에셋 id 로 합성한 적이 있는 것 — 읽지 않은 에셋은 다음 읽기가 새 층을 본다.
         vector<string> listCandidate;
         {
             State&            state = *_pState;
@@ -243,7 +243,7 @@ namespace sw
             for ( const auto& [assetID, record] : state._mapRecord )
             {
                 if ( record._bLayered == SW_TRUE )
-                    ResourceCompositionInternal::addPending( state, assetID );
+                    AssetCompositionInternal::addPending( state, assetID );
                 else
                     listCandidate.push_back( assetID );
             }
@@ -253,7 +253,7 @@ namespace sw
         {
             for ( const string& root : listRoot )
             {
-                if ( AssetIO::hasAsset( AssetID{ ResourceLayers::makeLayerAssetID( root, assetID ) } ) )
+                if ( AssetIO::hasAsset( AssetID{ AssetLayers::makeLayerAssetID( root, assetID ) } ) )
                 {
                     listLayered.push_back( assetID );
                     break;
@@ -264,11 +264,11 @@ namespace sw
         ScopedLock<mutex> lock{ state._mutex };
         for ( const string& assetID : listLayered )
         {
-            ResourceCompositionInternal::addPending( state, assetID );
+            AssetCompositionInternal::addPending( state, assetID );
         }
     }
 
-    void ResourceComposition::takePendingReload( vector<string>& outListAssetID )
+    void AssetComposition::takePendingReload( vector<string>& outListAssetID )
     {
         State& state = *_pState;
         {
@@ -279,7 +279,7 @@ namespace sw
         VectorUtil::sort( outListAssetID );
     }
 
-    void ResourceComposition::collectDigest( vector<ResourceDigestEntry>& outListEntry ) const
+    void AssetComposition::collectDigest( vector<AssetDigestEntry>& outListEntry ) const
     {
         outListEntry.clear();
         {
@@ -288,24 +288,24 @@ namespace sw
             for ( const auto& [assetID, record] : state._mapRecord )
             {
                 if ( record.isComparedBetweenPeers() )
-                    outListEntry.push_back( ResourceDigestEntry{ assetID, record._hash } );
+                    outListEntry.push_back( AssetDigestEntry{ assetID, record._hash } );
             }
         }
-        VectorUtil::sort( outListEntry, []( const ResourceDigestEntry& lhs, const ResourceDigestEntry& rhs )
+        VectorUtil::sort( outListEntry, []( const AssetDigestEntry& lhs, const AssetDigestEntry& rhs )
         { return lhs._assetID < rhs._assetID; } );
     }
 
-    void ResourceComposition::collectTagDependentChanges( uint64& inoutRevision, vector<ResourceDigestEntry>& outListEntry ) const
+    void AssetComposition::collectTagDependentChanges( uint64& inoutRevision, vector<AssetDigestEntry>& outListEntry ) const
     {
-        ResourceCompositionInternal::collectChanges( *_pState, inoutRevision, true, outListEntry );
+        AssetCompositionInternal::collectChanges( *_pState, inoutRevision, true, outListEntry );
     }
 
-    void ResourceComposition::collectAllChanges( uint64& inoutRevision, vector<ResourceDigestEntry>& outListEntry ) const
+    void AssetComposition::collectAllChanges( uint64& inoutRevision, vector<AssetDigestEntry>& outListEntry ) const
     {
-        ResourceCompositionInternal::collectChanges( *_pState, inoutRevision, false, outListEntry );
+        AssetCompositionInternal::collectChanges( *_pState, inoutRevision, false, outListEntry );
     }
 
-    bool ResourceComposition::isDigestMismatch( const ResourceDigestEntry& entry ) const
+    bool AssetComposition::isDigestMismatch( const AssetDigestEntry& entry ) const
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
@@ -313,7 +313,7 @@ namespace sw
         return it != state._mapRecord.end() && it->second._hash != entry._hash;
     }
 
-    bool ResourceComposition::isLayered( string_view assetID ) const
+    bool AssetComposition::isLayered( string_view assetID ) const
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
@@ -321,12 +321,12 @@ namespace sw
         return it != state._mapRecord.end() && it->second._bLayered == SW_TRUE;
     }
 
-    uint64 ResourceComposition::hashText( string_view text )
+    uint64 AssetComposition::hashText( string_view text )
     {
         return HashUtil::computeStringHash64( text.data(), text.size(), false );
     }
 
-    void ResourceComposition::clear()
+    void AssetComposition::clear()
     {
         State&            state = *_pState;
         ScopedLock<mutex> lock{ state._mutex };
@@ -337,14 +337,14 @@ namespace sw
         ++state._revision; // 이미 받은 번호가 새 기록을 가리지 않게 되돌리지 않는다
     }
 
-    ResourceDigestComparer::ResourceDigestComparer( const ResourceComposition& composition )
+    AssetDigestComparer::AssetDigestComparer( const AssetComposition& composition )
         : _composition{ composition }
         , _listLine{}
         , _revision{ 0 }
     {
     }
 
-    bool ResourceDigestComparer::addPeerLine( int32 peer, const ResourceDigestEntry& entry, int64 nowNanoseconds )
+    bool AssetDigestComparer::addPeerLine( int32 peer, const AssetDigestEntry& entry, int64 nowNanoseconds )
     {
         const optional<int64> suspectStartTime = _composition.isDigestMismatch( entry ) ? optional<int64>{ nowNanoseconds } : nullopt;
         uint32                lineCount        = 0;
@@ -369,19 +369,19 @@ namespace sw
         return true;
     }
 
-    void ResourceDigestComparer::removePeer( int32 peer )
+    void AssetDigestComparer::removePeer( int32 peer )
     {
         (void)VectorUtil::removeIf( _listLine, [peer]( const PeerLine& line )
         { return line._peer == peer; } );
     }
 
-    void ResourceDigestComparer::update( int64 nowNanoseconds, int64 graceNanoseconds, vector<ResourceDigestMismatch>& outListMismatch )
+    void AssetDigestComparer::update( int64 nowNanoseconds, int64 graceNanoseconds, vector<AssetDigestMismatch>& outListMismatch )
     {
-        vector<ResourceDigestEntry> listChanged;
+        vector<AssetDigestEntry> listChanged;
         _composition.collectAllChanges( _revision, listChanged );
         for ( PeerLine& line : _listLine )
         {
-            const bool bChanged = listChanged.empty() == false && VectorUtil::containsIf( listChanged, [&line]( const ResourceDigestEntry& changed )
+            const bool bChanged = listChanged.empty() == false && VectorUtil::containsIf( listChanged, [&line]( const AssetDigestEntry& changed )
             { return changed._assetID == line._entry._assetID; } );
             if ( ( bChanged || line._suspectStartTime.has_value() ) == false )
                 continue;
@@ -394,15 +394,15 @@ namespace sw
                 line._suspectStartTime = nowNanoseconds;
             if ( nowNanoseconds - *line._suspectStartTime >= graceNanoseconds )
             {
-                ResourceDigestMismatch& mismatch = outListMismatch.emplace_back();
-                mismatch._peer                   = line._peer;
-                mismatch._assetID                = line._entry._assetID;
-                line._suspectStartTime           = nullopt;
+                AssetDigestMismatch& mismatch = outListMismatch.emplace_back();
+                mismatch._peer                = line._peer;
+                mismatch._assetID             = line._entry._assetID;
+                line._suspectStartTime        = nullopt;
             }
         }
     }
 
-    void ResourceDigestComparer::clear()
+    void AssetDigestComparer::clear()
     {
         _listLine.clear();
     }

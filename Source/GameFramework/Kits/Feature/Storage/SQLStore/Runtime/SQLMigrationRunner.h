@@ -59,7 +59,7 @@ namespace sw
         static constexpr const utf8* kListFileName = "migrations.xml";
 
         /**
-         * @brief 리소스 폴더 @p folder(`common/sql/servicestore`. OS 경로는 `AssetPaths::mountDiskDomain` 으로 붙여 id 로 준다)의 목록(`migrations.xml`)대로 `.sql` 을 읽어 @p driverName 에 맞게 고릅니다.
+         * @brief 에셋 폴더 @p folder(`common/sql/servicestore`. OS 경로는 `AssetPaths::mountDiskDomain` 으로 붙여 id 로 준다)의 목록(`migrations.xml`)대로 `.sql` 을 읽어 @p driverName 에 맞게 고릅니다.
          * @return 목록을 못 읽거나, 번호가 1 부터 빈틈없이 이어지지 않거나, 그 드라이버의 파일이 없거나, 디스크 폴더에 목록에 없는 `.sql` 이 있으면 false 를 반환합니다.
          */
         [[nodiscard]] static expected<void> loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration );

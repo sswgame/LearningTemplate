@@ -66,7 +66,7 @@ namespace sw
                 // 중첩 인스턴스의 원본을 읽는 캐시는 작업마다 새로 둔다 — 앞 작업이 읽어 둔 원본을 쓰면 그 읽기가 이 작업의 입력에서 빠진다.
                 PrefabCache nestedPrefabs;
                 PrefabAsset asset;
-                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
+                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(에셋 id 입구는 팩 전용 구성에서 콘텐츠 루트 안 절대 경로를 거절한다).
                 const bool bLoaded    = asset.loadFromDiskFile( normalized );
                 const bool bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
                 if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )

@@ -613,7 +613,7 @@ namespace sw::editor
             return false;
         }
         // 이 창의 데이터와 실행 중인 게임의 데이터에 올린다 — 씬의 컴포넌트는 게임 서비스(`AppearanceDatabase`)에서 프리셋을 푼다.
-        // 쓰기는 디스크 경로, 읽기는 리소스 id 다(리소스 입구는 OS 경로를 받지 않는다).
+        // 쓰기는 디스크 경로, 읽기는 에셋 id 다(에셋 입구는 OS 경로를 받지 않는다).
         if ( _database.loadPresetFile( AssetID{ assetID } ) == false )
         {
             StringBuilder<constant::buffer::kMax1024> status;

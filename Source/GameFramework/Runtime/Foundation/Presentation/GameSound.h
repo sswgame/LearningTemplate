@@ -27,7 +27,7 @@ namespace sw
      */
     struct SW_GF_API GameSound
     {
-        /** @brief 효과음 클립 하나를 비동기로 냅니다. 리소스 경로는 `game/<게임>/sounds/x.ogg` 형식이며, 버스가 비면 sfx 입니다. */
+        /** @brief 효과음 클립 하나를 비동기로 냅니다. 에셋 경로는 `game/<게임>/sounds/x.ogg` 형식이며, 버스가 비면 sfx 입니다. */
         static bool play( const AssetID& assetID, const hashed_string& bus = hashed_string{} );
         /** @brief 배경 음악을 바꿉니다. */
         static bool playMusic( const AssetID& assetID );
@@ -79,7 +79,7 @@ namespace sw
     public:
         GameSoundQueue();
 
-        /** @brief 효과음 클립(리소스 경로, `GameSound::play`)을 쌓습니다. */
+        /** @brief 효과음 클립(에셋 경로, `GameSound::play`)을 쌓습니다. */
         void queueClip( const utf8* pPath );
         /** @brief 이벤트(2D, `GameSound::postEvent`)를 쌓습니다. */
         void queueEvent( const utf8* pEventName );

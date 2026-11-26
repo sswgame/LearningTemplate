@@ -725,17 +725,17 @@ SW_TEST_CASE( UIPreviewLogicTest, ViewportSafeInsetsTakeTheLargerPerEdge )
 SW_TEST_CASE( UIPreviewLogicTest, DevicePresetPicksScreenTags )
 {
     UIScaleSettings settings{};
-    settings._rule                              = UIScaleRule::Fixed;
-    settings._compactMaxWidth                   = 600.0f;
-    constexpr float32              kDensity     = 2.75f;
-    const UIViewport               portrait     = UIScaleSettings::makeViewport( settings, float2{ 1080.0f, 2400.0f }, 1.0f, kDensity, float4{}, 0.0f );
-    const optional<ResourceTagSet> portraitTags = settings.makeScreenTags( portrait );
+    settings._rule                           = UIScaleRule::Fixed;
+    settings._compactMaxWidth                = 600.0f;
+    constexpr float32           kDensity     = 2.75f;
+    const UIViewport            portrait     = UIScaleSettings::makeViewport( settings, float2{ 1080.0f, 2400.0f }, 1.0f, kDensity, float4{}, 0.0f );
+    const optional<AssetTagSet> portraitTags = settings.makeScreenTags( portrait );
     SW_REQUIRE_TRUE( portraitTags.has_value() );
     SW_EXPECT_TRUE( portraitTags->contains( "screen.compact" ) );
     SW_EXPECT_TRUE( portraitTags->contains( "orientation.portrait" ) );
 
-    const UIViewport               landscape     = UIScaleSettings::makeViewport( settings, float2{ 2400.0f, 1080.0f }, 1.0f, kDensity, float4{}, 0.0f );
-    const optional<ResourceTagSet> landscapeTags = settings.makeScreenTags( landscape );
+    const UIViewport            landscape     = UIScaleSettings::makeViewport( settings, float2{ 2400.0f, 1080.0f }, 1.0f, kDensity, float4{}, 0.0f );
+    const optional<AssetTagSet> landscapeTags = settings.makeScreenTags( landscape );
     SW_REQUIRE_TRUE( landscapeTags.has_value() );
     SW_EXPECT_TRUE( landscapeTags->contains( "screen.regular" ) ); // 2400 / 2.75 ≈ 873dp
     SW_EXPECT_TRUE( landscapeTags->contains( "orientation.landscape" ) );

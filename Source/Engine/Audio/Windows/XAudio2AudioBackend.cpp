@@ -63,7 +63,7 @@ namespace sw
             /** @brief 장치에 걸어 둘 버퍼 수입니다. 지연은 대략 (수 − 1) × 버퍼 길이입니다. */
             static constexpr uint32 kStreamBufferCount = 2;
             /** @brief 확장형 형식의 IEEE float 하위 형식(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)입니다. ksmedia.h 를 끌어오지 않으려고 값을 적습니다. */
-            static constexpr GUID kSubFormatIeeeFloat = {
+            static constexpr ::GUID kSubFormatIeeeFloat = {
                 0x00000003,
                 0x0000,
                 0x0010,

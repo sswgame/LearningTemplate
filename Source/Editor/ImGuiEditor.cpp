@@ -486,12 +486,12 @@ namespace sw::editor
 {
     // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
-     * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
+     * @brief `-gv_editorStartupScene=<에셋 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
      * @details 빈 씬으로 기동 검증을 하면 오브젝트를 순회하는 코드가 실행되지 않습니다. 뷰포트 피킹, 컴포넌트 시각화, Hierarchy 트리,
      *          Profiler 분포 테이블, 씬 세대 변경 훅이 그 예입니다. 이 스위치로 테스트 씬을 열면 이 경로가 모두 실행됩니다.
      *          예: `-gv_editorStartupScene=game/playground/maps/editortest.scene.xml`
      */
-    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_editorStartupScene, "", "에디터 시작 시 열 씬의 에셋 경로 (비우면 열지 않는다)" );
 
     /**
      * @brief `-gv_editorUiScale=<배율>`: 에디터 UI 배율입니다. 0 이면 창이 놓인 모니터의 DPI 를 따릅니다.

@@ -313,7 +313,7 @@ namespace sw
     struct AbilityPresentationDef
     {
         TagID         _cueTag{};
-        hashed_string _prefab{};               ///< 대상 자리에 스폰할 프리팹 리소스 경로(빈 이름이면 없음)
+        hashed_string _prefab{};               ///< 대상 자리에 스폰할 프리팹 에셋 경로(빈 이름이면 없음)
         hashed_string _soundEvent{};           ///< 대상 자리에서 낼 오디오 이벤트(빈 이름이면 없음)
         float3        _offset{};               ///< 대상 자리에서 더할 월드 오프셋
         uint8         _bOnRemoved{ SW_FALSE }; ///< 해제(`Removed`) 순간에도 낼지 여부. 기본은 걸림 · 실행 순간만

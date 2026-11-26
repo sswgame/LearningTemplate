@@ -105,7 +105,7 @@ namespace sw
 
         /** @brief 내용을 @p path 에 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const MeshAssetData& data );
-        /** @brief 리소스 경로(또는 OS 절대 경로)의 `.mesh` 를 읽습니다. 팩 파일과 느슨한 파일 모두 `AssetPaths` 로 읽습니다. */
+        /** @brief 에셋 경로(또는 OS 절대 경로)의 `.mesh` 를 읽습니다. 팩 파일과 느슨한 파일 모두 `AssetPaths` 로 읽습니다. */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, MeshAssetData& outData );
     };
 } // namespace sw

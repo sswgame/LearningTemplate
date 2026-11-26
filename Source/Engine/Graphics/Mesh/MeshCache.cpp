@@ -75,7 +75,7 @@ namespace sw
                     SW_LOG_WARNING_ID( "MeshCache.MeshAssetCouldNot", "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
-            /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 리소스 id 만 담는다. */
+            /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 에셋 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 에셋 id 만 담는다. */
             [[nodiscard]] static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
         };
     } // namespace

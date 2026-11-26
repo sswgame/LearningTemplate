@@ -89,7 +89,7 @@ SW_TEST_CASE( MaterialXMLTest, ShaderTypeIsNotAFileField )
 }
 
 /**
- * @brief [MaterialXMLTest] 현재 판(formatVersion=0)의 XML 을 리소스 id 로 읽는다 — 이름 · 셰이더 경로가 그대로다
+ * @brief [MaterialXMLTest] 현재 판(formatVersion=0)의 XML 을 에셋 id 로 읽는다 — 이름 · 셰이더 경로가 그대로다
  */
 SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
 {

@@ -7,14 +7,14 @@
  *            그래서 쿠킹 중의 에셋 로드는 워커로 넘기지 않고 요청한 스레드에서 읽는다(`requiresCallingThreadRead` — `AssetLoadOperation::startLoad` 가 본다).
  *          - 쿠킹 세션(`CookSession`)이 열려 있는 동안 범위 밖에서 일어난 읽기는 오류다(읽기가 실패한다). 전역 캐시가 미리 읽어 둔 것을 쓰면 기록이 빠지기 때문이다.
  *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 출력 이름, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
- *          - 입력은 셋이다(`CookInputKind`): 리소스(리소스 id 의 내용 해시), 디스크 파일(리소스 루트 밖 절대 경로의 내용 해시), 목록(폴더 아래 확장자가 같은 파일 이름들의 해시, `collectFiles`).
+ *          - 입력은 셋이다(`CookInputKind`): 리소스(에셋 id 의 내용 해시), 디스크 파일(콘텐츠 루트 밖 절대 경로의 내용 해시), 목록(폴더 아래 확장자가 같은 파일 이름들의 해시, `collectFiles`).
  *            없는 것을 찾은 것도 해시 0 으로 남는다. 종류는 기록할 때 정하고 다시 풀 때 그 종류의 규칙으로만 푼다 — 예전에는 한 칸(`_source`)에 다섯 종류를 담고 다시 풀 때
  *            `findLooseFile` 이 글 모양으로 추측했다(절대 경로 갈래를 지우면 디스크 · 목록 입력이 조용히 0 이 되어 늘 다시 구웠다).
  *            폴더를 훑어 정한 출력(레지스트리)은 파일이 하나 더 생겨도 읽은 파일이 바뀌지 않으므로 목록이 입력이어야 한다.
- *          - 디스크 읽기가 리소스 루트 · 붙인 도메인 아래면 리소스 입력으로 기록한다(`AssetPaths::toAssetID`). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
- *            루트 밖으로 나가는 리소스 id(`..`)는 입력이 될 수 없어 그 읽기가 실패한다(받은 글 그대로 기록하던 폴백을 없앴다).
+ *          - 디스크 읽기가 콘텐츠 루트 · 붙인 도메인 아래면 리소스 입력으로 기록한다(`AssetPaths::toAssetID`). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
+ *            루트 밖으로 나가는 에셋 id(`..`)는 입력이 될 수 없어 그 읽기가 실패한다(받은 글 그대로 기록하던 폴백을 없앴다).
  *          - 리소스 읽기(`AssetID`)와 디스크 읽기(경로 글)는 입구가 다르다. 디스크 경로는 작업 폴더 기준이어도 절대 경로로 바꿔 기록한다 — 상대 글을 그대로 두면
- *            다시 풀 때(`CookInput::computeCurrentHash`) 리소스 id 로 읽혀 다른 파일이나 없음이 되고, 기록이 늘 낡거나 엉뚱한 파일과 비교된다.
+ *            다시 풀 때(`CookInput::computeCurrentHash`) 에셋 id 로 읽혀 다른 파일이나 없음이 되고, 기록이 늘 낡거나 엉뚱한 파일과 비교된다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -45,8 +45,8 @@ namespace sw
     ENUM()
     enum class CookInputKind : uint8
     {
-        Resource, ///< 리소스 하나의 내용(`_source` 는 리소스 id - 다시 풀 때 검색 순서로 이긴 파일). 없으면 해시 0
-        DiskFile, ///< 리소스 루트 밖 디스크 파일 하나의 내용(`_source` 는 절대 경로). 없으면 해시 0
+        Resource, ///< 리소스 하나의 내용(`_source` 는 에셋 id - 다시 풀 때 검색 순서로 이긴 파일). 없으면 해시 0
+        DiskFile, ///< 콘텐츠 루트 밖 디스크 파일 하나의 내용(`_source` 는 절대 경로). 없으면 해시 0
         Listing,  ///< 폴더(`_source`, 절대 경로) 아래(하위 폴더 포함) 확장자(`_extension`)가 같은 파일의 상대 경로 목록
     };
 
@@ -54,7 +54,7 @@ namespace sw
     struct CookInput
     {
         CookInputKind _kind{ CookInputKind::Resource };
-        string        _source;    ///< 리소스 id(`Resource`) 또는 절대 경로(`DiskFile` · `Listing`) - 종류가 정한다
+        string        _source;    ///< 에셋 id(`Resource`) 또는 절대 경로(`DiskFile` · `Listing`) - 종류가 정한다
         string        _extension; ///< 목록일 때만 쓴다(예: ".material")
         uint64        _contentHash{ 0 };
 
@@ -116,7 +116,7 @@ namespace sw
     class SW_API CookSession
     {
     public:
-        /** @param assetPaths 세션을 여는 리소스 경로 상태(엔진 범위 — `AssetPaths::openCookSession`)입니다. 세션보다 오래 산다. */
+        /** @param assetPaths 세션을 여는 에셋 경로 상태(엔진 범위 — `AssetPaths::openCookSession`)입니다. 세션보다 오래 산다. */
         explicit CookSession( AssetPaths& assetPaths );
         ~CookSession();
         CookSession( const CookSession& )            = delete;
@@ -176,7 +176,7 @@ namespace sw
         /**
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
          * @details 폴더를 훑어 출력을 정하는 쿠커는 `FileUtil::collectFiles` 대신 이것을 쓴다 — 파일이 생기거나 사라지면 다시 베이크한다.
-         *          목록 입력의 id 는 폴더의 절대 경로다(리소스 id 로 줄이지 않는다 — 도메인 폴더는 id 로 줄이면 같은 폴더로 돌아오지 않는다).
+         *          목록 입력의 id 는 폴더의 절대 경로다(에셋 id 로 줄이지 않는다 — 도메인 폴더는 id 로 줄이면 같은 폴더로 돌아오지 않는다).
          * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(부분 목록 — 구울 것을 빠뜨린다) false 입니다.
          */
         [[nodiscard]] static bool collectFiles( const AbsolutePath& folderPath, string_view extension, vector<AbsolutePath>& outListFile );
@@ -185,7 +185,7 @@ namespace sw
 
         /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `allowDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool recordDiskInput( const DiskPath& diskPath, uint64 contentHash );
-        /** @brief 디스크 파일 @p diskPath 의 입력 값입니다(`recordDiskInput` 이 기록하는 것 — 붙인 도메인 · 리소스 루트 아래면 리소스). 만들지 못하면 오류를 남기고 빈 값입니다. */
+        /** @brief 디스크 파일 @p diskPath 의 입력 값입니다(`recordDiskInput` 이 기록하는 것 — 붙인 도메인 · 콘텐츠 루트 아래면 리소스). 만들지 못하면 오류를 남기고 빈 값입니다. */
         [[nodiscard]] static optional<CookInput> makeDiskInput( const DiskPath& diskPath, uint64 contentHash );
         /** @brief 입력 하나를 기록합니다. 같은 입력이 있으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
         void recordInput( const CookInput& input );
@@ -198,7 +198,7 @@ namespace sw
         /** @brief 작업 키입니다. `makeKeyDescription` 의 글을 해시합니다. */
         static uint64 computeKey( const CookJobDesc& desc, const vector<CookInput>& listInput );
         /**
-         * @brief 작업 키의 기준 글(쿠커 이름 · 코드 지문 · 대상 · 설정 해시 · 출력 이름 · 정렬한 입력 id 와 내용 해시)입니다. 입력은 리소스 id 순서로 정렬하므로 읽은 순서와 관계없습니다.
+         * @brief 작업 키의 기준 글(쿠커 이름 · 코드 지문 · 대상 · 설정 해시 · 출력 이름 · 정렬한 입력 id 와 내용 해시)입니다. 입력은 에셋 id 순서로 정렬하므로 읽은 순서와 관계없습니다.
          * @details DDC 항목 머리에 그대로 적혀 64 비트 키 충돌을 미스로 바꾼다(`DerivedDataCache::find`).
          */
         static string makeKeyDescription( const CookJobDesc& desc, const vector<CookInput>& listInput );

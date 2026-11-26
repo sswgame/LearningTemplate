@@ -11,8 +11,8 @@
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
@@ -353,7 +353,7 @@ namespace sw::editor
         // `_base` 를 펼쳐 연다. 부모 id 는 들고 있다가 저장이 부모와의 차이로 쓴다(`makeSaveText`).
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xmlText, "BehaviorTreeEditModel", ResourceContext::forSchema( &BehaviorTreeSchema::make ), flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, "BehaviorTreeEditModel", AssetComposeContext::forSchema( &BehaviorTreeSchema::make ), flatText, bComposed ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Its _base chain could not be flattened - see the log" } );
         XMLDocument document;
         if ( document.parse( bComposed ? string_view{ flatText } : xmlText, "BehaviorTreeEditModel" ) == false )
@@ -390,7 +390,7 @@ namespace sw::editor
         if ( AssetIO::readTextAsset( AssetID{ _baseID }, parentText ) == false || parent.parse( parentText ).has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "The base tree could not be read - not saved", _baseID } );
         string               deltaText;
-        const expected<void> delta = ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
+        const expected<void> delta = AssetComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
         {
             BehaviorTreeEditModel reread;
             return reread.parse( text ).has_value() ? reread.write() : string{};

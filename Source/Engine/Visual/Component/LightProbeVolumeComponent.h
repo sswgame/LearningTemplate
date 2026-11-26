@@ -106,7 +106,7 @@ namespace sw
         const LightProbeGrid* findProbeData() const;
         /**
          * @brief 베이크 결과를 받아 들고 경로를 적습니다(베이크 도구가 파일을 쓴 뒤 부른다). 데이터의 모양이 지금 볼륨과 다르면 받지 않고 false 입니다.
-         * @param path 그 데이터를 쓴 `.probes` 리소스 경로
+         * @param path 그 데이터를 쓴 `.probes` 에셋 경로
          */
         [[nodiscard]] bool applyProbeData( LightProbeGrid&& grid, string_view path );
         /** @brief 베이크 데이터를 바꿀 때마다 오르는 번호입니다. 컴포넌트 번호와 함께 SH9 내용을 가린다 — 같으면 프로브 버퍼 원소를 다시 펼치지 않는다(`LightProbeElementBuilder`). */

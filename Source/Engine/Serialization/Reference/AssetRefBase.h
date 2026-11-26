@@ -26,7 +26,7 @@ namespace sw
 
     /**
      * @class AssetRefBase
-     * @brief 경로(리소스 id)와 대상 종류입니다. 직접 만들지 않고 `AssetRef<T>` 로 씁니다.
+     * @brief 경로(에셋 id)와 대상 종류입니다. 직접 만들지 않고 `AssetRef<T>` 로 씁니다.
      */
     class SW_API AssetRefBase
     {
@@ -45,7 +45,7 @@ namespace sw
          *        글에서 다시 intern 하지 않게 한다(FNV · 샤드 잠금). 표시 철자는 경로 그대로다.
          */
         [[nodiscard]] const hashed_string& key() const { return _key; }
-        /** @brief 리소스 입구(`AssetIO`)에 넘길 id 입니다. */
+        /** @brief 에셋 입구(`AssetIO`)에 넘길 id 입니다. */
         [[nodiscard]] AssetID id() const { return AssetID{ _path }; }
         /** @brief 경로를 받는 함수(`string_view`)에 그대로 넘깁니다. 이 값은 이미 경로라 짐작하는 변환이 아니다. */
         operator string_view() const noexcept { return _path; } // NOLINT(google-explicit-constructor)

@@ -26,7 +26,7 @@
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
@@ -317,7 +317,7 @@ namespace sw
             release();
             return false;
         }
-        vector<string> listLayerRoot = game::getSubsystem<ResourceComposition>().getLayers();
+        vector<string> listLayerRoot = game::getSubsystem<AssetComposition>().getLayers();
         // 경로마다 모은 목록을 훑지 않는다(켠 모드들의 덮어쓰기 · 층 수의 제곱). 목록은 처음 나온 순서다.
         unordered_set<string> uniqueOverridePath;
         unordered_set<string> uniqueLayerPath;
@@ -340,8 +340,8 @@ namespace sw
         // 모드 층은 게임 팩의 층 위에 모드 순서대로 얹는다 — 뒤(우선순위가 높은) 모드의 차이가 나중에 얹혀 이긴다.
         if ( _listLayerPath.empty() == false )
         {
-            _listPreviousLayerRoot = game::getSubsystem<ResourceComposition>().getLayers();
-            if ( game::getSubsystem<ResourceComposition>().setLayers( listLayerRoot ) == false )
+            _listPreviousLayerRoot = game::getSubsystem<AssetComposition>().getLayers();
+            if ( game::getSubsystem<AssetComposition>().setLayers( listLayerRoot ) == false )
             {
                 release();
                 return false;
@@ -387,7 +387,7 @@ namespace sw
     void ModSession::release()
     {
         // 층을 먼저 되돌린다 — 팩을 내린 뒤의 다시 읽기가 사라진 층 뿌리를 보지 않게.
-        if ( _bLayersSet != 0 && game::getSubsystem<ResourceComposition>().setLayers( _listPreviousLayerRoot ) == false )
+        if ( _bLayersSet != 0 && game::getSubsystem<AssetComposition>().setLayers( _listPreviousLayerRoot ) == false )
             SW_LOG_ERROR_ID( "ModSession.LayersNotRestored", "The resource layers before the mods could not be restored - the next session may still see mod layers" );
         _bLayersSet = 0;
         _listPreviousLayerRoot.clear();

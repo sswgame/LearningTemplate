@@ -194,14 +194,14 @@ namespace sw
                 vector<string> _listOrigin; ///< 머티리얼 에셋 id 하나(`ShaderCookRequest::_listOrigin` 의 한 묶음)
             };
 
-            /** @brief 훑은 파일 @p absPath 의 에셋 id(리소스 루트 `Content/` 기준 정규화 경로 — 팩 고르기의 id 와 같은 규칙)입니다. 훑는 루트가 도메인 하나여도 같다. 출처 칸에 든다. */
+            /** @brief 훑은 파일 @p absPath 의 에셋 id(콘텐츠 루트 `Content/` 기준 정규화 경로 — 팩 고르기의 id 와 같은 규칙)입니다. 훑는 루트가 도메인 하나여도 같다. 출처 칸에 든다. */
             static string makeOriginID( const string& absPath )
             {
                 const string resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath().str();
                 string       relativePath;
                 if ( FileUtil::tryMakePathUnderRoot( resourceRoot, absPath, relativePath ) == false )
                 {
-                    // 훑기(`collectContentFiles`)가 리소스 루트 아래에서 낸 파일이라 오지 않는 자리다 — 경로 그대로면 어떤 닿은 id 와도 맞지 않아 경고가 빠질 뿐이다.
+                    // 훑기(`collectContentFiles`)가 콘텐츠 루트 아래에서 낸 파일이라 오지 않는 자리다 — 경로 그대로면 어떤 닿은 id 와도 맞지 않아 경고가 빠질 뿐이다.
                     SW_LOG_ERROR_ID( "ShaderCooker.OriginOutsideRoot", "Shader cook: '%#' is not under the resource root '%#' - its requests have no asset origin", absPath, resourceRoot );
                     return FileUtil::normalizePath( absPath ).str();
                 }
@@ -285,7 +285,7 @@ namespace sw
 
                     const vector<string> pipelineOrigin{ makeOriginID( xmlPath.str() ) };
                     RenderPipelineAsset  pipelineResource;
-                    // 디스크로 훑은 소스 파일이다 — 디스크 입구로 읽는다(리소스 입구는 OS 경로를 받지 않는다).
+                    // 디스크로 훑은 소스 파일이다 — 디스크 입구로 읽는다(에셋 입구는 OS 경로를 받지 않는다).
                     if ( pipelineResource.loadFromDiskFile( xmlPath ) == false )
                         continue;
 

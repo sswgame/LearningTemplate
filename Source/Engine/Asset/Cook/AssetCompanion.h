@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    /** @brief 리소스 id 에서 곁 파일의 리소스 id 를 만드는 함수입니다. 이 규칙이 다루지 않는 파일이면 빈 글을 돌려줍니다. */
+    /** @brief 에셋 id 에서 곁 파일의 에셋 id 를 만드는 함수입니다. 이 규칙이 다루지 않는 파일이면 빈 글을 돌려줍니다. */
     using AssetCompanionPathFunction = string ( * )( string_view assetID );
 
     /**

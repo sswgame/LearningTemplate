@@ -1,5 +1,5 @@
 // Archive — 바이너리 스트림: 원시 · 수학 타입 왕복, 파일 저장 · 읽기, CRC32 체크섬과 변조 감지, 범위 밖 읽기 · 오류 표시, 섹션 · 서브 아카이브, VarInt · ZigZag 경계(nogpu).
-// TLV · 문자열 풀 · 압축 · JSON/XML 임베딩 · 세이브 · 씬 문서 케이스는 손으로 만든 TypeInfo · GameFramework 타입 · 옛 임시 리소스 id 에 기대 아직 옮기지 않았다.
+// TLV · 문자열 풀 · 압축 · JSON/XML 임베딩 · 세이브 · 씬 문서 케이스는 손으로 만든 TypeInfo · GameFramework 타입 · 옛 임시 에셋 id 에 기대 아직 옮기지 않았다.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"

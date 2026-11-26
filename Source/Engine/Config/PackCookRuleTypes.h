@@ -26,7 +26,7 @@ namespace sw
         string         _packRoot{};             ///< 비면 모든 팩, 아니면 이 팩(`game/nilecity`) 아래 파일에만
         vector<string> _listExcludedPackRoot{}; ///< 이 팩들 아래 파일에는 닿지 않는다(그 게임이 같은 이름으로 덮었다)
 
-        /** @brief 리소스 id @p assetID 의 파일에 이 규칙이 닿으면 true 입니다. */
+        /** @brief 에셋 id @p assetID 의 파일에 이 규칙이 닿으면 true 입니다. */
         bool isApplicableTo( string_view assetID ) const
         {
             if ( _packRoot.empty() == false && isUnder( assetID, _packRoot ) == false )
@@ -39,7 +39,7 @@ namespace sw
             return true;
         }
 
-        /** @brief @p assetID 가 팩 루트 @p packRoot 아래이면 true 입니다(대소문자 무시 — 리소스 id 는 소문자로 정규화돼 있다). */
+        /** @brief @p assetID 가 팩 루트 @p packRoot 아래이면 true 입니다(대소문자 무시 — 에셋 id 는 소문자로 정규화돼 있다). */
         static bool isUnder( string_view assetID, string_view packRoot )
         {
             return assetID.size() > packRoot.size() && assetID[packRoot.size()] == '/' && StringUtil::equals( assetID.substr( 0, packRoot.size() ), packRoot, true );
@@ -50,7 +50,7 @@ namespace sw
      * @struct PackAlwaysCookRule
      * @brief 참조가 없어도 담는 파일의 이름 붙은 묶음입니다(언리얼 Primary Asset Rules 의 `AlwaysCook` · Directories to Always Cook).
      * @details 코드가 이름으로 읽는 것(엔진 기본 에셋 · 설정, 시나리오, 종류 경로 규칙으로 찾는 데이터)처럼 참조 칸으로 닿지 않는 파일만 적는다. 이 묶음의 파일은 뿌리라 그 참조도 따라간다.
-     *          패턴은 리소스 id(`engine/…` · `game/<팩>/…`)에 `StringUtil::matchesPathPattern` 으로 맞춘다.
+     *          패턴은 에셋 id(`engine/…` · `game/<팩>/…`)에 `StringUtil::matchesPathPattern` 으로 맞춘다.
      */
     REFLECT()
     struct SW_API PackAlwaysCookRule
@@ -61,13 +61,13 @@ namespace sw
         string _name; ///< 묶음 이름 — 왜 참조로 닿지 않는지를 이름으로 적는다(로그 · 문서용)
 
         PROPERTY( Required )
-        vector<string> _listPattern; ///< 리소스 id 패턴(`game/*/maps/**`)
+        vector<string> _listPattern; ///< 에셋 id 패턴(`game/*/maps/**`)
 
         PROPERTY( Required )
         bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(개발 구성 클라이언트)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
 
         PROPERTY()
-        vector<string> _listExcludePattern; ///< `_listPattern` 에 맞아도 뺄 리소스 id 패턴 — 쿠킹본을 읽는 구성에 없는 실행기의 것(에디터 시나리오는 에디터가 없는 쿠킹 구성에서 돌지 않고 에디터 원본을 가리킨다)
+        vector<string> _listExcludePattern; ///< `_listPattern` 에 맞아도 뺄 에셋 id 패턴 — 쿠킹본을 읽는 구성에 없는 실행기의 것(에디터 시나리오는 에디터가 없는 쿠킹 구성에서 돌지 않고 에디터 원본을 가리킨다)
 
         PackRuleScope _scope{}; ///< 합친 뒤 이 규칙이 닿는 팩(설정 파일의 칸이 아니다 — `mergeGameRules` 가 채운다)
     };

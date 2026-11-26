@@ -72,7 +72,7 @@ namespace sw
                 return string( text.view() );
             }
 
-            /** @brief 씬 원본 바이트의 해시입니다. 원본 경로는 리소스 id 이거나 절대 경로다(`Scene::getSourcePath`). 못 읽으면 빈 값. */
+            /** @brief 씬 원본 바이트의 해시입니다. 원본 경로는 에셋 id 이거나 절대 경로다(`Scene::getSourcePath`). 못 읽으면 빈 값. */
             static string computeSceneHash( string_view scenePath )
             {
                 if ( scenePath.empty() )

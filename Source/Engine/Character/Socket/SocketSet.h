@@ -214,7 +214,7 @@ namespace sw
          *          부모는 @p kinds 로 읽습니다. 언리얼 데이터 에셋 상속 · 유니티 프리팹 변형이 덮어쓴 값만 저장하는 것과 같은 자리다.
          */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath, const SocketKindTable& kinds ) const;
-        /** @brief 읽은 파일이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었으면 비어 있습니다. */
+        /** @brief 읽은 파일이 가리킨 부모의 에셋 id 입니다. 부모 없이 읽었으면 비어 있습니다. */
         const string& getBaseID() const { return _baseID; }
 
         /** @brief 항목을 더합니다. 같은 이름이 있으면 바꿉니다. */
@@ -263,7 +263,7 @@ namespace sw
 
     private:
         void readRoot( const XMLNode& root, const SocketKindTable& kinds, CharacterDataReader& reader );
-        /** @brief 뼈 검사(@p pBones 가 있으면)를 더하고 읽개를 끝냅니다. 글 입구와 리소스 입구의 공통 끝입니다. */
+        /** @brief 뼈 검사(@p pBones 가 있으면)를 더하고 읽개를 끝냅니다. 글 입구와 에셋 입구의 공통 끝입니다. */
         [[nodiscard]] bool finishLoad( CharacterDataReader& reader, const CharacterBoneArray* pBones );
         void               readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader );
         void               readVirtualBone( const XMLNode& node, CharacterDataReader& reader );

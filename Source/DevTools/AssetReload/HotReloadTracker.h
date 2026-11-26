@@ -31,7 +31,7 @@ namespace sw
      */
     struct HotReloadTrackerEntry
     {
-        string        _path;                     ///< 바뀐 파일(설정은 절대 경로, 에셋은 리소스 id, 셰이더는 소스 경로)
+        string        _path;                     ///< 바뀐 파일(설정은 절대 경로, 에셋은 에셋 id, 셰이더는 소스 경로)
         string        _reason;                   ///< 마지막 실패의 까닭 한 줄(성공이면 빈 값)
         uint64        _lastRequestSequence{ 0 }; ///< 마지막으로 적은 차례
         uint64        _appliedSequence{ 0 };     ///< 마지막으로 성공한 차례(0 이면 이 실행에서 한 번도 성공하지 않았다 — 처음 읽은 값으로 돈다)

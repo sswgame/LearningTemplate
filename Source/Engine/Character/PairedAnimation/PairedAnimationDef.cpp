@@ -96,9 +96,9 @@ namespace sw
         _anchorRoleIndex = constant::invalid_index::kUint32;
     }
 
-    string PairedAnimationDef::makeXMLText( const PairedAnimationContentDef& content, ResourceFieldWrite fieldWrite )
+    string PairedAnimationDef::makeXMLText( const PairedAnimationContentDef& content, AssetFieldWrite fieldWrite )
     {
-        const bool  bWriteAll = fieldWrite == ResourceFieldWrite::WriteAll;
+        const bool  bWriteAll = fieldWrite == AssetFieldWrite::WriteAll;
         XMLDocument document;
         XMLNode     root = document.appendRoot( PairedAnimationDefInternal::kRootName );
         root.appendAttribute( "duration", CharacterDataReader::formatFloat( content._duration ).c_str() );

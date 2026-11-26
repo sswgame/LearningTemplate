@@ -363,7 +363,7 @@ namespace sw
         Source        _source{};                      ///< 입자의 출처(위)
         float4x4      _world{};                       ///< 입자를 월드로 옮기는 행렬(행벡터 규약)
         float3        _sortPosition{};                ///< 투명 정렬의 깊이를 재는 방출기 자리(월드)
-        hashed_string _texturePath{};                 ///< 입자 텍스처(리소스 id)
+        hashed_string _texturePath{};                 ///< 입자 텍스처(에셋 id)
         uint8         _bAdditive{ SW_FALSE };         ///< 더하기 블렌드(`VFXBlendMode::Additive`)면 SW_TRUE
         uint8         _bRibbon{ SW_FALSE };           ///< 띠(`VFXRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
         VFXSortMode   _sortMode{ VFXSortMode::None }; ///< 방출기 안 입자의 그리는 순서 — 렌더 스레드가 뷰마다 순서 목록을 만든다(`VFXParticleOrder`)

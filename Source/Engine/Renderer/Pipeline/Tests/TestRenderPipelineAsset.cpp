@@ -20,8 +20,8 @@
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
@@ -458,7 +458,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, TextListsMergeItemByItem )
                          "</_listPermutation></RenderGraphPassDesc></_listPass><_listRenderFeatureRef><item _op=\"Remove\">a.xml</item></_listRenderFeatureRef></RenderPipelineDesc>";
     string       flatText;
     bool         bComposed = false;
-    SW_REQUIRE_TRUE( ResourceComposer::compose( child, "child.xml", ResourceContext::forPackCook( source ), flatText, bComposed ) );
+    SW_REQUIRE_TRUE( AssetComposer::compose( child, "child.xml", AssetComposeContext::forPackCook( source ), flatText, bComposed ) );
     SW_EXPECT_TRUE( bComposed );
     SW_EXPECT_TRUE( flatText.find( "A=1" ) == string::npos );
     SW_EXPECT_TRUE( flatText.find( "B=1" ) != string::npos );
@@ -864,7 +864,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
         DataInheritanceDiskSource source{ contentRoot, 8u }; // 설정(`EngineConfig.json`)과 같은 깊이 상한
         string                    flatText;
         bool                      bComposed = false;
-        SW_REQUIRE_TRUE( ResourceComposer::compose( sourceText, pID, ResourceContext::forPackCook( source ), flatText, bComposed ) );
+        SW_REQUIRE_TRUE( AssetComposer::compose( sourceText, pID, AssetComposeContext::forPackCook( source ), flatText, bComposed ) );
         SW_EXPECT_TRUE( bComposed );
         SW_EXPECT_TRUE( DataInheritance::findBasePath( flatText ).empty() );
 
