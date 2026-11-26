@@ -28,7 +28,7 @@
 | w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
-| w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
+| w-server-subsystem · LT-wt/serversub | 서버 서비스 모듈 서브시스템(1469af8976 끝 — 합치면 6 절 줄 삭제), 서비스 없음 기동 오류, 모듈 수명 정적 등록 목록 |
 | w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 · 구성 표 테스트(ece90ecaea · 4686edfe1e 끝), 소문자 데이터 철자 열거 7 건, configure_files 생성기 음성 사례 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
