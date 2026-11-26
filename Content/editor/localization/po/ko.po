@@ -755,12 +755,12 @@ msgctxt "EdCommon.ComponentCardOptions"
 msgid "More options for this component, including removing it."
 msgstr "컴포넌트 추가 옵션 및 삭제"
 
-#: Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.ContentChangedOnDisk"
 msgid "{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it"
 msgstr "{path} 이(가) 연 뒤 디스크에서 바뀌었습니다. 그 내용을 쓰려면 다시 열고, 덮어쓰려면 다시 저장하십시오."
 
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.ContentReadOnly"
 msgid "{path} is read-only - Check Out (lock) it in the Content Browser first"
 msgstr "{path} 은(는) 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
@@ -810,8 +810,8 @@ msgctxt "EdCommon.DeleteLayout"
 msgid "Delete this saved layout."
 msgstr "저장된 레이아웃을 지웁니다."
 
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 #: Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
 msgctxt "EdCommon.DeleteRefusedTitle"
 msgid "Delete refused"
 msgstr "삭제 거절"
@@ -992,7 +992,7 @@ msgctxt "EdCommon.LiveCodingSucceededTitle"
 msgid "Live Coding Succeeded"
 msgstr "라이브 코딩 성공"
 
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.MoveRefusedTitle"
 msgid "Move refused"
 msgstr "옮기기 거절"
@@ -1444,8 +1444,7 @@ msgctxt "EdCommon.SaveLayout"
 msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
 msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 
-#: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
-#: Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp
+#: Source/Editor/Common/Asset/AssetWriter.cpp
 msgctxt "EdCommon.SaveRefusedTitle"
 msgid "Save refused"
 msgstr "저장 거절"
@@ -4426,8 +4425,7 @@ msgid "Apply"
 msgstr "적용"
 
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
-#: Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp
-#: Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp
+#: Source/Editor/Common/GUI/Status/EditorStatusBarItems.cpp
 #: Source/Editor/Common/Widgets/EditorWidgets.cpp
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
@@ -4737,12 +4735,12 @@ msgctxt "EdVisualizer.PropertyShapesTip"
 msgid "Shows the shapes that component properties declare (light radius and cone, volumes, directions) on the selected objects, with handles that edit the values"
 msgstr "선택한 오브젝트의 컴포넌트 프로퍼티가 선언한 모양(빛 반경 · 원뿔, 볼륨, 방향)을 표시하고 손잡이로 값을 고칩니다"
 
-#: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
+#: Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoLabel"
 msgid "Rig Target"
 msgstr "리그 대상"
 
-#: Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp
+#: Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp
 msgctxt "EdVisualizer.RigTargetGizmoTip"
 msgid "Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset"
 msgstr "리그 디버그 창에서 고른 리그 대상의 기즈모입니다. 끌기를 놓으면 대상 오프셋을 리그 에셋에 씁니다"
@@ -4757,12 +4755,12 @@ msgctxt "EdVisualizer.SelectionBoundsTip"
 msgid "Shows the bounding box of the selected objects in accent-colored lines"
 msgstr "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다"
 
-#: Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdVisualizer.TerrainBrushLabel"
 msgid "Terrain"
 msgstr "지형"
 
-#: Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp
+#: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdVisualizer.TerrainBrushTip"
 msgid "Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)"
 msgstr "지형 도구: 지형 위를 끌어 깎거나 레이어를 칠합니다(브러시 설정 창, Ctrl+Z 는 한 번의 끌기를 되돌린다)"

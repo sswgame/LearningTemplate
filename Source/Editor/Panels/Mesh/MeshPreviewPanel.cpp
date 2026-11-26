@@ -46,7 +46,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Mesh Preview"; }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override { return false; }
+        [[nodiscard]] bool saveDocument( AssetWriter& /*writer*/ ) override { return false; }
         bool               canSaveDocument() const override { return false; }
 
         /** @brief 미리보기 메시의 LOD 0 정점 수입니다. 아직 읽는 중이거나 읽지 못했거나 씬이 없으면 false 입니다(감시 값 `Editor.MeshPreviewVertexCount`). */

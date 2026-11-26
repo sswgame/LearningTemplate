@@ -40,6 +40,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class UndoStepOwner;
 
     /**
@@ -133,7 +135,7 @@ namespace sw::editor
         /** @brief 입력 흉내나 애니메이션이 트리 값을 바꾸지 않았고 문서가 열려 있으면 true 입니다. */
         bool canSaveDocument() const;
         /** @brief 미리보기 트리를 `UIDocumentWriter` 로 문서 파일에 씁니다. 핫 리로드가 다시 읽기를 기다립니다. */
-        [[nodiscard]] bool saveDocument();
+        [[nodiscard]] bool saveDocument( AssetWriter& writer );
 
         // --- 보기 설정 ---------------------------------------------------------------
         /** @brief 고른 해상도 견본입니다. 테이블을 처음 쓸 때 읽고, 읽지 못했으면 nullptr 입니다. */

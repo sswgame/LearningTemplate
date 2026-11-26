@@ -117,8 +117,8 @@ namespace sw
                         return true;
                     }
                 }
-                const optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
-                const string                 loosePath = looseFile.has_value() ? looseFile->str() : string{};
+                const optional<DiskPath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
+                const string             loosePath = looseFile.has_value() ? looseFile->str() : string{};
                 if ( loosePath.empty() == false && ContentFileSource::getCurrent().isFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
@@ -179,7 +179,7 @@ namespace sw
         return CookJob::recordReadInput( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
-    bool AssetIO::readTextFile( const AbsolutePath& filePath, string& outText )
+    bool AssetIO::readTextFile( const DiskPath& filePath, string& outText )
     {
         if ( FileUtil::readTextFile( filePath, outText ) == false )
         {
@@ -333,7 +333,7 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
         {
             // 읽기와 같은 판정이다(R7) - 읽기는 파일만 읽으므로 폴더는 "있음" 이 아니다(예전에는 `exists` 라 폴더에도 true 였다).
-            const optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
+            const optional<DiskPath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
             if ( absPath.has_value() && ContentFileSource::getCurrent().isFile( absPath->str() ) )
                 return true;
         }
@@ -363,9 +363,9 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( folder ) )
         {
             // 검색 순서의 모든 도메인 폴더를 합친다 — 팩 나열과 같은 합집합(같은 이름은 아래 정렬에서 앞선 표기가 남는다).
-            vector<AbsolutePath> listDiskFolder;
+            vector<DiskPath> listDiskFolder;
             engine::getSubsystem<AssetPaths>().collectLooseFolders( folder, listDiskFolder );
-            for ( const AbsolutePath& diskFolder : listDiskFolder )
+            for ( const DiskPath& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
                 if ( ContentFileSource::getCurrent().collectFiles( diskFolder.str(), listDiskFile ) == false )

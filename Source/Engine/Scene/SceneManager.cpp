@@ -20,6 +20,7 @@
 #include "Engine/Asset/PreloadSet.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -619,8 +620,8 @@ namespace sw
         const string sourceID = AssetCookPath::toSourcePath( pScene->getSourcePath(), SceneDocument::kAssetType );
         if ( sourceID != pScene->getSourcePath() )
             SW_LOG_WARNING_ID( "SceneManager.ScenePathNotName", "Scene path '%#' is not a name the cooker cooks - saving as '%#'", pScene->getSourcePath(), sourceID );
-        const optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        return absPath.has_value() && writeActiveScene( *absPath, sourceID );
+        const optional<DiskPath> absPath = engine::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        return absPath.has_value() && writeActiveScene( AssetWriteAccess::toWritablePath( *absPath ), sourceID );
     }
 
     bool SceneManager::saveActiveSceneAs( const AbsolutePath& absPath )

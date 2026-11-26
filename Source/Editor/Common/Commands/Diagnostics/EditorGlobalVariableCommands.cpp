@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -64,7 +64,7 @@ namespace sw::editor
         return stateDir.join( "GlobalVariablePresets" ).join( packName );
     }
 
-    AbsolutePath EditorGlobalVariableCommands::getComponentPresetFolderPath()
+    DiskPath EditorGlobalVariableCommands::getComponentPresetFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kDataFolder ), constant::path::kPresetsFolder ) );
     }
@@ -93,14 +93,14 @@ namespace sw::editor
         return doc.saveToString();
     }
 
-    bool EditorGlobalVariableCommands::savePreset( const AbsolutePath& filePath, const string& presetName )
+    bool EditorGlobalVariableCommands::savePreset( AssetWriter& writer, const DiskPath& filePath, const string& presetName )
     {
-        if ( EditorContentWrite::warnIfReadOnly( filePath, EditorContentWriteKind::Save ) ) // 프리셋 단추 · 패널 저장이 모두 지나는 쓰기 입구다
-            return false;
-        return ResourceComposer::saveText( filePath, ResourceSaveText::makeComplete( makePresetText( presetName ) ) );
+        const string text = makePresetText( presetName );
+        return writer.save( filePath, [&text]( const AbsolutePath& writable )
+        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } );
     }
 
-    bool EditorGlobalVariableCommands::loadPreset( const AbsolutePath& filePath )
+    bool EditorGlobalVariableCommands::loadPreset( const DiskPath& filePath )
     {
         string presetText;
         return FileUtil::readTextFile( filePath, presetText ) && applyPresetText( presetText );
@@ -120,7 +120,7 @@ namespace sw::editor
         return true;
     }
 
-    vector<string> EditorGlobalVariableCommands::collectPresetVariables( const AbsolutePath& filePath )
+    vector<string> EditorGlobalVariableCommands::collectPresetVariables( const DiskPath& filePath )
     {
         vector<string> listName;
         XMLDocument    doc;
@@ -168,8 +168,8 @@ namespace sw::editor
         return makePresetText( EditorGlobalVariableCommandsInternal::kSessionPresetName );
     }
 
-    bool EditorGlobalVariableCommands::saveSessionPreset()
+    bool EditorGlobalVariableCommands::saveSessionPreset( AssetWriter& writer )
     {
-        return savePreset( getSessionPresetPath(), EditorGlobalVariableCommandsInternal::kSessionPresetName );
+        return savePreset( writer, getSessionPresetPath(), EditorGlobalVariableCommandsInternal::kSessionPresetName );
     }
 } // namespace sw::editor

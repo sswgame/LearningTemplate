@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
@@ -273,14 +273,14 @@ namespace sw::editor
             _gameDataJob.request();
     }
 
-    bool DataTableViewModel::saveDocument()
+    bool DataTableViewModel::saveDocument( AssetWriter& writer )
     {
-        saveLocalization(); // 고친 것이 있을 때만 쓴다
-        const bool bGameDataSaved = _gameDataPath.empty() || saveGameDataFile();
+        saveLocalization( writer ); // 고친 것이 있을 때만 쓴다
+        const bool bGameDataSaved = _gameDataPath.empty() || saveGameDataFile( writer );
         return bGameDataSaved && isAnyDirty() == false;
     }
 
-    void DataTableViewModel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void DataTableViewModel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         if ( _bLocalizationDirty )
             EditorDataTableCommands::collectLocalizationFiles( _localizationSheet, outListPath );
@@ -426,13 +426,13 @@ namespace sw::editor
         _bLocalizationLoaded = SW_FALSE;
     }
 
-    void DataTableViewModel::saveLocalization()
+    void DataTableViewModel::saveLocalization( AssetWriter& writer )
     {
         // 고친 것이 없으면 쓰지 않는다 — 읽는 중의 빈 표나 그대로인 표로 파일을 다시 쓰고 실행 중인 게임을 다시 읽게 할 까닭이 없다.
         if ( _bLocalizationDirty == false )
             return;
         // 하나라도 쓰지 못했으면 dirty 를 지우지 않는다 — 저장 확인이 다시 묻는다.
-        if ( EditorDataTableCommands::saveLocalizationProject( _localizationSheet ) == false )
+        if ( EditorDataTableCommands::saveLocalizationProject( writer, _localizationSheet ) == false )
             return;
         _bLocalizationDirty = SW_FALSE;
     }
@@ -443,12 +443,12 @@ namespace sw::editor
         _bGameDataLoaded  = SW_TRUE;
     }
 
-    string DataTableViewModel::makeGameDataAssetID( const AbsolutePath& absolutePath )
+    string DataTableViewModel::makeGameDataAssetID( const DiskPath& absolutePath )
     {
         return editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
     }
 
-    bool DataTableViewModel::openGameDataFile( const AbsolutePath& absolutePath )
+    bool DataTableViewModel::openGameDataFile( const DiskPath& absolutePath )
     {
         // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
         string text;
@@ -473,7 +473,7 @@ namespace sw::editor
         _bGameDataDirty = SW_FALSE;
     }
 
-    bool DataTableViewModel::saveGameDataFile()
+    bool DataTableViewModel::saveGameDataFile( AssetWriter& writer )
     {
         if ( _gameDataPath.empty() )
             return false;
@@ -483,9 +483,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
             return false;
         }
-        if ( EditorContentWrite::warnIfReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
-            return false;
-        if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
+        if ( writer.writeText( _gameDataPath, _selectedGameDataRawText ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );
             return false;

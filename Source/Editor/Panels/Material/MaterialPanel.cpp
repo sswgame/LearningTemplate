@@ -11,7 +11,6 @@
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
@@ -45,7 +44,7 @@ namespace sw::editor
         MaterialPanel();
 
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 지난 그리기의 미리보기 평균 (R - B)(0..255)입니다. 지난 프레임에 그리지 않았으면 false 입니다(감시 값 `Editor.MaterialPreviewRedMinusBlue`). */
         [[nodiscard]] bool findPreviewRedMinusBlue( float32& outValue ) const { return _model.findPreviewRedMinusBlue( outValue ); }
         /** @brief 미저장 편집 때문에 "그래도 바꿀까요?" 대답을 기다리는 중이면 true 입니다(감시 값 `Editor.MaterialSwitchPending`). */
@@ -544,12 +543,9 @@ namespace sw::editor
         _model.applyLivePreview( getLoadedAssetPath() );
     }
 
-    bool MaterialPanel::saveDocument()
+    bool MaterialPanel::saveDocument( AssetWriter& writer )
     {
-        if ( _model.saveDocument( getLoadedAssetPath() ) == false )
-            return false;
-        syncDocumentUndoBaseline();
-        return true;
+        return _model.saveDocument( writer, getLoadedAssetPath() );
     }
 
     ToolAssetLoadResult MaterialPanel::loadDocument()

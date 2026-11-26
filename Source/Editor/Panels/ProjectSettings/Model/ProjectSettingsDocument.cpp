@@ -8,6 +8,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -219,7 +221,7 @@ namespace sw::editor
         shutdown();
     }
 
-    ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, const AbsolutePath& absolutePath, string_view elementName )
+    ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, const DiskPath& absolutePath, string_view elementName )
     {
         shutdown();
         _pType       = &type;
@@ -460,7 +462,7 @@ namespace sw::editor
         return _current.isValid() && _state.isDirty( makeDifferenceText() );
     }
 
-    bool ProjectSettingsDocument::saveElement( const string& elementText ) const
+    bool ProjectSettingsDocument::saveElement( AssetWriter& writer, const string& elementText ) const
     {
         // 요소는 남의 파일(팩 gamesettings.xml) 안에 산다 — 파일을 만들지 않는다.
         string fileText;
@@ -497,10 +499,10 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsRewritingDid", "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
             return false;
         }
-        return FileUtil::writeTextFile( _path, newText );
+        return writer.writeText( _path, newText );
     }
 
-    bool ProjectSettingsDocument::saveDocument()
+    bool ProjectSettingsDocument::saveDocument( AssetWriter& writer )
     {
         if ( _current.isValid() == false || isLoadFailed() )
             return false;
@@ -514,9 +516,9 @@ namespace sw::editor
         const string& text   = *difference;
         bool          bSaved = false;
         if ( isElementMode() )
-            bSaved = saveElement( text );
+            bSaved = saveElement( writer, text );
         else
-            bSaved = FileUtil::writeTextFile( _path, text );
+            bSaved = writer.writeText( _path, text );
         if ( bSaved == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );

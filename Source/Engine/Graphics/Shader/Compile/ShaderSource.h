@@ -94,9 +94,9 @@ namespace sw
      */
     struct ShaderCompileInput
     {
-        AbsolutePath         _source;          ///< 주 소스 파일(`.hlsl`)
-        AbsolutePath         _shadersFolder;   ///< 소스가 든 도메인의 `shaders` 폴더 — 가림 검사의 기준
-        vector<AbsolutePath> _listIncludeRoot; ///< `#include` 검색 순서: 소스 폴더 → include 루트 도메인(engine · common)의 `shaders`
+        DiskPath         _source;          ///< 주 소스 파일(`.hlsl`)
+        DiskPath         _shadersFolder;   ///< 소스가 든 도메인의 `shaders` 폴더 — 가림 검사의 기준
+        vector<DiskPath> _listIncludeRoot; ///< `#include` 검색 순서: 소스 폴더 → include 루트 도메인(engine · common)의 `shaders`
     };
 
     /**
@@ -105,8 +105,8 @@ namespace sw
      */
     struct ShaderIncludeRootDomain
     {
-        string       _domain;        ///< 도메인 이름(문제 글의 이름)
-        AbsolutePath _shadersFolder; ///< 그 도메인의 `shaders` 폴더
+        string   _domain;        ///< 도메인 이름(문제 글의 이름)
+        DiskPath _shadersFolder; ///< 그 도메인의 `shaders` 폴더
     };
 
     /**
@@ -129,7 +129,7 @@ namespace sw
         ShaderIncludeCache& operator=( const ShaderIncludeCache& ) = delete;
 
         /** @brief 후보 @p candidate 를 처음이면 디스크에서 읽고, 다음부터는 표에서 줍니다. 없는 파일도 기억합니다. */
-        [[nodiscard]] shared_ptr<const File> read( const AbsolutePath& candidate );
+        [[nodiscard]] shared_ptr<const File> read( const DiskPath& candidate );
 
     private:
         mutex                                         _mutex;
@@ -154,17 +154,17 @@ namespace sw
          * @brief 이름 그대로 적힌 include @p includeName 을 @p input 의 검색 순서로 찾아 읽습니다(FXC — 이름만 준다). 못 찾으면 빈 값입니다.
          * @details 읽은 파일과 찾아봤지만 없던 앞자리 후보를 이 스레드의 작업(`CookJob`)에 입력으로 적는다 — 그 자리에 헤더가 생기면 가려지므로 "없음" 도 의존이다.
          */
-        [[nodiscard]] optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const;
+        [[nodiscard]] optional<DiskPath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const;
         /**
          * @brief 컴파일러가 고른 후보 경로 @p candidatePath 를 읽습니다(DXC — 검색 폴더마다 후보를 묻는다). 엄격한 절대 경로인 정규 파일만 받습니다. 없는 후보는 로그 없이 빈 값입니다(다음 폴더로 넘어간다).
          */
-        [[nodiscard]] optional<AbsolutePath> readInclude( const AbsolutePath& candidate, vector<uint8>& outBytes ) const;
+        [[nodiscard]] optional<DiskPath> readInclude( const DiskPath& candidate, vector<uint8>& outBytes ) const;
         /**
          * @brief 소스 도메인의 `shaders` 폴더 @p shadersFolder 의 헤더가 include 루트(engine · common)의 헤더와 같은 상대 경로를 가지면 그 쌍을 @p outListProblem 에 적습니다.
          * @details include 검색은 자기 폴더가 먼저라 같은 이름의 헤더가 엔진 헤더를 조용히 가린다. 가림은 고르지 않고 오류로 멈춘다. 컴파일과 쿠킹본 판정이 부른다.
          * @return 문제가 없으면 true 입니다. 헤더 목록을 다 얻지 못했을 때도 false 입니다.
          */
-        [[nodiscard]] bool findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem ) const;
+        [[nodiscard]] bool findShadowedHeaders( const DiskPath& shadersFolder, vector<string>& outListProblem ) const;
 
     private:
         vector<ShaderIncludeRootDomain> _listRootDomain;
@@ -187,7 +187,7 @@ namespace sw
         /** @brief @p source 를 풉니다. `shaders` 칸이 없거나 파일이 없거나 소스가 자기 `shaders` 폴더 밖으로 풀리면 @p outError 에 까닭을 담고 빈 값입니다. */
         [[nodiscard]] expected<ShaderCompileInput> resolve( const ShaderSourceID& source ) const;
         /** @brief 도메인 @p domain 의 `shaders` 폴더입니다(있는 폴더만). */
-        [[nodiscard]] optional<AbsolutePath> findDomainShadersFolder( string_view domain ) const;
+        [[nodiscard]] optional<DiskPath> findDomainShadersFolder( string_view domain ) const;
 
     private:
         ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver );

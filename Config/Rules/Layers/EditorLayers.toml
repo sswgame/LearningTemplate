@@ -42,9 +42,11 @@ SelfTest = 7
 # 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
 [prelude]
 "Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
+"Editor/Common/Workspace/EditorNotificationManager.h" = "토스트 알림 목록 — Core · EditorSubsystem · 알림 값만 include 하는 잎 헤더라 UI 없는 도구 층의 쓰기 문(AssetWriter)이 저장 거절을 알린다"
+"Editor/Common/Workspace/EditorNotificationItem.h" = "알림 하나의 값 — Core 만 include(알림 목록이 품는다)"
 "Editor/Common/Workspace/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorService 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
 "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h" = "프로퍼티 표시 이름 규칙(makeDisplayName · chooseLabel) — Core 만 include 하는 잎 헤더라 프리팹 오버라이드 목록(커맨드 층)도 쓴다"
-"Editor/Viewport/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
+"Editor/Viewport/Model/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
 "Editor/SelfTest/EditorWatchSupport.h" = "감시 값 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
 "Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
 
@@ -82,11 +84,10 @@ views = [
     "Viewport/EditorViewportPicker.cpp",
     "Viewport/EditorViewportProjection.cpp",
     "Viewport/EditorViewportVisualizer.cpp",
+    "Viewport/RigTargetGizmoVisualizer.cpp",
     "Viewport/ViewportInputOverlay.cpp",
     "Viewport/TerrainBrushTool.cpp",
     "Viewport/ViewportToolbarSettings.cpp",
-    "Viewport/Visualizers/RigTargetGizmoVisualizer.cpp",
-    "Viewport/Visualizers/TerrainBrushVisualizer.cpp",
 ]
 patterns = [
     "^Editor/Common/Workspace/",
@@ -126,7 +127,7 @@ defaultBan = [
 "Editor/Common/Workspace/Play/EditorSessionPolicy.h" = "미저장 · 플레이 중 편집 판정 값(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetType.h" = "에셋 종류 서술(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeID.h" = "에셋 종류를 가리키는 값과 에디터 전용 종류 id(EditorPanel · 패널 열기 요청이 값으로 든다 — 등록 표 EditorAssetType.h 에서 나눈 잎)"
-"Editor/Common/Workspace/Asset/EditorDiskBaseline.h" = "연 파일의 디스크 내용 해시를 드는 값 형식(문서 패널 바탕이 든다 — Core 와 내보내기만 include)"
+"Editor/Common/Asset/AssetWriter.h" = "연 파일의 디스크 내용 해시를 드는 값 형식(문서 패널 바탕이 든다 — Core 와 내보내기만 include)"
 "Editor/Common/Commands/EditorCommandText.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
 "Engine/Object/GameObject/Service/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
 "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h" = "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"
@@ -135,11 +136,11 @@ defaultBan = [
 "Editor/Common/Commands/Asset/EditorFolderListingEntry.h" = "콘텐츠 브라우저 폴더 항목 값"
 "Editor/Common/Commands/Asset/EditorLocalizationSheet.h" = "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)"
 "Editor/Common/Workspace/Undo/EditorDocumentState.h" = "문서 한 벌의 저장한 값과 창 안 되돌리기 기록 — Core 와 EditSnapshotHistory 만 include 하는 값 템플릿(문서 Model 이 값으로 든다)"
-"Editor/Common/Workspace/Undo/EditSnapshotHistory.h" = "창 안 되돌리기 스냅숏 기록 — Core 만 include 하는 값 템플릿"
+"Editor/Common/Workspace/Undo/EditSnapshotHistory.h" = "창 안 되돌리기 스냅숏 기록 — Core 와 기록기(SnapshotUndoRecorder, 스택은 앞 선언)만 include 하는 값 템플릿"
+"Editor/Common/Workspace/Undo/SnapshotUndoRecorder.h" = "스냅숏 기록을 명령 스택에 올리는 기록기 — Core 와 내보내기만 include 하고 CommandStack 은 앞 선언이다"
 "Editor/Common/Workspace/EditorViewTargetUtil.h" = "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산"
 "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h" = "프리팹 오버라이드 항목 값"
 "Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h" = "멀티 프로세스 재생 구성 · 프리셋 파일 값(리플렉션 집합체) — Core 와 리플렉션 매크로만 include 한다. Multiplayer 세션 ViewState 가 구성 사본을 들고 Net Mode 위젯이 고친다"
-"Editor/Common/Commands/Play/EditorNetConditions.h" = "회선 조절 패널 값(ms · % · KB/s)과 명령 글을 만드는 순수 함수 — Core 만 include 한다. Conditions ViewState 가 대상의 패널 값을 든다"
 "Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h" = "Profiler 표본 값 형식(채널 열거 · 종류별 비중 · 복제 셈)과 그 계산 — Core 와 리플렉션 매크로만 include 한다. Profiler ViewState 가 그대로 든다"
 "Editor/Common/Workspace/EditorFrameStep.h" = "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h" = "종류별 썸네일 · 열기 · 뷰포트 배치 확장 인터페이스 — Core 와 내보내기만 include 하고 씬 형식은 앞 선언이다. 콘텐츠 브라우저 View 가 카드 썸네일을 그 종류의 동작으로 그린다"

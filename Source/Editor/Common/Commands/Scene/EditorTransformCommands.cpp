@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -205,8 +206,8 @@ namespace sw::editor
 
     bool EditorTransformCommands::saveComponentPreset( const Component* pComp, string_view presetName )
     {
-        const AbsolutePath folder   = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-        const string       fileName = makeComponentPresetFileName( pComp, presetName );
+        const DiskPath folder   = EditorGlobalVariableCommands::getComponentPresetFolderPath();
+        const string   fileName = makeComponentPresetFileName( pComp, presetName );
         if ( folder.empty() || fileName.empty() )
         {
             SW_LOG_ERROR_ID( "EditorTransformCommands.ComponentPresetPresetFolder", "Component preset '%#': the preset folder of the active game could not be resolved", presetName );
@@ -215,20 +216,22 @@ namespace sw::editor
         return saveComponentPresetTo( pComp, folder.join( fileName ) );
     }
 
-    bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, const AbsolutePath& filePath )
+    bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, const DiskPath& filePath )
     {
         const bool bInvalidPresetSaveArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || filePath.empty();
         if ( bInvalidPresetSaveArguments )
             return false;
 
-        AbsolutePath fullPath( filePath );
+        DiskPath fullPath = filePath;
         if ( StringUtil::endsWith( fullPath.str(), EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
             fullPath = fullPath.removeExtension().appendSuffix( EditorTransformCommandsInternal::kPresetSuffix );
         // 저장 입구(`saveToFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
-        return XMLSerializer::saveToFile( fullPath, pComp, *pComp->getTypeInfo() );
+        AssetWriter writer;
+        return writer.save( fullPath, [pComp]( const AbsolutePath& writable )
+        { return XMLSerializer::saveToFile( writable, pComp, *pComp->getTypeInfo() ); } );
     }
 
-    bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, const AbsolutePath& presetFilePath )
+    bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, const DiskPath& presetFilePath )
     {
         const bool bInvalidPresetLoadArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || presetFilePath.empty();
         if ( bInvalidPresetLoadArguments )

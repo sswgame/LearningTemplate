@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
@@ -34,24 +35,24 @@ namespace sw::editor
             static bool isSelectorKey( string_view key ) { return key == "name" || key == "filter" || key == "inherits"; }
 
             /** @brief 원본 @p assetID 의 서술 디스크 경로입니다. 리소스 id 가 아니면 빈 글입니다. */
-            static AbsolutePath findMetaPath( string_view assetID )
+            static DiskPath findMetaPath( string_view assetID )
             {
-                const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-                return diskPath.has_value() ? AssetMeta::makePath( *diskPath ) : AbsolutePath{};
+                const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+                return diskPath.has_value() ? AssetMeta::makePath( *diskPath ) : DiskPath{};
             }
 
             /** @brief 서술 글을 읽습니다. 없거나 읽지 못하면 false 입니다. */
             static bool readMetaText( string_view assetID, string& outText )
             {
-                const AbsolutePath metaPath = findMetaPath( assetID );
+                const DiskPath metaPath = findMetaPath( assetID );
                 return metaPath.empty() == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, outText );
             }
 
-            /** @brief 서술 글을 쓰고 그 원본을 다시 임포트합니다(원본 해시에 해석한 규칙이 들어 예외가 바뀐 원본만 다시 임포트된다). */
-            static bool writeMetaText( string_view assetID, string_view text )
+            /** @brief 서술 글이 @p expectedText 그대로면 @p text 로 쓰고 그 원본을 다시 임포트합니다(원본 해시에 해석한 규칙이 들어 예외가 바뀐 원본만 다시 임포트된다). */
+            static bool writeMetaText( string_view assetID, string_view expectedText, string_view text )
             {
-                const AbsolutePath metaPath = findMetaPath( assetID );
-                if ( metaPath.empty() || FileUtil::writeTextFile( metaPath, text ) == false )
+                const DiskPath metaPath = findMetaPath( assetID );
+                if ( metaPath.empty() || AssetWriter::replaceText( metaPath, expectedText, text ) == false )
                 {
                     SW_LOG_ERROR_ID( "InspectorImportSettings.WriteFailed", "Import settings: could not write the .meta of '%#'", string{ assetID }.c_str() );
                     return false;
@@ -202,15 +203,15 @@ namespace sw::editor
         const string afterText   = meta.toXML();
         if ( afterText == beforeText )
             return true;
-        if ( InspectorImportSettingsInternal::writeMetaText( _assetID, afterText ) == false )
+        if ( InspectorImportSettingsInternal::writeMetaText( _assetID, beforeText, afterText ) == false )
             return false;
         // 씬이 아니라 에셋 서술의 편집이다 — 작업 공간 스택에 두되 씬 dirty 는 표시하지 않는다(문서 스택 길의 `push`).
         CommandStack* pStack = editor::findSubsystem<CommandStack>();
         if ( pStack != nullptr )
         {
             EditorTransaction transaction;
-            transaction.push( SW_UNDO_STEP( InspectorImportSettings::restoreMetaText, _assetID, beforeText ),
-                              SW_UNDO_STEP( InspectorImportSettings::restoreMetaText, _assetID, afterText ), undoLabel, *pStack );
+            transaction.push( SW_UNDO_STEP( InspectorImportSettings::restoreMetaText, _assetID, afterText, beforeText ),
+                              SW_UNDO_STEP( InspectorImportSettings::restoreMetaText, _assetID, beforeText, afterText ), undoLabel, *pStack );
         }
         _metaText.clear(); // 다음 `refresh` 가 쓴 서술로 다시 짓는다
         return true;
@@ -255,8 +256,8 @@ namespace sw::editor
         return writeOverrides( listOverride, "Revert Import Setting" );
     }
 
-    void InspectorImportSettings::restoreMetaText( string assetID, string metaText )
+    void InspectorImportSettings::restoreMetaText( string assetID, string expectedText, string metaText )
     {
-        (void)InspectorImportSettingsInternal::writeMetaText( assetID, metaText ); // 지면 오류 로그가 남는다 — 되돌리기 하나가 빠졌다
+        (void)InspectorImportSettingsInternal::writeMetaText( assetID, expectedText, metaText ); // 지면 오류 로그가 남는다 — 되돌리기 하나가 빠졌다
     }
 } // namespace sw::editor

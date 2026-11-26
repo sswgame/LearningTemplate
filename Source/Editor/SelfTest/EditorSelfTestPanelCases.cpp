@@ -61,11 +61,8 @@ namespace sw::editor
                 {
                     // 추적하지 않는 작업 도메인(scratch)에 쓴다 - 예전에는 활성 게임 팩(추적 원본) 아래에 써, 시나리오의 쓰기 게이트가 거절했고 죽은 실행은 저장소에 폴더를 남겼다.
                     // 작업 도메인은 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 백엔드마다 나란히 도는 실행이 서로의 폴더를 지우지 않는다.
-                    const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( kProbeFolderID );
-                    if ( folder.has_value() == false )
-                        return false;
-                    _folderAbs = *folder;
-                    if ( FileUtil::removeDirectory( _folderAbs ) == false ) // 앞 실행이 남긴 폴더다
+                    _folderAbs = AssetPaths::getScratchFolderPath().getParent().join( kProbeFolderID ); // id 는 작업 도메인(`scratch/…`)이다
+                    if ( FileUtil::removeDirectory( _folderAbs ) == false )                             // 앞 실행이 남긴 폴더다
                         return false;
                     if ( FileUtil::ensureDirectoryExists( _folderAbs ) == false )
                         return false;

@@ -12,7 +12,6 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
@@ -224,7 +223,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LoadTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
-                (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
+                (void)saveDocumentAndClearDirty(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::record( "animationGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
@@ -444,22 +443,10 @@ namespace sw::editor
         _poseDraftNodeID = 0; // 초안은 되돌리기 앞 문서의 것이다
     }
 
-    bool AnimationGraphPanel::saveGraphData()
+    bool AnimationGraphPanel::saveDocument( AssetWriter& writer )
     {
         // 노드 자리는 그린 프레임마다 `cacheNodeLayout` 이 문서에 싣는다 — 저장이 캔버스에 다시 물으면 아직 그리지 않은 노드(되돌리기 직후)는 FLT_MAX 가 파일에 남는다.
-        // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
-        // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
-        if ( AnimationGraphEdit::saveGraph( captureGraphData(), getLoadedAssetPath() ) == false )
-            return false;
-
-        clearDocumentDirty();
-        syncDocumentUndoBaseline();
-        return true;
-    }
-
-    bool AnimationGraphPanel::saveDocument()
-    {
-        return saveGraphData();
+        return AnimationGraphEdit::saveGraph( writer, captureGraphData(), getLoadedAssetPath() );
     }
 
     int32 AnimationGraphPanel::addNamedNode( const utf8* pName )

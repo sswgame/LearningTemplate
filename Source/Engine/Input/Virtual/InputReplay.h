@@ -68,7 +68,7 @@ namespace sw
         /** @brief 바이너리 파일(.swreplay)로 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 바이너리 파일(.swreplay)에서 읽습니다. 버전이 다르거나 잘렸으면 false 를 반환하고 기존 상태는 그대로 둡니다. */
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& filePath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& filePath );
 
         /** @brief 녹화된 모든 프레임을 비웁니다. */
         void clear();

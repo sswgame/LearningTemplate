@@ -1011,7 +1011,7 @@ namespace sw::editor
         return FileUtil::toDiskPath( rawFolder ).getParent().join( importedFolderName ).join( relativePath ).removeExtension().appendSuffix( importedExtension );
     }
 
-    uint64 AssetImportStampUtil::computeFileHash( const AbsolutePath& path )
+    uint64 AssetImportStampUtil::computeFileHash( const DiskPath& path )
     {
         FileStamp  stamp{};
         const bool bMissingOrEmpty = FileUtil::getFileStamp( path, stamp ) == false || stamp._sizeBytes == 0;

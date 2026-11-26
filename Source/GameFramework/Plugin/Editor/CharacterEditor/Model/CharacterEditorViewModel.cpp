@@ -10,10 +10,10 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/Undo/SaveReloadGuard.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Socket/SocketSet.h"
@@ -52,7 +52,7 @@ namespace sw::editor
         , _bodyShapes{}
         , _bodyProfiles{}
         , _visuals{}
-        , _pReloadGuard{ make_unique<SaveReloadGuard<SocketSet>>() }
+        , _pReloadWatch{ make_unique<AssetReloadWatch<SocketSet>>() }
         , _fit{}
         , _pItems{}
         , _database{}
@@ -61,7 +61,7 @@ namespace sw::editor
         , _stagedSelection{}
         , _thumbnailPresetName{}
         , _thumbnailSlot{}
-        , _diskBaseline{}
+        , _writer{}
         , _presetRequest{}
         , _thumbnailRequest{}
         , _paths{}
@@ -152,7 +152,7 @@ namespace sw::editor
         if ( _bKindTableReady )
             return;
         _bKindTableReady = SW_TRUE;
-        _pReloadGuard->reset();
+        _pReloadWatch->markSeen();
         SocketKindTable kinds;
         if ( kinds.loadDefault() == false )
             SW_LOG_WARNING_ID( "CharacterEditorViewModel.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
@@ -179,17 +179,22 @@ namespace sw::editor
             return false;
         }
         _status.clear();
-        _diskBaseline.capture( span<const AbsolutePath>( &*readPath, 1 ) );
+        _writer.capture( *readPath );
         _selectedSocket  = hashed_string{};
         _bExternalChange = SW_FALSE;
-        _pReloadGuard->reset();
+        _pReloadWatch->markSeen();
         return true;
     }
 
-    void CharacterEditorViewModel::pollExternalChange( float64 nowSeconds )
+    void CharacterEditorViewModel::pollExternalChange()
     {
-        if ( _pReloadGuard->pollExternalChange( nowSeconds ) )
-            _bExternalChange = SW_TRUE;
+        // 다시 읽은 횟수는 종류 하나가 나눠 쓴다 — 다른 소켓 파일의 다시 읽기와 우리 저장은 내용이 같아 걸리지 않는다.
+        if ( _pReloadWatch->takeChanged() )
+        {
+            const auto socketPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) );
+            if ( socketPath.has_value() && _writer.isChangedOnDisk( *socketPath ) )
+                _bExternalChange = SW_TRUE;
+        }
         if ( _bExternalChange && _paths._socketPath.empty() )
             _bExternalChange = SW_FALSE; // 열어 둔 소켓 파일이 없으면 반영할 모델이 없다
         // 고치지 않은 모델은 바뀐 파일을 바로 다시 읽는다. 읽기가 실패하면 표시가 남고 화면이 다시 읽기 단추를 낸다.
@@ -219,7 +224,7 @@ namespace sw::editor
         if ( model.openFile( *diskPath ) == false )
             _status = model.getError();
         else
-            _diskBaseline.capture( span<const AbsolutePath>( &*diskPath, 1 ) );
+            _writer.capture( *diskPath );
     }
 
     void CharacterEditorViewModel::openBodyData( const hashed_string& bodyShapesAsset )
@@ -230,7 +235,7 @@ namespace sw::editor
         openBodyDataFile( _visuals, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "itemvisuals.xml" ) ) );
     }
 
-    bool CharacterEditorViewModel::saveBodyData()
+    bool CharacterEditorViewModel::saveBodyData( AssetWriter& writer )
     {
         bool       bSaved          = true;
         const bool bProfileChanged = _bodyProfiles.isDirty() || _visuals.isDirty();
@@ -238,19 +243,12 @@ namespace sw::editor
         {
             if ( pModel->isDirty() == false )
                 continue;
-            if ( _diskBaseline.validateOverwrite( span<const AbsolutePath>( &pModel->getDiskPath(), 1 ) ) == false )
-            {
-                _status = "Body data file changed on disk - save again to overwrite it";
-                bSaved  = false;
-                continue;
-            }
-            if ( pModel->save() == false )
+            if ( pModel->save( writer ) == false )
             {
                 _status = pModel->getError();
                 bSaved  = false;
                 continue;
             }
-            _diskBaseline.capture( span<const AbsolutePath>( &pModel->getDiskPath(), 1 ) );
             SW_LOG_INFO_ID( "CharacterEditorViewModel.BodyDataSaved", "Body data file saved to %#", pModel->getDiskPath().c_str() );
         }
         // 몸 프로필 · 구간은 이 창의 외형 데이터가 읽은 것이다 — 다시 읽어야 미리보기 몸이 새 값을 입는다(채널 매핑은 공유 캐시의 파일 감시가 다시 읽는다).
@@ -259,39 +257,36 @@ namespace sw::editor
         return bSaved;
     }
 
-    bool CharacterEditorViewModel::saveFiles( float64 nowSeconds )
+    bool CharacterEditorViewModel::saveFiles( AssetWriter& writer )
     {
         bool bSaved = true;
         if ( _sockets.isDirty() )
         {
             const auto writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._socketPath.c_str() ) );
-            if ( writePath.has_value() == false || _diskBaseline.validateOverwrite( span<const AbsolutePath>( &*writePath, 1 ) ) == false || _sockets.saveDocument( *writePath ) == false )
+            if ( writePath.has_value() == false || _sockets.saveDocument( writer, *writePath ) == false )
             {
                 _status = "Socket file could not be saved";
                 bSaved  = false;
             }
             else
             {
-                _diskBaseline.capture( span<const AbsolutePath>( &*writePath, 1 ) );
-                _pReloadGuard->onSaved( nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
                 SW_LOG_INFO_ID( "CharacterEditorViewModel.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
             }
         }
         if ( _pose.isDirty() )
         {
             const auto writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._refPosePath.c_str() ) );
-            if ( writePath.has_value() == false || _diskBaseline.validateOverwrite( span<const AbsolutePath>( &*writePath, 1 ) ) == false || _pose.saveDocument( *writePath ) == false )
+            if ( writePath.has_value() == false || _pose.saveDocument( writer, *writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
                 bSaved  = false;
             }
             else
             {
-                _diskBaseline.capture( span<const AbsolutePath>( &*writePath, 1 ) );
                 SW_LOG_INFO_ID( "CharacterEditorViewModel.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
             }
         }
-        if ( isBodyDataDirty() && saveBodyData() == false )
+        if ( isBodyDataDirty() && saveBodyData( writer ) == false )
             bSaved = false; // 까닭은 saveBodyData 가 상태 줄에 남겼다
         if ( bSaved )
             _status.clear();
@@ -337,7 +332,7 @@ namespace sw::editor
             _status = "Reference pose file could not be loaded (see log)";
         else
         {
-            _diskBaseline.capture( span<const AbsolutePath>( &*readPath, 1 ) );
+            _writer.capture( *readPath );
             _status.clear();
         }
     }
@@ -608,7 +603,9 @@ namespace sw::editor
         presetFile.appendFormat( "%#%#", presetID.c_str(), AppearanceDatabase::kPresetExtension );
         const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), presetFile.view() );
         const auto   writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        const bool   bWritten  = writePath.has_value() && doc.saveCompleteToFile( *writePath );
+        AssetWriter  writer; // 내보내기는 연 문서가 아니다 — 읽기 전용만 본다
+        const bool   bWritten = writePath.has_value() && writer.save( *writePath, [&doc]( const AbsolutePath& writable )
+          { return doc.saveCompleteToFile( writable ); } );
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax512> status;
@@ -751,5 +748,58 @@ namespace sw::editor
     void CharacterEditorViewModel::reportEdit( const expected<bool>& result )
     {
         _status = result.has_value() ? string{} : EditorWidgets::makeStatusText( result.error() );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        hashed_string findPartName( const FitResult& result, uint32 partIndex )
+        {
+            return partIndex < result._listPart.size() ? result._listPart[partIndex]._name : hashed_string{};
+        }
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    FitCheckSummary FitCheckSummary::fromResult( const FitResult& result )
+    {
+
+        FitCheckSummary summary;
+        for ( const FitPartResult& part : result._listPart )
+        {
+            FitPartSummary row;
+            row._name             = part._name;
+            row._triangleCount    = part._triangleCount;
+            row._cutTriangleCount = part._cutTriangleCount;
+            row._cutRatio         = part._triangleCount > 0 ? static_cast<float32>( part._cutTriangleCount ) / static_cast<float32>( part._triangleCount ) : 0.0f;
+            for ( const float3& delta : part._listVertexDelta )
+            {
+                const float32 distance = delta.getLength();
+                if ( distance <= 0.0f )
+                    continue;
+                ++row._movedVertexCount;
+                if ( distance > row._maxDelta )
+                    row._maxDelta = distance;
+            }
+            summary._listPart.push_back( row );
+        }
+        for ( const FitPenetration& penetration : result._report._listPenetration )
+        {
+            FitPenetrationSummary row;
+            row._partA       = findPartName( result, penetration._partA );
+            row._partB       = findPartName( result, penetration._partB );
+            row._vertexCount = penetration._vertexCount;
+            row._maxDepth    = penetration._maxDepth;
+            row._listPoint   = penetration._listPoint;
+            summary._listPenetration.push_back( row );
+            summary._penetrationVertexCount += penetration._vertexCount;
+            if ( penetration._maxDepth > summary._maxPenetrationDepth )
+                summary._maxPenetrationDepth = penetration._maxDepth;
+        }
+        summary._listMessage = result._report._listMessage;
+        return summary;
     }
 } // namespace sw::editor

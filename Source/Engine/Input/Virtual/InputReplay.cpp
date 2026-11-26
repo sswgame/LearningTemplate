@@ -145,7 +145,7 @@ namespace sw
         return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 
-    bool InputReplay::loadFromFile( const AbsolutePath& filePath )
+    bool InputReplay::loadFromFile( const DiskPath& filePath )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false )

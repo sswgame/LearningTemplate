@@ -9,7 +9,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -537,18 +536,17 @@ namespace sw::editor
             _document.editPath() = newPath;
     }
 
-    bool TileMapPanel::saveDocument()
+    bool TileMapPanel::saveDocument( AssetWriter& writer )
     {
-        if ( _document.saveDocument() == false )
+        if ( _document.saveDocument( writer ) == false )
             return false;
-        syncDocumentUndoBaseline();
         // 다른 경로로 저장했으면 그 파일이 열린 문서다 — 핫 리로드 · 최근 목록 · 되돌리기의 문서 경로가 옛 파일을 가리키지 않게 한다.
         if ( string_view( _document.getPath() ) != string_view( getLoadedAssetPath() ) )
             requestOpenDocument( _document.getPath() );
         return true;
     }
 
-    void TileMapPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void TileMapPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         appendFileToSave( _document.getPath(), outListPath );
     }

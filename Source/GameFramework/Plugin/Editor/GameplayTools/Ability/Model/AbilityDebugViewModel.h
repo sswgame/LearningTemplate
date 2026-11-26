@@ -10,7 +10,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugSnapshot.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityDebugSnapshot.h"
 
 namespace sw::editor
 {

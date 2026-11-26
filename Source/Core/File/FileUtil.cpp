@@ -46,7 +46,7 @@ namespace sw
              * @details 이름만 대소문자가 다른 항목이 여럿이어도 같은 답이 나오게, 소문자가 같은 항목 중 정렬 순으로 앞선 것을 고른다.
              * @return 찾으면 true 이고 @p outName 이 디스크 표기입니다. 폴더를 열지 못했거나 항목이 없으면 false 입니다.
              */
-            [[nodiscard]] static bool findEntryIgnoringCase( const AbsolutePath& directory, string_view component, string& outName )
+            [[nodiscard]] static bool findEntryIgnoringCase( const DiskPath& directory, string_view component, string& outName )
             {
                 const PathKey lowerComponent = FileUtil::normalizePath( component );
                 outName.clear();
@@ -209,7 +209,7 @@ namespace sw
              *          공유는 읽기 · 쓰기 · 지우기를 막지 않는다 - 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있다.
              */
             template <typename BufferType>
-            [[nodiscard]] static OptionalFileRead readRange( const AbsolutePath& fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer, bool bMissingIsError )
+            [[nodiscard]] static OptionalFileRead readRange( const DiskPath& fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer, bool bMissingIsError )
             {
                 requireDiskIOAllowed( fileName.str() );
                 const NativeFileHandle handle = PlatformFileUtil::openNativeFileForRead( fileName.c_str() );
@@ -254,7 +254,7 @@ namespace sw
             }
 
             /** @brief `readTextFile` · `readOptionalTextFile` 의 본체입니다 - 읽고, 연 횟수를 세고, UTF-8 BOM 을 뗀다. @p bMissingIsError 만 다르다. */
-            [[nodiscard]] static OptionalFileRead readText( const AbsolutePath& fileName, string& outText, bool bMissingIsError )
+            [[nodiscard]] static OptionalFileRead readText( const DiskPath& fileName, string& outText, bool bMissingIsError )
             {
                 const OptionalFileRead result = readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText, bMissingIsError );
                 if ( result != OptionalFileRead::Read )
@@ -820,7 +820,7 @@ namespace sw
         return toDiskPath( executablePath );
     }
 
-    bool FileUtil::getFileStamp( const AbsolutePath& fileName, FileStamp& outStamp )
+    bool FileUtil::getFileStamp( const DiskPath& fileName, FileStamp& outStamp )
     {
         // 크기와 시각을 한 번의 조회로 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라). 폴더는 false 다.
         PlatformFileSystem::FileStatus status;
@@ -936,7 +936,7 @@ namespace sw
         return FileUtilInternal::writeBytes( fileName, pData, size, FileSyncMode::Durable );
     }
 
-    bool FileUtil::readFile( const AbsolutePath& fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
+    bool FileUtil::readFile( const DiskPath& fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
     {
         if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes, true ) != OptionalFileRead::Read )
             return false;
@@ -944,7 +944,7 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::readStreamTextFile( const AbsolutePath& fileName, string& outText, const uint64 maxBytes )
+    bool FileUtil::readStreamTextFile( const DiskPath& fileName, string& outText, const uint64 maxBytes )
     {
         outText.clear();
         FileUtilInternal::requireDiskIOAllowed( fileName.str() );
@@ -978,12 +978,12 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::readTextFile( const AbsolutePath& fileName, string& outText )
+    bool FileUtil::readTextFile( const DiskPath& fileName, string& outText )
     {
         return FileUtilInternal::readText( fileName, outText, true ) == OptionalFileRead::Read;
     }
 
-    OptionalFileRead FileUtil::readOptionalTextFile( const AbsolutePath& fileName, string& outText )
+    OptionalFileRead FileUtil::readOptionalTextFile( const DiskPath& fileName, string& outText )
     {
         return FileUtilInternal::readText( fileName, outText, false );
     }
@@ -1117,7 +1117,8 @@ namespace sw
         return current;
     }
 
-    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
+    template <typename PathType>
+    bool FileUtil::collectFilesInto( const DiskPath& directory, string_view filterExtension, vector<PathType>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
     {
         if ( isDirectory( directory ) == false )
             return false;
@@ -1129,7 +1130,7 @@ namespace sw
                 return false;
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
                 return true;
-            outListFilePath.push_back( AbsolutePath{ string( entry._path ) } ); // 절대 폴더 아래의 `/` 구분 항목이라 다시 검사하지 않는다
+            outListFilePath.push_back( PathType{ string( entry._path ) } ); // 절대 폴더 아래의 `/` 구분 항목이라 다시 검사하지 않는다
             return true;
         } );
         const bool bStopped   = stopToken.isStopRequested();
@@ -1138,7 +1139,8 @@ namespace sw
         return bWalked;
     }
 
-    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, const bool bRecursive )
+    template <typename PathType>
+    bool FileUtil::collectFoldersInto( const DiskPath& directory, vector<PathType>& outListFolder, const bool bRecursive )
     {
         if ( isDirectory( directory ) == false )
             return false;
@@ -1146,12 +1148,32 @@ namespace sw
         const bool bWalked = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory )
-                outListFolder.push_back( AbsolutePath{ string( entry._path ) } );
+                outListFolder.push_back( PathType{ string( entry._path ) } );
             return true;
         } );
         if ( bWalked == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory.str() );
         return bWalked;
+    }
+
+    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
+    {
+        return collectFilesInto( directory, filterExtension, outListFilePath, bRecursive, stopToken );
+    }
+
+    bool FileUtil::collectFiles( const DiskPath& directory, string_view filterExtension, vector<DiskPath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
+    {
+        return collectFilesInto( directory, filterExtension, outListFilePath, bRecursive, stopToken );
+    }
+
+    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, const bool bRecursive )
+    {
+        return collectFoldersInto( directory, outListFolder, bRecursive );
+    }
+
+    bool FileUtil::collectFolders( const DiskPath& directory, vector<DiskPath>& outListFolder, const bool bRecursive )
+    {
+        return collectFoldersInto( directory, outListFolder, bRecursive );
     }
 
 } // namespace sw
@@ -1301,25 +1323,25 @@ namespace sw
         return {};
     }
 
-    bool FileUtil::exists( const AbsolutePath& path )
+    bool FileUtil::exists( const DiskPath& path )
     {
         PlatformFileSystem::FileStatus status;
         return PlatformFileSystem::queryStatus( path.str(), status );
     }
 
-    bool FileUtil::isDirectory( const AbsolutePath& path )
+    bool FileUtil::isDirectory( const DiskPath& path )
     {
         PlatformFileSystem::FileStatus status;
         return PlatformFileSystem::queryStatus( path.str(), status ) && status._kind == PlatformFileSystem::FileKind::Directory;
     }
 
-    bool FileUtil::isRegularFile( const AbsolutePath& path )
+    bool FileUtil::isRegularFile( const DiskPath& path )
     {
         PlatformFileSystem::FileStatus status;
         return PlatformFileSystem::queryStatus( path.str(), status ) && status._kind == PlatformFileSystem::FileKind::File;
     }
 
-    bool FileUtil::isReadOnlyFile( const AbsolutePath& fileName )
+    bool FileUtil::isReadOnlyFile( const DiskPath& fileName )
     {
         PlatformFileSystem::FileStatus status;
         return PlatformFileSystem::queryStatus( fileName.str(), status ) && status._kind == PlatformFileSystem::FileKind::File && status._bReadOnly;
@@ -1356,7 +1378,7 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::tryGetFileTimestamp( const AbsolutePath& fileName, uint64& outSeconds )
+    bool FileUtil::tryGetFileTimestamp( const DiskPath& fileName, uint64& outSeconds )
     {
         // 있는지 따로 묻지 않는다 - 묻고 나서 읽는 사이에 지워지면(파일 감시 · 핫 리로드) 어긋난다. 한 번 묻는다.
         PlatformFileSystem::FileStatus status;
@@ -1371,7 +1393,7 @@ namespace sw
         return static_cast<uint64>( getCurrentFileWriteTime() / kFileTimeTicksPerSecond );
     }
 
-    bool FileUtil::getFileWriteTime( const AbsolutePath& path, int64& outTicks )
+    bool FileUtil::getFileWriteTime( const DiskPath& path, int64& outTicks )
     {
         outTicks = 0;
         PlatformFileSystem::FileStatus status;
@@ -1397,7 +1419,7 @@ namespace sw
         return PlatformFileSystem::getNowTicks();
     }
 
-    bool FileUtil::tryGetFileSize( const AbsolutePath& fileName, uint64& outSize )
+    bool FileUtil::tryGetFileSize( const DiskPath& fileName, uint64& outSize )
     {
         // 크기만 알면 되므로 파일을 열지 않는다.
         PlatformFileSystem::FileStatus status;
@@ -1407,7 +1429,7 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::copyFile( const AbsolutePath& source, const AbsolutePath& destination )
+    bool FileUtil::copyFile( const DiskPath& source, const AbsolutePath& destination )
     {
         if ( isWriteAllowed( destination ) == false )
             return false;
@@ -1539,7 +1561,7 @@ namespace sw
         return toDiskPath( trimTrailingSlashes( temp ) ); // OS 가 준 끝 구분자는 여기서 한 규칙으로 뗀다(드라이브 루트는 남긴다)
     }
 
-    bool FileUtil::forEachDirectoryEntry( const AbsolutePath& directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )
+    bool FileUtil::forEachDirectoryEntry( const DiskPath& directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )
     {
         if ( visit == nullptr || directory.empty() )
             return false;

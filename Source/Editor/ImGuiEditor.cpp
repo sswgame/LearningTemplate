@@ -35,7 +35,6 @@
 #include "Editor/Common/GUI/EditorUIContextState.h"
 #include "Editor/Common/GUI/Panel/EditorPanelDump.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"

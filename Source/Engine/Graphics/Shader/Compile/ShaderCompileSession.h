@@ -35,7 +35,7 @@ namespace sw
         /** @brief @p source 를 풉니다(`ShaderSourceResolver::resolve` 를 소스마다 한 번). 해석기가 있을 때만 부릅니다. */
         [[nodiscard]] expected<ShaderCompileInput> resolve( const ShaderSourceID& source );
         /** @brief `ShaderIncludeResolver::findShadowedHeaders` 를 폴더마다 한 번 부른 결과입니다. 해석기가 있을 때만 부릅니다. */
-        [[nodiscard]] bool findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem );
+        [[nodiscard]] bool findShadowedHeaders( const DiskPath& shadersFolder, vector<string>& outListProblem );
         /** @brief `CookRecord::isFresh` 와 같되 입력마다 지금 해시를 묶음에서 한 번만 구합니다. */
         [[nodiscard]] bool isRecordFresh( const CookRecord& record, const CookJobDesc& desc );
         /** @brief 입력 모두가 지금도 기록과 같은 내용이면 true 입니다. */

@@ -12,7 +12,6 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -39,7 +38,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Collision Responses"; }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         bool               canAcceptDocumentPath( string_view assetPath ) const override;
 
         const CollisionResponseEditModel& getModel() const { return _model; }
@@ -104,17 +103,14 @@ namespace sw::editor
     {
         if ( acceptDocumentToLoad().empty() )
             return ToolAssetLoadResult::Missing; // 아직 고르지 않았다
-        const optional<AbsolutePath> diskPath = getDocumentDiskPath();
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
         return diskPath.has_value() ? _model.loadDocument( *diskPath ) : ToolAssetLoadResult::Missing;
     }
 
-    bool CollisionResponsePanel::saveDocument()
+    bool CollisionResponsePanel::saveDocument( AssetWriter& writer )
     {
-        const optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        if ( diskPath.has_value() == false || _model.saveDocument( *diskPath ) == false )
-            return false; // 까닭은 상태 줄에 있다
-        syncDocumentUndoBaseline();
-        return true;
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
+        return diskPath.has_value() && _model.saveDocument( writer, *diskPath ); // 까닭은 상태 줄에 있다
     }
 
     void CollisionResponsePanel::drawDocumentContent()

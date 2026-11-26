@@ -141,7 +141,7 @@ namespace sw
                 return unexpected( atSource( Error{ ErrorKind::InvalidArgument, "an entry field is missing or unreadable", key }.appendDetail( ": " ).appendDetail( read.error().detail() ), sourceName ) );
             }
 
-            [[nodiscard]] static expected<void> readTextFile( const AbsolutePath& absolutePath, string& outText )
+            [[nodiscard]] static expected<void> readTextFile( const DiskPath& absolutePath, string& outText )
             {
                 if ( FileUtil::readTextFile( absolutePath, outText ) )
                     return {};
@@ -234,7 +234,7 @@ namespace sw
         return {};
     }
 
-    expected<void> SourceStringTable::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> SourceStringTable::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
@@ -326,7 +326,7 @@ namespace sw
         return {};
     }
 
-    expected<void> TranslationTable::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> TranslationTable::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
@@ -459,7 +459,7 @@ namespace sw
         return {};
     }
 
-    expected<void> LocalizationProject::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> LocalizationProject::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
@@ -471,7 +471,7 @@ namespace sw
         return FileUtil::joinPath( FileUtil::getDirectoryPart( projectPath ), fileName );
     }
 
-    AbsolutePath LocalizationProject::makeSiblingPath( const AbsolutePath& projectPath, string_view fileName )
+    DiskPath LocalizationProject::makeSiblingPath( const DiskPath& projectPath, string_view fileName )
     {
         return projectPath.getParent().join( fileName );
     }
@@ -507,7 +507,7 @@ namespace sw
         return makeSiblingPath( projectPath, fileName.view() );
     }
 
-    AbsolutePath LocalizationProject::makeTranslationPath( const AbsolutePath& projectPath, string_view culture )
+    DiskPath LocalizationProject::makeTranslationPath( const DiskPath& projectPath, string_view culture )
     {
         StringBuilder<constant::buffer::kMax256> fileName;
         fileName.appendFormat( "%#%#", CultureTable::normalizeCode( culture ), TranslationTable::kExtension );

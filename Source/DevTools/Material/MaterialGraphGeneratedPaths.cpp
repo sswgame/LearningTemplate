@@ -18,6 +18,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 
 namespace sw
@@ -44,9 +45,8 @@ namespace sw
             }
 
             /** @brief 디스크의 글이 @p text 와 다르면 씁니다. */
-            [[nodiscard]] static bool writeIfChanged( const AssetPaths& assetPaths, string_view assetID, string_view text, uint32* pOutWrittenCount )
+            [[nodiscard]] static bool writeIfChanged( const optional<AbsolutePath>& diskPath, string_view assetID, string_view text, uint32* pOutWrittenCount )
             {
-                const optional<AbsolutePath> diskPath = assetPaths.toDiskPath( assetID );
                 if ( diskPath.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "MaterialGraph.GeneratedPathUnresolved", "Generated material graph file '%#' has no disk path", assetID );
@@ -98,7 +98,7 @@ namespace sw
                     string                    metaText;
                     AssetMeta                 meta;
                     const optional<AssetGUID> guid = FileUtil::readTextFile( staleMetaPath, metaText ) ? meta.parseXML( metaText, staleMetaPath.str() ) : nullopt;
-                    if ( guid.has_value() == false || FileUtil::writeTextFile( currentMetaPath, AssetMeta::makeText( currentShaderPath.str(), *guid, meta._listImportOverride ) ) == false )
+                    if ( guid.has_value() == false || AssetMeta::saveBeside( currentShaderPath, *guid, meta._listImportOverride ) == false )
                     {
                         SW_LOG_WARNING_ID( "MaterialGraph.ShaderMetaNotCarried", "Could not carry '%#' to the new generated shader '%#' - it keeps a new identity", staleMetaPath.str(), currentShaderPath.str() );
                         return; // 옛 서술을 남겨 손으로 옮길 수 있게 한다
@@ -109,10 +109,9 @@ namespace sw
             }
 
             /** @brief 같은 줄기의 옛 해시 셰이더(@p currentShaderPath 말고)를 모읍니다. */
-            static void collectStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath, vector<AbsolutePath>& outListFile )
+            static void collectStaleShaders( const optional<AbsolutePath>& folder, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath, vector<AbsolutePath>& outListFile )
             {
                 outListFile.clear();
-                const optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
                 if ( folder.has_value() == false || FileUtil::isDirectory( *folder ) == false )
                     return;
                 vector<AbsolutePath> listFile;
@@ -131,13 +130,13 @@ namespace sw
              * @brief 지금 셰이더 @p shaderPath 의 정체성을 세웁니다 — 생성 머티리얼이 그것을 GUID 로 가리키므로 머티리얼 글보다 먼저다. 옛 셰이더의 서술을 옮기고(`carryStaleMeta`), 옮길 것이 없으면 새로 준다.
              * @details 미리보기(작업 도메인)의 셰이더는 정체성을 갖지 않는다 — 머티리얼은 경로로 가리킨다.
              */
-            [[nodiscard]] static bool ensureShaderIdentity( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view shaderPath )
+            [[nodiscard]] static bool ensureShaderIdentity( const optional<AbsolutePath>& shadersFolder, const optional<AbsolutePath>& diskPath, const MaterialGraphGeneratedPaths& paths,
+                                                            string_view shaderPath )
             {
-                const optional<AbsolutePath> diskPath = assetPaths.toDiskPath( shaderPath );
                 if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( shaderPath ), AssetPaths::kScratchDomain ) || AssetRegistry::resolveGUID( shaderPath ).has_value() || diskPath.has_value() == false )
                     return true; // 디스크 자리가 없으면 쓰기가 이미 오류를 남겼다
                 vector<AbsolutePath> listStale;
-                collectStaleShaders( assetPaths, paths, shaderPath, listStale );
+                collectStaleShaders( shadersFolder, paths, shaderPath, listStale );
                 for ( const AbsolutePath& stalePath : listStale )
                 {
                     carryStaleMeta( stalePath, *diskPath );
@@ -158,10 +157,10 @@ namespace sw
             }
 
             /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. 곁의 서술은 지금 셰이더로 옮긴다(`carryStaleMeta`). */
-            static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
+            static void removeStaleShaders( const optional<AbsolutePath>& shadersFolder, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
             {
                 vector<AbsolutePath> listStale;
-                collectStaleShaders( assetPaths, paths, currentShaderPath, listStale );
+                collectStaleShaders( shadersFolder, paths, currentShaderPath, listStale );
                 const string currentName = FileUtil::getFileNamePart( currentShaderPath );
                 for ( const AbsolutePath& filePath : listStale )
                 {
@@ -233,19 +232,27 @@ namespace sw
         return path;
     }
 
+    optional<AbsolutePath> MaterialGraphGeneratedPaths::openForWrite( const AssetPaths& assetPaths, string_view assetID )
+    {
+        const optional<DiskPath> diskPath = assetPaths.toDiskPath( assetID );
+        return diskPath.has_value() ? optional<AbsolutePath>{ AssetWriteAccess::toWritablePath( *diskPath ) } : nullopt;
+    }
+
     bool MaterialGraphGeneratedPaths::writeGenerated( const AssetPaths& assetPaths, string_view graphID, const MaterialGraphGeneratedPaths& paths, const MaterialGraphCompileResult& result, uint32* pOutWrittenCount )
     {
         using Internal          = MaterialGraphCookInternal;
         const string shaderPath = makeShaderPath( paths, result );
         // 셰이더를 먼저 쓴다 — 머티리얼이 가리키는 파일이 늘 있어야 감시가 먼저 머티리얼을 다시 읽어도 컴파일이 된다.
-        if ( Internal::writeIfChanged( assetPaths, shaderPath, result._hlsl, pOutWrittenCount ) == false )
+        const optional<AbsolutePath> shaderDiskPath = openForWrite( assetPaths, shaderPath );
+        const optional<AbsolutePath> shadersFolder  = openForWrite( assetPaths, paths._shadersFolder );
+        if ( Internal::writeIfChanged( shaderDiskPath, shaderPath, result._hlsl, pOutWrittenCount ) == false )
             return false;
-        if ( Internal::ensureShaderIdentity( assetPaths, paths, shaderPath ) == false )
+        if ( Internal::ensureShaderIdentity( shadersFolder, shaderDiskPath, paths, shaderPath ) == false )
             return false;
         const string materialText = MaterialGraphCompileResult::makeMaterialText( result, paths._stem, shaderPath, graphID );
-        if ( Internal::writeIfChanged( assetPaths, paths._materialPath, materialText, pOutWrittenCount ) == false )
+        if ( Internal::writeIfChanged( openForWrite( assetPaths, paths._materialPath ), paths._materialPath, materialText, pOutWrittenCount ) == false )
             return false;
-        Internal::removeStaleShaders( assetPaths, paths, shaderPath );
+        Internal::removeStaleShaders( shadersFolder, paths, shaderPath );
         return true;
     }
 

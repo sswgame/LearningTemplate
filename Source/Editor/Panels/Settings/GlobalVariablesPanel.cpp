@@ -12,7 +12,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorVirtualList.h"
@@ -207,15 +206,12 @@ namespace sw::editor
     {
     }
 
-    bool GlobalVariablesPanel::saveDocument()
+    bool GlobalVariablesPanel::saveDocument( AssetWriter& writer )
     {
-        if ( GlobalVariablesViewModel::saveSessionPreset() == false )
-            return false;
-        clearDocumentDirty();
-        return true;
+        return GlobalVariablesViewModel::saveSessionPreset( writer );
     }
 
-    void GlobalVariablesPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void GlobalVariablesPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         GlobalVariablesViewModel::collectFilesToSave( outListPath );
     }
@@ -321,7 +317,7 @@ namespace sw::editor
         }
         else
         {
-            for ( const AbsolutePath& presetFile : _model.getPresetFiles() )
+            for ( const DiskPath& presetFile : _model.getPresetFiles() )
             {
                 const string displayName = GlobalVariablesViewModel::makePresetDisplayName( presetFile.str() );
                 if ( ImGui::MenuItem( displayName.c_str() ) && _model.loadPreset( presetFile ) )

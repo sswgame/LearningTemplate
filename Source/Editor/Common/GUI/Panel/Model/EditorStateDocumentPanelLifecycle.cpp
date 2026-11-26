@@ -14,12 +14,12 @@ namespace sw::editor
 {
     DocumentAutosaveResult EditorStateDocumentPanel::takeAutosaveCopies( vector<EditorDocumentAutosaveEntry>& inoutListEntry )
     {
-        vector<AbsolutePath> listPath;
+        vector<DiskPath> listPath;
         if ( isDocumentDirty() )
             collectFilesToSave( listPath );
         removeStaleCopies( listPath );
         DocumentAutosaveResult result = DocumentAutosaveResult::Nothing;
-        for ( const AbsolutePath& path : listPath )
+        for ( const DiskPath& path : listPath )
         {
             expected<string> text = tryMakeFileText( path );
             if ( text.has_value() == false )
@@ -68,12 +68,12 @@ namespace sw::editor
             removeStaleCopies( {} );
     }
 
-    void EditorStateDocumentPanel::removeStaleCopies( const vector<AbsolutePath>& listPath )
+    void EditorStateDocumentPanel::removeStaleCopies( const vector<DiskPath>& listPath )
     {
         vector<string> listStale;
         for ( const auto& [path, textHash] : _mapCopyTextHash )
         {
-            const bool bKept = VectorUtil::containsIf( listPath, [&path = path]( const AbsolutePath& kept )
+            const bool bKept = VectorUtil::containsIf( listPath, [&path = path]( const DiskPath& kept )
             { return kept.str() == path; } );
             if ( bKept == false )
                 listStale.push_back( path );

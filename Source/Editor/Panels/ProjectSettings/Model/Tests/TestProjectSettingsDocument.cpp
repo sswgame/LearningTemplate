@@ -5,6 +5,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
 
@@ -82,7 +83,8 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
         SW_REQUIRE_TRUE( document.applyText( StringUtil::replace( document.captureText(), packRoot.get(), "game/savedpack" ) ) );
         SW_EXPECT_EQUAL( string{ "game/savedpack" }, static_cast<GameConfig*>( document.getInstance() )->_packRoot.get() );
         SW_EXPECT_TRUE( document.isModified() );
-        SW_REQUIRE_TRUE( document.saveDocument() );
+        AssetWriter writer;
+        SW_REQUIRE_TRUE( document.saveDocument( writer ) );
         SW_EXPECT_FALSE( document.isModified() );
 
         ProjectSettingsDocument reopened;
@@ -142,7 +144,8 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheBaseDoesNotLeakThePlatformOv
     pConfig->_dataInheritanceMaxDepth = editedDepth;
     SW_EXPECT_EQUAL( EngineConfig{}._dataInheritanceMaxDepth, pDefault->_dataInheritanceMaxDepth ); // 편집이 기본값에 닿지 않는다
     SW_EXPECT_TRUE( document.isModified() );
-    SW_REQUIRE_TRUE( document.saveDocument() );
+    AssetWriter writer;
+    SW_REQUIRE_TRUE( document.saveDocument( writer ) );
 
     const EngineConfig baseAfter = Util::readEngineConfig( project._basePath );
     SW_EXPECT_EQUAL( editedDepth, baseAfter._dataInheritanceMaxDepth );
@@ -166,7 +169,8 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheOverrideLeavesTheBaseUntouch
     const ProjectSettingsJSONNode& root = table.getNode( ProjectSettingsJSONDocument::kRootNode );
     SW_REQUIRE_EQUAL( root._listChild.size(), size_t{ 1 } );
     SW_REQUIRE_TRUE( table.setLeafText( root._listChild[0], "3" ) );
-    SW_REQUIRE_TRUE( table.saveDocument() );
+    AssetWriter writer;
+    SW_REQUIRE_TRUE( table.saveDocument( writer ) );
 
     string overrideAfter;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( project._overridePath, overrideAfter ) );

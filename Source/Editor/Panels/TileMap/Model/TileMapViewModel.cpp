@@ -110,9 +110,9 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool TileMapViewModel::saveDocument()
+    bool TileMapViewModel::saveDocument( AssetWriter& writer )
     {
-        if ( EditorToolAssetCommands::saveTileMap( _pathBuffer.c_str(), captureMapData() ) == false )
+        if ( EditorToolAssetCommands::saveTileMap( writer, _pathBuffer.c_str(), captureMapData() ) == false )
         {
             _status = SW_LOCKEY( "EditorTileMap", "SaveFailedStatus" );
             return false;

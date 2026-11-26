@@ -9,7 +9,6 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Panels/Scene/Model/PropertyShapeEdit.h"

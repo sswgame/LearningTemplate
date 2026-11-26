@@ -13,8 +13,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
 #include "Editor/Common/Workspace/Undo/EditSnapshotHistory.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -91,8 +91,12 @@ namespace sw::editor
         /** @brief 되돌린 것을 다시 합니다. */
         [[nodiscard]] bool redo();
         bool               canUndo() const { return _history.canUndo(); }
-        bool               canRedo() const { return _history.canRedo(); }
+        /** @brief 되돌리기 명령이 쌓이는 스택입니다 — 창이 Ctrl+Z 를 이리 보낸다(`MeshModifiersPanel::findPanelCommandStack`). */
+        CommandStack& getUndoStack() { return _history.getStack(); }
+        bool          canRedo() const { return _history.canRedo(); }
 
+        /** @brief 되돌리기 · 다시 하기가 스택 글을 넣습니다. */
+        void applyStackText( const string& text );
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. 다음 `isStackUnsaved` 도 저장 글을 다시 비교합니다. */
         void markDirty()
         {
@@ -134,9 +138,11 @@ namespace sw::editor
         const MeshModifierBounds& getSourceBounds() const { return _sourceBounds; }
 
         /** @brief 스택을 사이드카 문서에 씁니다. 성공하면 지금 스택이 저장된 상태가 됩니다(`isStackUnsaved`). */
-        [[nodiscard]] bool saveSidecar();
+        [[nodiscard]] bool saveSidecar( AssetWriter& writer );
+        /** @brief 사이드카를 읽은(쓴) 때의 내용을 든 쓰기 문입니다. */
+        AssetWriter& getSidecarWriter() { return _sidecarWriter; }
         /** @brief `saveSidecar` 가 쓸 사이드카의 디스크 경로입니다(메시 파일 곁). 대상이 없거나 메시 자리를 풀지 못하면 빈 값입니다(이유는 `toDiskPath` 가 남긴다). */
-        [[nodiscard]] optional<AbsolutePath> findSidecarPath() const;
+        [[nodiscard]] optional<DiskPath> findSidecarPath() const;
         /** @brief 사이드카 문서에서 스택을 다시 읽습니다. 없으면 false 입니다. 읽으면 그 스택이 저장된 상태가 됩니다. */
         [[nodiscard]] bool loadSidecar();
         /**
@@ -273,7 +279,7 @@ namespace sw::editor
         vector<float3>              _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
         EditSnapshotHistory<string> _history;            ///< 스택 글(JSON) 되돌리기
         expected<string>            _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준). 못 만들었으면 오류 값이다
-        EditorDiskBaseline          _sidecarBaseline;    ///< 사이드카를 읽은(쓴) 때의 내용 — 그 사이 밖에서 바뀐 사이드카를 말없이 덮지 않는다
+        AssetWriter                 _sidecarWriter;      ///< 사이드카를 읽은(쓴) 때의 내용 — 그 사이 밖에서 바뀐 사이드카를 말없이 덮지 않는다
         string                      _meshPath;
         MeshModifierBounds          _sourceBounds;
         GameObjectHandle            _target;

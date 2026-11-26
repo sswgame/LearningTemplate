@@ -8,7 +8,6 @@
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureViewModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerPerformanceViewModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
-#include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineViewModel.h"
 
 #include "Engine/Profiling/FrameProfiler.h"

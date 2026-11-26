@@ -10,6 +10,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
@@ -100,9 +101,9 @@ namespace sw::editor
         refreshEmitterRows();
     }
 
-    bool VFXPreviewViewModel::saveDocument()
+    bool VFXPreviewViewModel::saveDocument( AssetWriter& writer )
     {
-        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( _loadedDiskPath, _pDocument->getText() ) == false )
+        if ( _loadedDiskPath.empty() || writer.writeText( _loadedDiskPath, _pDocument->getText() ) == false )
         {
             _status = "The effect could not be saved - see the log";
             return false;
@@ -295,11 +296,11 @@ namespace sw::editor
         _listEmitterRow.clear();
         _previewEffectPath.clear();
         // 자동 갱신이 볼 내용 해시 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
-        const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
-                                                                                            : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
-        _loadedDiskPath                       = diskPath.has_value() ? *diskPath : AbsolutePath{};
-        _loadedContentHash                    = 0;
-        _seenContentSerial                    = editor::getSubsystem<AssetHotReload>().getContentChangeSerial();
+        const optional<DiskPath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? optional<DiskPath>{ FileUtil::toDiskPath( assetPath ) }
+                                                                                        : editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        _loadedDiskPath                   = diskPath.has_value() ? *diskPath : DiskPath{};
+        _loadedContentHash                = 0;
+        _seenContentSerial                = editor::getSubsystem<AssetHotReload>().getContentChangeSerial();
         if ( _loadedDiskPath.empty() == false )
             (void)updateContentHash( _loadedDiskPath, _loadedContentHash );
         // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).
@@ -332,7 +333,7 @@ namespace sw::editor
         return updateContentHash( _loadedDiskPath, _loadedContentHash );
     }
 
-    bool VFXPreviewViewModel::updateContentHash( const AbsolutePath& diskPath, uint64& inoutHash )
+    bool VFXPreviewViewModel::updateContentHash( const DiskPath& diskPath, uint64& inoutHash )
     {
         const uint64 hash = ContentHash::computeFile( diskPath );
         if ( hash == 0 || hash == inoutHash )

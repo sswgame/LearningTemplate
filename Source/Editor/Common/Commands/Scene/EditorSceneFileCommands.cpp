@@ -7,9 +7,9 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -262,10 +262,8 @@ namespace sw::editor
         const Scene*  pScene       = sceneManager.getActiveScene();
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
         // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
-        const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( *targetPath, EditorContentWriteKind::Save ) )
-            return false;
-        if ( targetPath.has_value() && editor::getSubsystem<EditorWorkspace>().validateSceneDiskOverwrite( *targetPath ) == false )
+        const optional<DiskPath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        if ( targetPath.has_value() && editor::getSubsystem<EditorWorkspace>().getSceneWriter().validateSave( *targetPath ) == false )
             return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
@@ -274,7 +272,7 @@ namespace sw::editor
     {
         if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
             return false;
-        if ( EditorContentWrite::warnIfReadOnly( absPath, EditorContentWriteKind::Save ) )
+        if ( AssetWriter::warnIfReadOnly( absPath, AssetWriteKind::Save ) )
             return false;
         return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
     }

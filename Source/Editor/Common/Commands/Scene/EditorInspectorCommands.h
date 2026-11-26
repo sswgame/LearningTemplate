@@ -15,6 +15,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class EditorInspectorCommands
      * @brief 프리팹을 적용 · 복원 · 연결 해제합니다. 프로퍼티 편집의 Undo 는 오브젝트 스냅샷(`EditorTransaction::recordModify`)이 맡습니다.
@@ -33,6 +35,8 @@ namespace sw::editor
 
         /** @brief 선택 오브젝트 상태를 프리팹 XML로 저장합니다. */
         [[nodiscard]] static bool applyToPrefab( GameObject* pObj, const AssetID& assetID );
+        /** @brief 문서 패널의 저장(@p writer — 연 뒤 밖에서 바뀐 프리팹을 덮기 전에 알린다)이 부릅니다. */
+        [[nodiscard]] static bool applyToPrefab( AssetWriter& writer, GameObject* pObj, const AssetID& assetID );
         /** @brief 프리팹 상태로 되돌리고 Undo에 기록합니다. */
         [[nodiscard]] static bool revertToPrefab( GameObject* pObj, string_view prefabPath );
         /**

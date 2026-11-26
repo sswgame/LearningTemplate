@@ -32,6 +32,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     struct ColliderHandle;
 
     class DocumentEditRecorder;
@@ -133,7 +135,7 @@ namespace sw::editor
         /** @brief 되돌리기 단계의 원문을 적용합니다. */
         void applyText( string_view text );
         /** @brief 원문을 읽은 자리에 쓰고 다음 `syncBody` 가 몸을 다시 놓게 합니다. 쓰지 못하면 상태 줄에 까닭을 두고 false 입니다. */
-        [[nodiscard]] bool saveDocument();
+        [[nodiscard]] bool saveDocument( AssetWriter& writer );
         /** @brief 이 에셋을 고칠 수 있으면 true 입니다. 물려받은 에셋(`_base`)은 부모와 다른 칸만 쓴다. */
         [[nodiscard]] bool isEditable() const;
         /** @brief 물려받은 부모의 리소스 id 입니다. 부모가 없으면 빈 글입니다. */
@@ -179,7 +181,7 @@ namespace sw::editor
 
     private:
         unique_ptr<ReflectedXMLDocument> _pDocument;      ///< 편집 사본(원문이 정본)
-        AbsolutePath                     _loadedDiskPath; ///< 읽은 에셋의 디스크 경로. 풀지 못했으면 비어 있다
+        DiskPath                         _loadedDiskPath; ///< 읽은 에셋의 디스크 경로. 풀지 못했으면 비어 있다
         vector<RagdollPreviewBodyRow>    _listBodyRow;
         string                           _bodyPrefabPath;    ///< 입력란의 몸 프리팹 경로(Spawn 을 눌러야 적용한다)
         string                           _activePrefabPath;  ///< Spawn 으로 확정한 몸 프리팹 경로

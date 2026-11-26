@@ -1,7 +1,7 @@
 /**
  * @file RigTargetGizmoEdit.h
  * @brief 리그 대상 오프셋 기즈모의 Model 쪽입니다 — 리그 디버그 창과 함께 보는 편집 상태(`RigTargetEdit`), 기즈모가 그릴 값 모으기, 기즈모(View)가 보낸 명령(끌기 · 놓기) 적용.
- * @details 리그 디버그 창이 대상을 고르고(`RigTargetEdit::_objectID` · `_targetIndex`), 시각화 "Rig Target"(View `Visualizers/RigTargetGizmoVisualizer.cpp`)이 그 대상에 기즈모를 그린다.
+ * @details 리그 디버그 창이 대상을 고르고(`RigTargetEdit::_objectID` · `_targetIndex`), 시각화 "Rig Target"(View `Viewport/RigTargetGizmoVisualizer.cpp`)이 그 대상에 기즈모를 그린다.
  *          끄는 동안의 값은 `_pending` 이고, 놓으면 리그 파일에 되써 넣는다(`RigSaveParams::writeToRigFile`, 파일 글 전후가 되돌리기 하나) — 파일 감시가 다시 읽어 인스턴스에
  *          들어올 때까지 기즈모는 `_pending` 에 남는다. 창(패널 층)과 시각화(뷰포트 층)가 다른 층이라 상태는 아래 층인 여기서 에디터 범위의 상태 저장소가 소유한다.
  *          트랜스폼 기즈모(`EditorGizmoEdit`)와 같은 모양이다 — 언리얼 컴포넌트 비주얼라이저가 끌기를 트랜잭션으로 감싸는 자리. ImGui 를 모릅니다.

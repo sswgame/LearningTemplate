@@ -95,10 +95,7 @@ namespace sw::editor
         const AbsolutePath metaPath = AssetMeta::makePath( sourcePath );
         if ( assetID.empty() || FileUtil::isRegularFile( metaPath ) )
             return true;
-        if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, AssetGUID::fromName( assetID ) ) ) )
-            return true;
-        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath.str() );
-        return false;
+        return AssetMeta::saveBeside( sourcePath, AssetGUID::fromName( assetID ) );
     }
 
     void ImportedAssetStore::collectReferences( string_view text, vector<string>& outListPath )

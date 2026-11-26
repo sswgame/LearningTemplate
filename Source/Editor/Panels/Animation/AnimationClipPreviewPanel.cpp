@@ -43,7 +43,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Clip Preview"; }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override { return false; }
+        [[nodiscard]] bool saveDocument( AssetWriter& /*writer*/ ) override { return false; }
         bool               canSaveDocument() const override { return false; }
 
         /** @brief 몸이 지금 재생하는 클립의 길이(초)입니다. 몸이 없거나 클립을 읽지 못했으면 false 입니다(감시 값 `Editor.ClipPreviewDuration`). */

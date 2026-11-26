@@ -37,6 +37,13 @@ namespace sw
              */
             static constexpr string_view kAllowedConfigWrites[] = { "Config/Editor" };
 
+            /** @brief 사본 폴더의 디스크 자리입니다 — 실행 뿌리 아래(`AssetPaths::getScratchFolderPath`)라 콘텐츠가 아니다. id 가 아니면 빈 경로입니다. */
+            static AbsolutePath makeScratchPath( const AutomationScratchFolder& folder )
+            {
+                const string id = AssetPaths::normalizeAssetID( folder._scratchID );
+                return id.empty() ? AbsolutePath{} : AssetPaths::getScratchFolderPath().getParent().join( id );
+            }
+
             /** @brief 사본 파일 하나의 정체성입니다. */
             struct CopiedIdentity
             {
@@ -135,24 +142,23 @@ namespace sw
 
     bool AutomationScratchWorkspace::discard( const AutomationScratchFolder& folder )
     {
-        const optional<AbsolutePath> scratchDir = engine::getSubsystem<AssetPaths>().toDiskPath( folder._scratchID );
-        return scratchDir.has_value() && FileUtil::removeDirectory( *scratchDir ); // 못 풀거나 못 지우면 AssetPaths · FileUtil 이 경로와 이유를 남긴다
+        const AbsolutePath scratchDir = AutomationScratchWorkspaceInternal::makeScratchPath( folder );
+        return scratchDir.empty() == false && FileUtil::removeDirectory( scratchDir ); // 못 지우면 FileUtil 이 경로와 이유를 남긴다
     }
 
     expected<void> AutomationScratchWorkspace::prepare( const AutomationScratchFolder& folder )
     {
         if ( expected<void> valid = folder.validate(); valid.has_value() == false )
             return valid;
-        const AssetPaths&            assetPaths = engine::getSubsystem<AssetPaths>();
-        const AbsolutePath           sourceDir  = assetPaths.getRootFolderPath().join( folder._sourceID );
-        const optional<AbsolutePath> scratchAt  = assetPaths.toDiskPath( folder._scratchID ); // 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`)
+        const AssetPaths&  assetPaths = engine::getSubsystem<AssetPaths>();
+        const AbsolutePath sourceDir  = assetPaths.getRootFolderPath().join( folder._sourceID );
+        const AbsolutePath scratchDir = AutomationScratchWorkspaceInternal::makeScratchPath( folder );
         if ( FileUtil::isDirectory( sourceDir ) == false )
         {
             return unexpected( Error{ ErrorKind::NotFound, "<Scratch from> is not a folder under Content/", folder._sourceID } );
         }
-        if ( scratchAt.has_value() == false )
+        if ( scratchDir.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> does not resolve to a disk folder", folder._scratchID } );
-        const AbsolutePath scratchDir = *scratchAt;
         // 지난 실행(중단된 것 포함)이 남긴 사본을 통째로 지운다 — 잔여 파일이 다음 실행의 이름을 바꾸지 않게 한다.
         if ( FileUtil::removeDirectory( scratchDir ) == false || FileUtil::ensureDirectoryExists( scratchDir ) == false )
         {

@@ -18,7 +18,7 @@ namespace sw::editor
     // EditorFileCollectJob
     // ======================================================================
 
-    void EditorFileCollectJob::request( const AbsolutePath& folder, string_view extension, bool recursive )
+    void EditorFileCollectJob::request( const DiskPath& folder, string_view extension, bool recursive )
     {
         EditorFileCollectInput input;
         input._folder     = folder;
@@ -40,7 +40,7 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        vector<AbsolutePath> listFile;
+        vector<DiskPath> listFile;
         // 표시용 목록이다 — 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알린 뒤 모은 데까지 보인다.
         const StopToken stopToken = readStopSignal( pState );
         (void)FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, stopToken );
@@ -100,7 +100,7 @@ namespace sw::editor
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
 
-        AbsolutePath dataFolder;
+        DiskPath dataFolder;
         if ( readInput( pState, generation, dataFolder ) == false )
             return;
 

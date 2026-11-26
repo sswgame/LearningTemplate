@@ -286,7 +286,7 @@ namespace sw
         /** @brief 리소스 id 의 타일맵 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
         /** @brief **디스크 파일**의 타일맵 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
-        [[nodiscard]] SW_API bool loadFromDiskFile( const AbsolutePath& diskPath );
+        [[nodiscard]] SW_API bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 본문에서 타일맵을 읽습니다(리소스가 아닌 글 — 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다). */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
         /** @brief 읽어 둔 문서(`load` 는 리소스 id 를 싣고 `parseResourceText` 로 읽는다)에서 타일맵을 읽습니다. */

@@ -6,6 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -35,6 +37,10 @@ namespace sw::editor
         , _override{}
         , _state{ _override.saveToXMLText() }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _override; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const ReferencePoseOverride& snapshot )
+        { _override = snapshot; } ) );
     }
 
     bool BonePoseEditModel::loadSkeleton( const AssetID& assetID )
@@ -188,7 +194,7 @@ namespace sw::editor
         return true;
     }
 
-    bool BonePoseEditModel::loadFromFile( const AbsolutePath& absolutePath )
+    bool BonePoseEditModel::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -205,12 +211,14 @@ namespace sw::editor
         _state.reset( _override.saveToXMLText() );
     }
 
-    bool BonePoseEditModel::saveDocument( const AbsolutePath& absPath )
+    bool BonePoseEditModel::saveDocument( AssetWriter& writer, const DiskPath& path )
     {
-        const string text = _override.saveToXMLText();
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( text ) ) == false ) // 뼈마다 모든 칸을 쓴다
+        const string text   = _override.saveToXMLText();
+        const bool   bSaved = writer.save( path, [&text]( const AbsolutePath& writable )
+          { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } ); // 뼈마다 모든 칸을 쓴다
+        if ( bSaved == false )
         {
-            SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
+            SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( path.str() ).c_str() );
             return false;
         }
         _state.markSaved( text );
@@ -219,11 +227,11 @@ namespace sw::editor
 
     bool BonePoseEditModel::undo()
     {
-        return _state.undo( _override );
+        return _state.undo();
     }
 
     bool BonePoseEditModel::redo()
     {
-        return _state.redo( _override );
+        return _state.redo();
     }
 } // namespace sw::editor

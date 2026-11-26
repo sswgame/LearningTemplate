@@ -82,13 +82,10 @@ namespace sw::editor
         _nodeGraph.requestContentFit(); // 되돌린 위치를 캔버스에 다시 넣는다
     }
 
-    bool AudioGraphPanel::saveDocument()
+    bool AudioGraphPanel::saveDocument( AssetWriter& writer )
     {
-        const optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        if ( diskPath.has_value() == false || _model.saveDocument( *diskPath ) == false )
-            return false;
-        syncDocumentUndoBaseline();
-        return true;
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
+        return diskPath.has_value() && _model.saveDocument( writer, *diskPath );
     }
 
     void AudioGraphPanel::onGraphEdited( const PropertyInfo& /*prop*/ )

@@ -799,7 +799,7 @@ namespace sw::editor
 
     uint64 EditorAutosaveCommands::computeSourceHash( string_view sourceID )
     {
-        const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        const optional<DiskPath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         return sourcePath.has_value() ? ContentHash::computeFile( *sourcePath ) : 0;
     }
 

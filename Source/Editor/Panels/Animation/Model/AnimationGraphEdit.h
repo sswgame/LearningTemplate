@@ -22,6 +22,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class EditorGraphEditSession;
     /**
      * @struct AnimationGraphEdit
@@ -49,7 +51,7 @@ namespace sw::editor
         /** @brief Resource 상대 경로 @p path 의 애니메이션 그래프 문서를 읽습니다(`EditorToolAssetCommands::loadAnimationGraph`). */
         static ToolAssetLoadResult loadGraph( AnimationGraphAsset& outGraph, string_view path );
         /** @brief 애니메이션 그래프 문서를 @p path 에 씁니다. 실패하면 커맨드가 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool saveGraph( const AnimationGraphAsset& graph, string_view path );
+        [[nodiscard]] static bool saveGraph( AssetWriter& writer, const AnimationGraphAsset& graph, string_view path );
 
         // 포즈 노드 종류 표(`AnimationPoseNodeRegistry` — 엔진 서비스)를 읽는 창구다. 패널 뷰는 서비스를 찾지 않는다(EditorLayers.toml).
         /** @brief 등록된 포즈 노드 종류 이름들입니다. 게임 · 플러그인이 더할 수 있어 메뉴를 열 때마다 다시 읽는다. */

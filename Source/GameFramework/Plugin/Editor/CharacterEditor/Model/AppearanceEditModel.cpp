@@ -75,6 +75,10 @@ namespace sw::editor
         , _state{}
         , _revision{ 0 }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _selection; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const AppearanceSelection& snapshot )
+        { _selection = snapshot; ++_revision; } ) );
     }
 
     void AppearanceEditModel::setSelection( const AppearanceSelection& selection )
@@ -300,14 +304,12 @@ namespace sw::editor
 
     bool AppearanceEditModel::undo()
     {
-        ++_revision;
-        return _state.undo( _selection );
+        return _state.undo();
     }
 
     bool AppearanceEditModel::redo()
     {
-        ++_revision;
-        return _state.redo( _selection );
+        return _state.redo();
     }
 
     expected<void> AppearanceEditModel::loadFromPreset( const UserAppearancePresetStore& store, string_view name, const AppearanceDatabase& database )

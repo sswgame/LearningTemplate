@@ -61,7 +61,7 @@ namespace sw
                 string text = original; // from 이 비면 바꾸지 않은 저장이다 — 감시가 같은 글을 다시 읽는다
                 if ( params._from.isSet() )
                 {
-                    const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from.get() );
+                    const optional<DiskPath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from.get() );
                     if ( sourcePath.has_value() == false || FileUtil::readTextFile( *sourcePath, text ) == false )
                     {
                         fixed_string<constant::buffer::kMax2048> message;

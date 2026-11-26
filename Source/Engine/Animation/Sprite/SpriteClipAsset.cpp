@@ -47,7 +47,7 @@ namespace sw
         return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool SpriteClipAsset::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool SpriteClipAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         clear();
         if ( diskPath.empty() )

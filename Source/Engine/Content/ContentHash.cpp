@@ -31,7 +31,7 @@ namespace sw
             static constexpr size_t kMinCacheEntryBytes = 28;
 
             /** @brief 파일을 조각으로 읽어 해시를 구하고 읽은 바이트를 @p inoutByteCount 에 더합니다(캐시 밖 본체). 못 읽으면 0 입니다. */
-            static uint64 readFileHash( const AbsolutePath& absPath, atomic<uint64>& inoutByteCount )
+            static uint64 readFileHash( const DiskPath& absPath, atomic<uint64>& inoutByteCount )
             {
                 uint64                 byteCount = 0;
                 const expected<uint64> hash      = ContentHash::computeFileStream( absPath, &byteCount );
@@ -61,7 +61,7 @@ namespace sw
         return HashUtil::appendBytes64( state, pData, size );
     }
 
-    expected<uint64> ContentHash::computeFileStream( const AbsolutePath& absPath, uint64* pOutByteCount )
+    expected<uint64> ContentHash::computeFileStream( const DiskPath& absPath, uint64* pOutByteCount )
     {
         uint64 fileSize = 0;
         if ( FileUtil::tryGetFileSize( absPath, fileSize ) == false )
@@ -79,7 +79,7 @@ namespace sw
         return state;
     }
 
-    uint64 ContentHash::computeFile( const AbsolutePath& absPath )
+    uint64 ContentHash::computeFile( const DiskPath& absPath )
     {
         return engine::getSubsystem<ContentHashCache>().computeFile( absPath );
     }
@@ -135,7 +135,7 @@ namespace sw
         return FileUtil::normalizeSeparators( path );
     }
 
-    uint64 ContentHashCache::computeFile( const AbsolutePath& absPath )
+    uint64 ContentHashCache::computeFile( const DiskPath& absPath )
     {
         const string key = makeKey( absPath.str() );
         FileStamp    stamp{};

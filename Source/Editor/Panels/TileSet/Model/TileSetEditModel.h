@@ -18,6 +18,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class DocumentEditRecorder;
     /**
      * @class TileSetEditModel
@@ -36,7 +38,7 @@ namespace sw::editor
         /** @brief @p path 를 읽습니다. 파일이 없으면 빈 타일셋(1 × 1 아틀라스)으로 시작합니다. 결과는 상태 줄에도 남습니다. */
         ToolAssetLoadResult loadDocument( string_view path );
         /** @brief @p path 에 씁니다. 규칙 위반이 있으면 쓰지 않고 상태 줄에 첫 문제를 남기며 false 입니다(런타임이 읽지 못할 파일을 쓰지 않는다). */
-        [[nodiscard]] bool saveDocument( string_view path );
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, string_view path );
         /** @brief 되돌리기 기록용 글입니다(파일과 같은 글). */
         string captureText() const { return _content.saveToXMLText(); }
         /** @brief 되돌리기 기록 글로 돌립니다. 규칙 위반이 든 글도 받는다(편집 중의 상태) — 읽기 규칙을 건너뛰지 않으려 글을 형식만 읽고 위반은 목록으로 보인다. */

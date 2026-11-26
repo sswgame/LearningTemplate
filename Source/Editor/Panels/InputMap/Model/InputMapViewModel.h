@@ -12,12 +12,56 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/Widgets/EditableAssetPath.h"
-#include "Editor/Panels/InputMap/Model/InputMapConflict.h"
 
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"
+
+// Input Map Editor 의 바인딩 충돌 찾기입니다 — 같은 레이어에서 한 입력이 두 액션을 함께 발화시키는 곳(ImGui 없음, EditorTest 가 본다).
+namespace sw
+{
+    class InputMap;
+} // namespace sw
+
+namespace sw::editor
+{
+    struct InputMapConflictView;
+
+    /** @brief 충돌 하나 — 액션 둘이 같은 레이어에서 같은 슬롯을 쓴다. */
+    struct InputMapConflict
+    {
+        hashed_string _actionA;
+        hashed_string _actionB;
+        hashed_string _layer;
+        InputSlot     _slot{};
+        uint32        _bindIndexA{ 0 }; ///< A 의 그 바인딩 번호
+        uint32        _bindIndexB{ 0 }; ///< B 의 그 바인딩 번호
+
+        // 바인딩 충돌을 모읍니다. 슬롯 수는 `BindingKinds::getConflictSlotCount` 가 정한다(합성 축의 네 방향 · Chord 의 수식 키 포함).
+        // 같은 액션 안의 겹침(Enter · Space 가 둘 다 Confirm)은 충돌이 아니다. 쌍은 액션 순서대로 한 번만 담는다.
+        /** @brief @p inputMap 의 충돌을 @p outListConflict 에 담습니다(먼저 비운다). */
+        static void collect( const InputMap& inputMap, vector<InputMapConflict>& outListConflict );
+        /** @brief @p action 이 낀 충돌이 있으면 true 입니다. */
+        static bool isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action );
+        /** @brief @p action 의 바인딩 @p bindIndex 가 낀 충돌이 있으면 true 입니다. */
+        static bool isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action, uint32 bindIndex );
+        /** @brief @p action 이 낀 충돌을 그 액션 쪽에서 본 줄로 @p outListView 에 담습니다(먼저 비운다). */
+        static void collectFor( const vector<InputMapConflict>& listConflict, const hashed_string& action, vector<InputMapConflictView>& outListView );
+    };
+
+    /** @brief 충돌 하나를 어느 한 액션 쪽에서 본 것입니다(상세 칸의 한 줄). */
+    struct InputMapConflictView
+    {
+        hashed_string _otherAction;
+        hashed_string _layer;
+        InputSlot     _slot{};
+        uint32        _bindIndex{ 0 };      ///< 보는 액션의 바인딩 번호
+        uint32        _otherBindIndex{ 0 }; ///< 상대 액션의 바인딩 번호
+    };
+} // namespace sw::editor
 
 namespace sw
 {
@@ -26,6 +70,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class DocumentEditRecorder;
     class EditorListFilter;
 
@@ -116,7 +162,7 @@ namespace sw::editor
          * @brief 확정한 맵 경로에 리소스의 기본 바인딩(`<InputMap>`)을 씁니다.
          * @details 경로가 게임 설정 파일(`gamesettings.xml`)이면 입력 맵 묶음을 고치는 중이다. 액션은 그것을 마지막으로 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다.
          */
-        [[nodiscard]] bool saveDocument();
+        [[nodiscard]] bool saveDocument( AssetWriter& writer );
         /** @brief 경로가 맵 파일 하나가 아니라 게임의 입력 맵 묶음을 가리키면 true 입니다. */
         bool isBundlePath() const;
         /** @brief 액션을 정한 파일의 리소스 경로입니다. 파일에서 읽지 않은 액션이면 빈 글입니다. */
@@ -257,7 +303,7 @@ namespace sw::editor
         /** @brief 이번 프레임의 스틱 · 트리거 · 마우스 변화량을 그래프 고리 버퍼에 담습니다. */
         void sampleInput( InputManager& input );
         /** @brief 묶음의 파일마다 고친 몫을 원래 자리에 씁니다. */
-        [[nodiscard]] bool saveBundle() const;
+        [[nodiscard]] bool saveBundle( AssetWriter& writer ) const;
         /** @brief @p bChanged 면 편집을 알리고(`DocumentEditRecorder` — 미저장 · 되돌리기는 문서 패널이 든다) 그대로 돌려줍니다. */
         bool recordEdit( bool bChanged );
         /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`canSaveTriggerProperties`). */

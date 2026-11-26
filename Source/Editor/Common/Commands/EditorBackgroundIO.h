@@ -30,9 +30,9 @@ namespace sw::editor
     /** @brief 폴더, 확장자, 재귀 여부로 파일을 모으는 잡의 입력입니다. */
     struct EditorFileCollectInput
     {
-        AbsolutePath _folder;
-        string       _extension;
-        bool         _bRecursive{ SW_FALSE };
+        DiskPath _folder;
+        string   _extension;
+        bool     _bRecursive{ SW_FALSE };
     };
 } // namespace sw::editor
 
@@ -52,11 +52,11 @@ namespace sw::editor
      * @class EditorFileCollectJob
      * @brief 폴더의 파일 목록을 워커에서 모으고 게임 스레드에서 꺼냅니다.
      */
-    class EditorFileCollectJob final : public EditorBackgroundTask<EditorFileCollectInput, vector<AbsolutePath>>
+    class EditorFileCollectJob final : public EditorBackgroundTask<EditorFileCollectInput, vector<DiskPath>>
     {
     public:
         /** @brief 워커에 폴더 스캔을 요청합니다. 이미 대기 중이면 세대를 올립니다. */
-        void request( const AbsolutePath& folder, string_view extension, bool recursive );
+        void request( const DiskPath& folder, string_view extension, bool recursive );
 
     private:
         static void runJob( const TaskArgs& args );
@@ -86,7 +86,7 @@ namespace sw::editor
      * @class EditorGameDataScanJob
      * @brief 게임 데이터 XML 파일 목록을 워커에서 모읍니다.
      */
-    class EditorGameDataScanJob final : public EditorBackgroundTask<AbsolutePath, vector<GameDataFileEntry>>
+    class EditorGameDataScanJob final : public EditorBackgroundTask<DiskPath, vector<GameDataFileEntry>>
     {
     public:
         /** @brief 워커에 XML 목록 스캔을 요청합니다. data 폴더는 호출한(에디터) 스레드에서 찾아 넘긴다 — 에디터 상태는 워커가 읽지 않는다. */

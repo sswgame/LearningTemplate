@@ -6,6 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Character/CharacterIssue.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 
@@ -39,6 +41,10 @@ namespace sw::editor
         , _state{ _sockets.saveToXMLText() }
         , _mirrorAxis{ MirrorAxis::X }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _sockets; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const SocketSet& snapshot )
+        { _sockets = snapshot; } ) );
     }
 
     bool SocketEditModel::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -51,7 +57,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SocketEditModel::loadFromFile( const AbsolutePath& absolutePath )
+    bool SocketEditModel::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -68,10 +74,12 @@ namespace sw::editor
         _state.reset( _sockets.saveToXMLText() );
     }
 
-    bool SocketEditModel::saveDocument( const AbsolutePath& absPath )
+    bool SocketEditModel::saveDocument( AssetWriter& writer, const DiskPath& path )
     {
         // 부모(`_base`)를 가리키던 파일은 부모와의 차이로 쓴다 — 실패 이유는 `SocketSet::saveToFile` 이 알린다.
-        if ( _sockets.saveToFile( absPath, _kinds ) == false )
+        const bool bSaved = writer.save( path, [this]( const AbsolutePath& writable )
+        { return _sockets.saveToFile( writable, _kinds ); } );
+        if ( bSaved == false )
             return false;
         _state.markSaved( _sockets.saveToXMLText() ); // 더러움은 펼친 한 벌로 비교한다
         return true;
@@ -319,12 +327,12 @@ namespace sw::editor
 
     bool SocketEditModel::undo()
     {
-        return _state.undo( _sockets );
+        return _state.undo();
     }
 
     bool SocketEditModel::redo()
     {
-        return _state.redo( _sockets );
+        return _state.redo();
     }
 
     void SocketEditModel::recordUndo( string_view coalesceKey )

@@ -45,7 +45,7 @@ namespace sw::editor
          * @brief 리소스 폴더 id(`game/playground/maps` · `editor/theme`)의 디스크 폴더를 반환합니다. 폴더가 없으면 빈 문자열입니다.
          * @details 해석은 `AssetPaths::toDiskPath` 하나다 - 예전에는 `AssetPaths::findLooseDomainFolder` 가 `Content/<도메인>` 을 따로 이어 붙였다(붙인 디스크 도메인을 몰랐다).
          */
-        static AbsolutePath findContentFolder( string_view folderID );
+        static DiskPath findContentFolder( string_view folderID );
         /**
          * @brief 에디터 범위의 리소스 경로 해석(`AssetPaths` — id ↔ 디스크, 붙인 도메인)입니다. 없으면 멈춘다.
          * @details 패널 View 가 서비스 창구(`EditorService.h`)를 보지 않고 경로를 풀게 여기를 지난다(`docs/agents/EditorUI.md` MVVM 계약). 경로 해석은 읽기만 한다.

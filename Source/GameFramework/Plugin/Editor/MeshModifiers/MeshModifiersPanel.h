@@ -46,24 +46,26 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 75.0f, 47.0f ); }
         void             drawContent() override;
         /** @brief 스택을 사이드카 문서에 씁니다(닫기 · 종료 확인의 Save). */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 세션의 사이드카 문서 하나입니다(`MeshModifierSession::findSidecarPath`). */
-        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
-        /** @brief 대상을 바꿀 때마다 사이드카를 새로 읽으므로 세션이 기준을 적고 본다(`MeshModifierSession::saveSidecar`). */
-        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
-        bool               canSaveDocument() const override;
+        void collectFilesToSave( vector<DiskPath>& outListPath ) const override;
+        /** @brief 대상을 바꿀 때마다 사이드카를 새로 읽으므로 세션이 기준을 든다(`MeshModifierSession::getSidecarWriter`). */
+        AssetWriter& getAssetWriter() override;
+        bool         canSaveDocument() const override;
         /** @brief 스택은 패널 밖의 세션(`MeshModifierSession`)에 살아 있어 창을 닫아도 잃지 않는다 — 닫기는 묻지 않고, 종료 확인만 미저장 스택을 묻는다. */
         bool shouldAskBeforeClose() const override { return false; }
 
     protected:
-        [[nodiscard]] expected<string> tryMakeFileText( const AbsolutePath& absolutePath ) const override;
+        [[nodiscard]] expected<string> tryMakeFileText( const DiskPath& absolutePath ) const override;
         /** @brief 지금 고른 메시의 사이드카면 true 입니다 — 다른 메시의 사본은 그 메시를 고를 때까지 기다립니다. */
-        [[nodiscard]] bool isEditingFile( const AbsolutePath& absolutePath ) override;
-        [[nodiscard]] bool applyFileText( const AbsolutePath& absolutePath, const string& text ) override;
+        [[nodiscard]] bool isEditingFile( const DiskPath& absolutePath ) override;
+        [[nodiscard]] bool applyFileText( const DiskPath& absolutePath, const string& text ) override;
 
     private:
         /** @brief 세션 스택이 사이드카와 다르면 패널 dirty 를 올리고, 같아지면 내립니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). 스택이 기준이다. */
         void syncDocumentDirty() override;
+        /** @brief 세션의 되돌리기 스택입니다 — Ctrl+Z · History 창이 창 단추와 같은 기록을 움직인다. 세션이 없으면 메인 스택입니다. */
+        CommandStack* findPanelCommandStack() override;
         /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 사이드카 상태로 돌립니다. */
         void revertDocument() override;
         void drawTargetRow( MeshModifierSession& session );
