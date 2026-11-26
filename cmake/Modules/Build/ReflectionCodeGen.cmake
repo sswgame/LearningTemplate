@@ -320,6 +320,17 @@ function(sw_add_reflection_candidate_check TARGET_NAME OUTPUT_DIR)
 	add_custom_target(${TARGET_NAME}_ReflectionCandidateCheck ALL DEPENDS "${reflect_scan_stamp}")
 endfunction()
 
+# TARGET_NAME 의 컴파일 정의와 include 자리 전부(자기 것 + 링크한 타깃의 INTERFACE)를 파서 인자 줄(`--target-arg -D…` · `--include <폴더>`)로 OUTPUT_FILE 에 쓴다.
+# 둘 다 생성 때 정해지므로 생성기 식으로 쓴다(file(GENERATE) 는 내용이 같으면 파일을 건드리지 않는다). 인자 꼴은 구성 때만 드러나 파서 사례가 지나지 않는다 —
+# ctest `ReflectionParser.TargetArgs` 가 작은 프로젝트를 구성해 이 함수의 산출물을 본다(IntegrationTests/ReflectionParser/TargetArgs).
+function(sw_write_reflection_target_args TARGET_NAME OUTPUT_FILE)
+	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
+	set(target_includes "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>,EXCLUDE,^$>")
+	file(GENERATE OUTPUT "${OUTPUT_FILE}"
+		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>"
+		TARGET ${TARGET_NAME})
+endfunction()
+
 # ------------------------------------------------------------------------------
 # 1) sw_add_reflection_step — REFLECT · ENUM 헤더 → .gen.cpp / .gen.h / .gen.meta.cpp, REFLECT · ENUM .cpp → .cpp.gen.inl(그 .cpp 끝에서 include)
 # HEADERS / OUTPUT_DIR. 정의 · include 자리는 타깃 속성에서 온다(ReflectionParser.target.rsp). .gen.cpp는 Unity 배치에서 제외 (ODR)
@@ -426,11 +437,7 @@ function(sw_add_reflection_step TARGET_NAME)
 	# 정의(`GlobalVariableManager.h` 가 쓰는 SW_REGISTRAR_MODULE)나 include 자리(서드파티 헤더)가 빠지면 파싱되지 않는다. 하나씩 손으로 적지 않는다.
 	# 둘 다 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
 	set(reflect_target_file "${ARG_OUTPUT_DIR}/ReflectionParser.target.rsp")
-	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
-	set(target_includes "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>,EXCLUDE,^$>")
-	file(GENERATE OUTPUT "${reflect_target_file}"
-		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>"
-		TARGET ${TARGET_NAME})
+	sw_write_reflection_target_args(${TARGET_NAME} "${reflect_target_file}")
 
 	add_custom_command(
 		OUTPUT ${generated_files}

@@ -357,6 +357,16 @@ if(TARGET ReflectionParser)
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserToolInputs.cmake")
 		set_tests_properties(ReflectionParser.ToolInputs.${parser_tool_mode} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
+	# 타깃 인자 응답 파일(컴파일 정의 · include 자리, `sw_write_reflection_target_args`)은 구성 · 생성 때만 도는 file(GENERATE) 라 사례가 지나지 않는다 — 작은 프로젝트를 구성해 본다.
+	add_test(NAME ReflectionParser.TargetArgs
+		COMMAND ${CMAKE_COMMAND}
+			"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+			"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/TargetArgs"
+			"-DGENERATED_CMAKE_VARS=${SW_GENERATED_CMAKE_VARS}"
+			"-DGENERATOR=${CMAKE_GENERATOR}"
+			"-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunTargetArgsCheck.cmake")
+	set_tests_properties(ReflectionParser.TargetArgs PROPERTIES LABELS nogpu TIMEOUT 120)
 	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
 	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)
 	add_test(NAME ReflectionParser.RejectsMissingOutput COMMAND $<TARGET_FILE:ReflectionParser> --input nothing.h)
