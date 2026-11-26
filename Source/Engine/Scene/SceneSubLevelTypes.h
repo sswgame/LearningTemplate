@@ -8,9 +8,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
-    /** @brief 하위 레벨 하나의 단계입니다. */
+    /** @brief 하위 레벨 하나의 단계입니다. 개발 명령 `scene.sublevel` 은 열거자 이름으로 알린다. */
+    ENUM()
     enum class SubLevelState : uint8
     {
         Loading,  ///< 더하기를 받았다 — 워커가 씬 문서를 읽는 중이다

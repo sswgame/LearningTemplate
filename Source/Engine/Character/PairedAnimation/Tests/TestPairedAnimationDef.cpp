@@ -17,7 +17,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     PairedAnimationDef def;
     SW_REQUIRE_TRUE( def.loadFromXMLText( R"(<PairedAnimation duration="1.5">
         <Role name="Attacker" anchor="true" required="true" clip="Grab_A" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
-        <Role name="Victim" required="true" clip="Grab_V" align="warp" offset="0 0 1.2" yaw="180" warpEnd="0.4" maxAlignDistance="2" enterBlend="0.1" exitState="Idle" exitBlend="0.2" skeleton="characters/humanoid.skeleton.xml"/>
+        <Role name="Victim" required="true" clip="Grab_V" align="Warp" offset="0 0 1.2" yaw="180" warpEnd="0.4" maxAlignDistance="2" enterBlend="0.1" exitState="Idle" exitBlend="0.2" skeleton="characters/humanoid.skeleton.xml"/>
         <Notify name="Impact" time="0.9" role="Victim"/>
         <Notify name="Grip" time="0.2" role="Attacker"/>
     </PairedAnimation>)",
@@ -48,21 +48,21 @@ SW_TEST_CASE( PairedAnimationDefTest, SelectMatchesBearingAndDistanceFromAnchor 
     PairedAnimationDef front;
     SW_REQUIRE_TRUE( front.loadFromXMLText( R"(<PairedAnimation duration="1">
         <Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/>
-        <Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="B" required="true" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/>
         <Select role="B" minAngle="-45" maxAngle="45" maxDistance="2"/>
     </PairedAnimation>)",
                                             "front" ) );
     PairedAnimationDef back;
     SW_REQUIRE_TRUE( back.loadFromXMLText( R"(<PairedAnimation duration="1">
         <Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/>
-        <Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="B" required="true" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/>
         <Select role="B" minAngle="135" maxAngle="-135" maxDistance="2"/>
     </PairedAnimation>)",
                                            "back" ) );
     PairedAnimationDef any;
     SW_REQUIRE_TRUE( any.loadFromXMLText( R"(<PairedAnimation duration="1">
         <Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/>
-        <Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="B" required="true" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/>
     </PairedAnimation>)",
                                           "any" ) );
     SW_REQUIRE_NOT_NULL( front.findSelect() );
@@ -91,7 +91,7 @@ namespace
     // 숫자 칸은 유한한 수만 읽힌다(StringUtil::parseFloat) — nan · inf 는 "숫자 아님" 이고, 읽지 못한 길이는 0 이라 길이 · 역할 시작 검사도 진다.
     const BadPairedAnimation kArrBadPairedAnimation[] = {
         // 앵커가 없다
-        {                                                                                                                                                                                                                                     R"(<PairedAnimation duration="1"><Role name="A" required="true" clip="X" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                                                                                                                                                                                     R"(<PairedAnimation duration="1"><Role name="A" required="true" clip="X" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.PairedAnchorCount" }                                                                 },
         // 앵커가 둘이다
         {                                                                                                                               R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" anchor="true" required="true" clip="Y" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
@@ -100,7 +100,7 @@ namespace
         {                                                                                                                                                                                                                                             R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "XMLFields.RequiredFieldMissing" }                                                              },
         // 오프셋이 NaN 이다
-        {                                                                                          R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="snap" offset="0 nan 1" maxAlignDistance="1" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                                          R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="Snap" offset="0 nan 1" maxAlignDistance="1" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "XMLFields.ValueUnreadable" }                                                                   },
         // 길이가 무한이다
         {                                                                                                                                                                                                                                  R"(<PairedAnimation duration="inf"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
@@ -109,19 +109,19 @@ namespace
         {                                                                                                                                                                                                                                     R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlnd="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "XMLFields.UnknownField", "XMLFields.RequiredFieldMissing" }                                    },
         // 앵커에 정렬을 적었다
-        {                                                                                                                                                                                                                       R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                                                                                                                                                                       R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.PairedAnchorHasAlign" }                                                              },
         // 앵커 밖 역할이 정렬을 적지 않았다
         {                                                                                                                                             R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.PairedAlignMissing" }                                                                },
         // warp 에 창 끝이 없다
-        {                                                                                            R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="warp" offset="0 0 1" maxAlignDistance="1" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                                            R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="Warp" offset="0 0 1" maxAlignDistance="1" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.AttributeMissing", "Character.PairedWarpEndOrder" }                                  },
         // warp 창이 들어오는 블렌드 안에서 끝난다
-        {                                                                            R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="warp" offset="0 0 1" warpEnd="0.1" maxAlignDistance="1" enterBlend="0.2" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                            R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="Warp" offset="0 0 1" warpEnd="0.1" maxAlignDistance="1" enterBlend="0.2" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.PairedWarpEndOrder" }                                                                },
         // none 인데 오프셋을 적었다
-        {                                                                                                                 R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" offset="0 0 1" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                                                                 R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="None" offset="0 0 1" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.PairedAlignOnlyAttribute" }                                                          },
         // 앵커가 선택 역할이다
         {                                                                                                                                                                                                                                   R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="false" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
@@ -133,7 +133,7 @@ namespace
         {                                                                                                                                                                                              R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Notify name="N" time="1.5" role="A"/></PairedAnimation>)",
          { "Character.PairedNotifyAfterEnd" }                                                              },
         // 역할 이름이 겹친다
-        {                                                                                                                               R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="A" required="false" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        {                                                                                                                               R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="A" required="false" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
          { "Character.PairedRoleRepeated" }                                                                },
         // 고르기 조건이 모르는 역할을 본다
         {                                                                                                                                                                     R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="Z" minAngle="-45" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
@@ -142,13 +142,13 @@ namespace
         {                                                                                                                                                                     R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="A" minAngle="-45" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
          { "Character.PairedSelectRoleInvalid" }                                                           },
         // 고르기 각이 반 바퀴 밖이다
-        {                                                                R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-200" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
+        {                                                                R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-200" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
          { "Character.PairedHalfTurnRange" }                                                               },
         // 고르기 거리가 없다
-        {                                                                                 R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45"/></PairedAnimation>)",
+        {                                                                                 R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45"/></PairedAnimation>)",
          { "XMLFields.RequiredFieldMissing" }                                                              },
         // 고르기 조건이 둘이다
-        {R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45" maxDistance="2"/><Select role="B" minAngle="135" maxAngle="-135" maxDistance="2"/></PairedAnimation>)",
+        {R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="None" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45" maxDistance="2"/><Select role="B" minAngle="135" maxAngle="-135" maxDistance="2"/></PairedAnimation>)",
          { "Character.PairedSelectRepeated" }                                                              },
     };
 } // namespace

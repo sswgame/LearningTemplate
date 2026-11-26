@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -56,8 +57,8 @@ namespace sw
             }
 
             /**
-             * @brief `align` 글을 풉니다. 없거나 모르는 값이면 오류를 남기고 `None` 입니다(읽기는 `finish` 에서 실패한다).
-             * @details 글 그대로 비교한다 — `hashed_string( "none" )` 은 빈 이름(None)과 같아 "적지 않음"과 가를 수 없다.
+             * @brief `align` 글(열거자 이름 `None` · `Snap` · `Warp`)을 풉니다. 없거나 모르는 값이면 오류를 남기고 `None` 입니다(읽기는 `finish` 에서 실패한다).
+             * @details 글 그대로 푼다 — 이름으로 읽으면 `None` 이 빈 이름과 같아 "적지 않음"과 가를 수 없다.
              */
             static PairedAnimationAlign parseAlign( CharacterDataReader& reader, const XMLNode& node )
             {
@@ -67,32 +68,13 @@ namespace sw
                     reader.addError( "Character.PairedAlignMissing", node, "needs attribute 'align'" );
                     return PairedAnimationAlign::None;
                 }
-                const string_view text( pText ); // 칸 이름 · 모르는 속성은 스키마가 보았다 — 여기서는 값의 철자만 푼다
-                if ( text == "none" )
-                    return PairedAnimationAlign::None;
-                if ( text == "snap" )
-                    return PairedAnimationAlign::Snap;
-                if ( text == "warp" )
-                    return PairedAnimationAlign::Warp;
+                // 칸 이름 · 모르는 속성은 스키마가 보았다. 여기서는 값의 철자만 푼다
+                if ( const optional<PairedAnimationAlign> align = tryParseEnum<PairedAnimationAlign>( pText ) )
+                    return *align;
                 fixed_string<constant::buffer::kMax256> message;
-                formatstring( message.data(), message.capacity(), "attribute 'align' must be none, snap or warp: '%#'", pText );
+                formatstring( message.data(), message.capacity(), "attribute 'align' must be None, Snap or Warp: '%#'", pText );
                 reader.addError( "Character.PairedAlignInvalid", node, message );
                 return PairedAnimationAlign::None;
-            }
-
-            /** @brief `align` 값의 파일 글입니다(`parseAlign` 의 반대). */
-            static const utf8* formatAlign( PairedAnimationAlign align )
-            {
-                switch ( align )
-                {
-                    case PairedAnimationAlign::None:
-                        return "none";
-                    case PairedAnimationAlign::Snap:
-                        return "snap";
-                    case PairedAnimationAlign::Warp:
-                        return "warp";
-                }
-                return "none";
             }
         };
     } // namespace
@@ -133,7 +115,7 @@ namespace sw
             if ( role._skeletonPath.empty() == false || bWriteAll )
                 node.appendAttribute( "skeleton", string_view{ role._skeletonPath.toText() } );
             if ( role._bAnchor == false )
-                node.appendAttribute( "align", PairedAnimationDefInternal::formatAlign( role._align ) );
+                node.appendAttribute( "align", getEnumName( role._align ) );
             const bool bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
             if ( bAligned )
             {

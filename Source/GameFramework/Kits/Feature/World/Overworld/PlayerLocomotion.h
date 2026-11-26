@@ -77,7 +77,7 @@ namespace sw
     private:
         PROPERTY( RuntimeState )
         LocomotionState                _state;
-        SW_CODEC_STATE FacingDirection _facing;     ///< 키트들이 나눠 쓰는 열거(리플렉션 등록 없음)라 손 본문이 싣는다
+        SW_CODEC_STATE FacingDirection _facing;     ///< 손 본문(`serializeState`)이 싣는다
         SW_CODEC_STATE Countdown       _stateTimer; ///< Walk 와 Interact 의 남은 시간(초)
     };
 

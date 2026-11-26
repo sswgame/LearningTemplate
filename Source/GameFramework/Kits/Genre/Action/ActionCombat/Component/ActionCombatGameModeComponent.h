@@ -113,7 +113,7 @@ namespace sw
         SW_CODEC_STATE Countdown  _bossDelay;
         PROPERTY( RuntimeState )
         float2                         _playerPosition;
-        SW_CODEC_STATE FacingDirection _facing; ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
+        SW_CODEC_STATE FacingDirection _facing; ///< 손 본문(`serializeGameState`)이 싣는다
         PROPERTY( RuntimeState )
         int32 _playerHP;
         PROPERTY( RuntimeState )

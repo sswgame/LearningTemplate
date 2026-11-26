@@ -76,10 +76,5 @@ namespace sw
         FractureVolume _volume; ///< 부피다(닫히지 않은 모델은 Bounds 나 Hull 을 쓴다).
 
         FractureSettings();
-
-        /** @brief 원본 해시에 섞는 이름입니다(글자를 바꾸면 모든 파쇄 모델을 다시 임포트한다). */
-        static string_view getPatternName( FracturePattern pattern );
-        /** @brief 원본 해시에 섞는 이름입니다(글자를 바꾸면 모든 파쇄 모델을 다시 임포트한다). */
-        static string_view getVolumeName( FractureVolume volume );
     };
 } // namespace sw

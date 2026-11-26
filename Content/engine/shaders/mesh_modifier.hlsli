@@ -325,7 +325,8 @@ static float MeshDeform::axisFraction( float3 position, ModifierContext context 
 }
 
 // ------------------------------------------------------------------------------
-// 값 노이즈 — Core/Math/ValueNoise.cpp(`ValueNoise::sampleValue3D`)와 같은 정수 해시
+// 값 노이즈 — Core/Math/ValueNoise.cpp(`ValueNoise::sampleValue3D` · `sampleValue1D`)와 같은 정수 해시 · 같은 보간 식
+// 격자값은 CPU 와 비트까지 같지만 보간은 셰이더 컴파일러가 곱셈 · 덧셈을 FMA 로 묶어 끝 비트가 갈린다. CPU 결과와 견줄 때는 허용 오차로 본다.
 // ------------------------------------------------------------------------------
 static uint4 MeshDeform::hashLattice( int4 cellX, int4 cellY, int cellZ, uint seed )
 {

@@ -12,6 +12,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <algorithm>
 
@@ -292,7 +293,7 @@ namespace sw
             canonical.append( "output=" ).append( desc._output ).append( "\n" );
         for ( const CookInput* pInput : listSorted )
         {
-            canonical.append( CookInput::getKindName( pInput->_kind ) ).append( "\t" ).append( pInput->_source ).append( "\t" );
+            canonical.append( getEnumName( pInput->_kind ) ).append( "\t" ).append( pInput->_source ).append( "\t" );
             canonical.append( pInput->_extension ).append( "\t" ).append( sw::to_string( pInput->_contentHash ) ).append( "\n" );
         }
         return canonical;

@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -49,26 +50,6 @@ namespace sw
         SW_TRANSIENT string _playingAnimation; ///< 마지막으로 튼 애니메이션 이름(같으면 다시 틀지 않는다)
     };
 
-    namespace
-    {
-        /** @brief 애니메이션 이름의 방향 꼬리입니다(`FacingDirection` 순서). */
-        const utf8* toFacingSuffix( FacingDirection facing )
-        {
-            switch ( facing )
-            {
-                case FacingDirection::Down:
-                    return "down";
-                case FacingDirection::Left:
-                    return "left";
-                case FacingDirection::Right:
-                    return "right";
-                case FacingDirection::Up:
-                    return "up";
-            }
-            return "down";
-        }
-    } // namespace
-
     OverworldWalkerViewComponent::OverworldWalkerViewComponent()
         : _spriteOffset{ 0.0f, 0.0f }
         , _depthPerUnitY{ 0.01f }
@@ -99,8 +80,9 @@ namespace sw
         SpriteAnimatorComponent* pAnimator = pOwner->getComponent<SpriteAnimatorComponent>();
         if ( pAnimator == nullptr )
             return;
+        // 애니메이션 이름은 `walk_` · `idle_` 뒤에 방향의 열거자 이름이다(`walk_Down`).
         string animation = pGameMode->isHeroWalking() ? "walk_" : "idle_";
-        animation += toFacingSuffix( pGameMode->getHeroFacing() );
+        animation += getEnumName( pGameMode->getHeroFacing() );
         if ( animation == _playingAnimation )
             return;
         pAnimator->play( animation );
