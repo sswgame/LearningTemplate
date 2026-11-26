@@ -7,7 +7,7 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"

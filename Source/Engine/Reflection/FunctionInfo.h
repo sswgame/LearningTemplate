@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 

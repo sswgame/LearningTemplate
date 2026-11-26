@@ -19,7 +19,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 #include "Core/Time/TimeRolloverUtil.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"

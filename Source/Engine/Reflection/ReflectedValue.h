@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Foundation/Expected.h"
 #include "Core/Math/PackedTypesFwd.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/TypeFqn.h"
@@ -88,7 +88,6 @@ namespace sw
         static constexpr ReflectBuiltinTraits kArrTraits[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, Widget, Layout, Roles, ... ) { SW_BUILTIN_LAYOUT_KIND_##Layout, static_cast<uint8>( Roles ) },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
         };
@@ -154,7 +153,6 @@ namespace sw
         static constexpr ReflectBuiltinIndex kIndex = ReflectBuiltinIndex::k##Canon; \
     };
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
 } // namespace sw

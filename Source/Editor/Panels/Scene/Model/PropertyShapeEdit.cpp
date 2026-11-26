@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Radians.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditConditionExpr.h"

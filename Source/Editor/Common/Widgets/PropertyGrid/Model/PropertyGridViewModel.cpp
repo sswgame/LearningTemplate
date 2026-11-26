@@ -10,7 +10,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"

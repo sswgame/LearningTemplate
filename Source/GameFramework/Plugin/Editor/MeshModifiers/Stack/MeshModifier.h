@@ -23,7 +23,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskDelegate.h"
 
 #include "Engine/Curve/FloatCurve.h"
 

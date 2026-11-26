@@ -5,7 +5,7 @@
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/XorShift32.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/ReflectedValue.h"

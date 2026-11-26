@@ -12,7 +12,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskProfileHook.h"
 
 #include "Engine/Profiling/IProfilerBackend.h"
 

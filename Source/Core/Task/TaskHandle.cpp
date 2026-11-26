@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"

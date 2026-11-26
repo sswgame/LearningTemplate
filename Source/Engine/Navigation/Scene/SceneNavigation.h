@@ -37,7 +37,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/SceneIterationKey.h"

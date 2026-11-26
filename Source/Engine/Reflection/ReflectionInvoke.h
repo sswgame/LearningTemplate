@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectedValue.h"

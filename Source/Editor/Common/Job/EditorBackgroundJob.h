@@ -18,7 +18,8 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
+#include "Core/Task/TaskHandle.h"
 
 namespace sw::editor
 {

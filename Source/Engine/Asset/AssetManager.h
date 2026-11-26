@@ -23,7 +23,8 @@
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskDelegate.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"

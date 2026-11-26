@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"

@@ -5,7 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
