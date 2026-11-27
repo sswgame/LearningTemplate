@@ -2,6 +2,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"
 
+#include "Core/Algorithm/SampleStatistics.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
@@ -22,9 +23,6 @@ namespace sw
         struct LoadBotMetricsInternal
         {
             static constexpr size_t kActionCount          = static_cast<size_t>( LoadBotAction::Count );
-            static constexpr int32  kPercentileMedian     = 50;
-            static constexpr int32  kPercentileHigh       = 95;
-            static constexpr int32  kPercentileTail       = 99;
             static constexpr int32  kJSONIndent           = 2;
             static constexpr int64  kMicrosecondsPerTenth = 100;
             static constexpr int32  kActionColumnWidth    = 22;
@@ -126,16 +124,6 @@ namespace sw
         _listMatchID.push_back( matchID );
     }
 
-    int64 LoadBotMetrics::computePercentile( const vector<int64>& listSortedSample, int32 percentile )
-    {
-        if ( listSortedSample.empty() )
-            return 0;
-        const int64  sampleCount = static_cast<int64>( listSortedSample.size() );
-        const int64  rank        = ( static_cast<int64>( percentile ) * sampleCount + 99 ) / 100; // 올림 — 가장 가까운 순위
-        const size_t index       = static_cast<size_t>( MathUtil::min( sampleCount, MathUtil::max<int64>( rank, 1 ) ) - 1 );
-        return listSortedSample[index];
-    }
-
     void LoadBotMetrics::summarize( vector<LoadBotActionSummary>& outListSummary ) const
     {
         for ( size_t actionIndex = 0; actionIndex < LoadBotMetricsInternal::kActionCount; ++actionIndex )
@@ -146,12 +134,13 @@ namespace sw
             VectorUtil::sort( listSorted );
             LoadBotActionSummary& summary = outListSummary.emplace_back();
             summary._actionName           = toString( static_cast<LoadBotAction>( actionIndex ) );
-            summary._p50Us                = computePercentile( listSorted, LoadBotMetricsInternal::kPercentileMedian );
-            summary._p95Us                = computePercentile( listSorted, LoadBotMetricsInternal::kPercentileHigh );
-            summary._p99Us                = computePercentile( listSorted, LoadBotMetricsInternal::kPercentileTail );
-            summary._maxUs                = listSorted.back();
-            summary._count                = static_cast<int64>( listSorted.size() );
-            summary._errorCount           = _listErrorCountByAction[actionIndex];
+            // 빈 표본은 위에서 건너뛰었다 — 백분위는 늘 있다.
+            summary._p50Us      = *SampleStatistics::findNearestRankPercentile( listSorted, SampleStatistics::kPercentMedian );
+            summary._p95Us      = *SampleStatistics::findNearestRankPercentile( listSorted, SampleStatistics::kPercentHigh );
+            summary._p99Us      = *SampleStatistics::findNearestRankPercentile( listSorted, SampleStatistics::kPercentTail );
+            summary._maxUs      = listSorted.back();
+            summary._count      = static_cast<int64>( listSorted.size() );
+            summary._errorCount = _listErrorCountByAction[actionIndex];
         }
     }
 
