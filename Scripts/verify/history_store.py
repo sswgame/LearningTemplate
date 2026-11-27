@@ -16,7 +16,6 @@ from typing import Iterable, Sequence
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "TestSelection" / "Quarantine.json"
-VERIFY_CONFIG_PATH = Path("Config") / "Dev" / "Verify.json"
 RUN_KINDS = ("verify", "manual", "rerun")
 STAGE_RESULTS = ("passed", "failed", "skipped")
 SLOW_MIN_SAMPLES = 3
@@ -81,14 +80,6 @@ def open_database(path: Path) -> sqlite3.Connection:
     connection = sqlite3.connect(path)
     connection.executescript(SCHEMA)
     return connection
-
-
-def read_verify_config(project_root: Path, key: str) -> float:
-    """`Config/Dev/Verify.json` 의 수 — 없으면 멈춘다(폴백 없음)."""
-    value = json.loads((project_root / VERIFY_CONFIG_PATH).read_text(encoding="utf-8")).get(key)
-    if not isinstance(value, (int, float)) or isinstance(value, bool):
-        raise SystemExit(f"[TestHistory] {VERIFY_CONFIG_PATH} 의 {key} 가 수가 아니다")
-    return float(value)
 
 
 def ingest(connection: sqlite3.Connection, list_report: Iterable[dict], commit_sha: str, run_kind: str = "manual", since_unix_ms: int | None = None) -> int:

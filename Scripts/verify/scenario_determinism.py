@@ -15,9 +15,10 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+from common.time_limits import read_script_time_limit  # noqa: E402
 
-#: 묶음 하나(단계 둘까지)의 시한 — 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )` 545 초)의 두 배에 기동 여유.
-SEQUENCE_TIMEOUT_SECONDS = 1200
+#: 묶음 하나(단계 둘까지)의 시한 — 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )`)의 두 배에 기동 여유(그보다 긴지는 생성기 time_limits 가 본다).
+SEQUENCE_TIMEOUT_SECONDS = int(read_script_time_limit("_sequenceCtestSeconds"))
 IMAGE_SUFFIXES = frozenset({".ppm", ".png"})
 
 #: (돌릴 단계 경로들) → 실행. 진 실행이면 그 까닭, 통과면 빈 글.

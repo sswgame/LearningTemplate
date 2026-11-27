@@ -19,9 +19,6 @@ namespace sw
                 /** @brief 차단 조건(등록 순서)입니다. */
                 static SW_DEFINE_REGISTRATION_LIST( getBlockers, const AutomationBlocker, "AutomationBlocker", RegistrationOrder::Insertion, true )
 
-                /** @brief 검사 함수만 올린 등록(`SW_AUTOMATION_STEP_VALIDATOR` — 단계를 등록하는 모듈이 없는 프로세스가 속성을 검사하게 한다)입니다. */
-                static SW_DEFINE_REGISTRATION_LIST( getValidators, const AutomationStepValidatorRegistration, "AutomationStepValidator", RegistrationOrder::Insertion, true )
-
                 /**
                  * @brief @p isInScope 가 고른 조건 가운데 지금 진행 중인 첫 조건입니다. 해당 없음 · 준비됨은 막지 않는다.
                  */
@@ -74,24 +71,6 @@ namespace sw
     const AutomationStepRegistration* AutomationStepRegistry::find( string_view kind )
     {
         return AutomationStepRegistryInternal::getRegistrations().findByName( kind );
-    }
-
-    bool AutomationStepRegistry::registerValidator( const AutomationStepValidatorRegistration* pRegistration )
-    {
-        const bool bInvalidValidatorRegistration = pRegistration == nullptr || pRegistration->_pKind == nullptr || pRegistration->_pValidate == nullptr;
-        if ( bInvalidValidatorRegistration )
-            return false;
-        return AutomationStepRegistryInternal::getValidators().addLogged( pRegistration, "Automation step validator", pRegistration->_pKind ) == RegistrationResult::Added;
-    }
-
-    void AutomationStepRegistry::unregisterValidator( const AutomationStepValidatorRegistration* pRegistration )
-    {
-        (void)AutomationStepRegistryInternal::getValidators().remove( pRegistration ); // 올라와 있지 않은 검사 함수를 빼는 것은 할 일이 없다
-    }
-
-    const AutomationStepValidatorRegistration* AutomationStepRegistry::findValidator( string_view kind )
-    {
-        return AutomationStepRegistryInternal::getValidators().findByName( kind );
     }
 
     bool AutomationStepRegistry::registerBlocker( const AutomationBlocker* pBlocker )

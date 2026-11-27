@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Iterable, Mapping, Sequence
 
+from lint.function_spans import find_closing_brace
 from lint.index_cache import Facts, compute_version, CACHE_FOLDER, open_facts, write_json
 from lint.lint_rule import LintRule
 from lint.lint_scope import LintScope, list_repo_files
@@ -30,18 +31,6 @@ DERIVATIVE_PATTERN = re.compile(r"\.(?:Sample|SampleBias|SampleCmp)\s*\(|\b(?:dd
 KILL_PATTERN = re.compile(r"\bclip\s*\(|\bdiscard\b|\bSW_APPEARANCE_CLIP\s*\(")
 CALL_PATTERN = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 KEYWORDS = {"if", "for", "while", "switch", "return", "clip", "discard"}
-
-
-def find_closing_brace(code: str, open_index: int) -> int:
-    depth = 0
-    for index in range(open_index, len(code)):
-        if code[index] == "{":
-            depth += 1
-        elif code[index] == "}":
-            depth -= 1
-            if depth == 0:
-                return index
-    return len(code)
 
 
 def collect_functions(path: str, text: str) -> list[tuple[str, str, str]]:

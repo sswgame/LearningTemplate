@@ -23,6 +23,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.log_lines import problem_lines
 from common.paths import get_project_root
 from common.process_session import DEFAULT_PRESET, ChildProcess, MultiProcessSession, free_port, report
@@ -34,8 +35,8 @@ _FOLDER = "game/playground/automation/netpair"
 _RUN_SCENARIO = f"{_FOLDER}/online_run.scenario.xml"
 _PEOPLE_SCENARIOS = (f"{_FOLDER}/people_first.scenario.xml", f"{_FOLDER}/people_second.scenario.xml")
 _MATCH_MINIGAME = "shooter3d_match"  # 서버의 첫 씬이자 클라이언트가 줄을 서는 매치형 미니게임
-_TIMEOUT_SECONDS = 60.0  # 서버 기동 · 사건을 기다리는 최대 초
-_SCENARIO_TIMEOUT_SECONDS = 400.0  # 시나리오 하나가 끝나기를 기다리는 최대 초
+_TIMEOUT_SECONDS = read_script_time_limit("_sessionEventWaitSeconds")  # 서버 기동 · 사건을 기다리는 최대 초
+_SCENARIO_TIMEOUT_SECONDS = read_script_time_limit("_sessionScenarioSeconds")  # 시나리오 하나가 끝나기를 기다리는 최대 초
 _ALLOWED_IDS = frozenset({"LoginTicketKey.AccountKitNoTicketKeySecretEnvironment"})
 
 CTEST_ITEMS = (

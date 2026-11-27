@@ -267,7 +267,8 @@ SW_REGISTER_ARGUMENT( RHI_BREADCRUMBS, All, false, "rhi-breadcrumbs" )
 // 교착 탐지기를 켜고 `sw::mutex` 잠금 순서를 추적한다(느리다). 코어 범위가 설 때 한 번 읽고 실행 중에 끄지 않는다. 배포 구성에는 없다
 SW_REGISTER_ARGUMENT( DEADLOCK_DETECTION, Dev, false, "deadlock-detection" )
 
-// 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 테스트 · 스크립트가 준다.
+// 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않고 스플래시를 띄우지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 테스트 · 스크립트가 준다.
+// 프로파일(`-gv_profileFrames`) · 에디터 자체 테스트(`-gv_editorSelfTest`)를 사람 없이 돌릴 때도 함께 준다(`CommandLine::isAutomatedRun`)
 SW_REGISTER_ARGUMENT( UNATTENDED, All, false, "unattended" )
 
 // 작업 풀의 워커 수(1 이상) — 없으면 쓸 수 있는 코어 수에서 정한다. 부하 시나리오(`load/*`)를 워커 1 · 2 · 4 · 8 로 재서 병렬 효율 기준선을 잡는다(언리얼 `-numberofworkerthreadstouse=`)

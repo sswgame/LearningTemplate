@@ -214,32 +214,11 @@ namespace sw
     {
         /**
          * @brief 단언 대화상자의 구현과 감시 값입니다(대화형 에디터 실행의 단언 대화상자, Windows 검사 구성. 언리얼의 ensure 대화상자에 해당한다).
-         * @details 단언 한 번에 저장하지 않은 편집을 잃지 않게 사람이 지켜보는 실행에서만 건다. 자동 실행(-unattended, 시나리오, 프로파일, 에디터 자체 테스트)과 테스트는 기존처럼 멈춘다.
+         * @details 단언 한 번에 저장하지 않은 편집을 잃지 않게 사람이 지켜보는 실행에서만 건다. 무인 실행(`CommandLine::isAutomatedRun`)과 테스트는 기존처럼 멈춘다.
          */
         struct AssertDialogInternal
         {
 #if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
-            /** @brief 이 전역 변수가 0 이 아니거나 비어 있지 않으면 자동 실행입니다(프로파일, 에디터 자체 테스트). 이름으로 읽으며, 개발 도구는 모듈을 모릅니다. */
-            static constexpr const utf8* kArrAutomationVariable[] = { "gv_profileFrames", "gv_profileSeconds", "gv_editorSelfTest" };
-
-            /** @brief 사람이 지켜보지 않는 실행이면 true 를 반환합니다(-unattended, 시나리오, 프로파일, 자체 테스트). */
-            static bool isAutomatedRun( const CommandLine& commandLine )
-            {
-                if ( commandLine.isAutomatedRun() )
-                    return true;
-                for ( const utf8* pName : kArrAutomationVariable )
-                {
-                    const GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pName );
-                    if ( pVariable == nullptr )
-                        continue;
-                    const bool bSet = pVariable->isTextType() ? pVariable->getValueAsString().empty() == false
-                                                              : pVariable->getValueAsFloat() != 0.0f;
-                    if ( bSet )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 단언을 사용자에게 묻습니다. 디버거가 붙어 있으면 묻지 않고 멈춥니다. 개발자가 그 위치를 직접 보려는 것이기 때문입니다. */
             static internal::AssertAction showAssertDialog( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line )
             {
@@ -285,7 +264,7 @@ namespace sw
         {
 #if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
             // 다시 불려도(호스트 모듈을 다시 세움) 이미 건 주인이면 다시 걸지 않는다 — 대화상자 칸은 하나라 둘째 등록은 단언이다.
-            if ( s_assertDialogRegistration.isActive() == false && AssertDialogInternal::isAutomatedRun( commandLine ) == false )
+            if ( s_assertDialogRegistration.isActive() == false && commandLine.isAutomatedRun() == false )
                 s_assertDialogRegistration = internal::bindAssertDialog( &AssertDialogInternal::showAssertDialog );
 #endif
         }

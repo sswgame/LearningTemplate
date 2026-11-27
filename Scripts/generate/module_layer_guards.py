@@ -17,17 +17,16 @@ Engine(`Source/Engine`)과 GameFramework 런타임(`Source/GameFramework/Runtime
 
 from __future__ import annotations
 
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
+from common.layer_table import find_layer, get_layer_table_path, read_layer_table
 from common.paths import list_files_under
 from common.paths import get_project_root
 from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 
 TAG = "ModuleLayers"
-RULE_DIR = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers"
 SOURCE_SUFFIX = {".cpp", ".c"}
 HEADER_SUFFIX = {".h", ".hpp", ".inl", ".xxx"}
 
@@ -40,7 +39,7 @@ class LayerTable:
     _var_prefix: str
 
     def get_rule_file(self) -> Path:
-        return RULE_DIR / f"{self._module}Layers.toml"
+        return get_layer_table_path(self._module)
 
 
 LIST_LAYER_TABLE = (
@@ -54,16 +53,6 @@ def find_layer_table(module: str) -> LayerTable:
         if table._module == module:
             return table
     raise GeneratorError(f"층 표가 없는 모듈 '{module}' — {', '.join(table._module for table in LIST_LAYER_TABLE)} 중 하나다")
-
-
-def find_layer(map_layer: dict[str, int], relative: str) -> int | None:
-    """모듈 폴더 기준 경로의 층 — 가장 긴 접두어 키가 이긴다. 표에 없으면 None."""
-    best: tuple[str, int] | None = None
-    for key, layer in map_layer.items():
-        if relative == key or relative.startswith(key + "/"):
-            if best is None or len(key) > len(best[0]):
-                best = (key, layer)
-    return best[1] if best is not None else None
 
 
 def assign_layers(map_layer: dict[str, int], list_relative: Sequence[str], rule_name: str, module: str) -> dict[str, int]:
@@ -88,17 +77,10 @@ def require_no_stale_keys(map_layer: dict[str, int], root_dir: Path, rule_name: 
         raise GeneratorError(f"폴더 · 파일이 없는 층 표 줄: {', '.join(list_stale)} — {rule_name} 의 [layer] 에서 지우세요")
 
 
-def read_layer_table(rule_file: Path) -> dict[str, int]:
-    try:
-        return tomllib.loads(rule_file.read_text(encoding="utf-8"))["layer"]
-    except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{rule_file.name}: 읽지 못했다 ({exception!r}) — [layer] 표가 있어야 한다") from exception
-
-
 def generate_module_layer_guards(module: str, output_path: Path) -> None:
     table = find_layer_table(module)
     rule_file = table.get_rule_file()
-    map_layer = read_layer_table(rule_file)
+    map_layer: dict[str, int] = read_layer_table(module)["layer"]
     source_dir = get_project_root() / "Source"
     root_dir = source_dir / table._root_folder
     list_relative = [path.relative_to(root_dir).as_posix() for path in list_files_under(source_dir)   # 같은 프로세스의 다른 층 표 · TargetLayers 와 한 번 훑은 목록을 나눠 쓴다

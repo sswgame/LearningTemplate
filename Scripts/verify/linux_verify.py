@@ -36,6 +36,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common.command import Command, ScriptContext  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
 from common.host_platform import is_windows_host  # noqa: E402
+from common.wsl_path import to_wsl_path  # noqa: E402
 from common import app_arguments  # noqa: E402
 from verify import scenario_reports  # noqa: E402
 
@@ -75,21 +76,12 @@ def run_in_wsl(gpu: str, action: str, arguments: list[str]) -> int:
         run_git_or_raise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
     env[HEAD_ENV] = head
-    wsl_repo = to_wsl_path(REPO, env)
+    wsl_repo = to_wsl_path(REPO, DISTRO, env)
     # 클론은 refs/linux-verify 를 공통 git 폴더에서 받는다 — 워크트리의 .git 은 Windows 경로를 적은 파일이라 WSL 의 git 이 열지 못한다.
     common_dir = pathlib.Path(run_git_or_raise(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO).strip())
-    env[GIT_SOURCE_ENV] = to_wsl_path(common_dir, env)
+    env[GIT_SOURCE_ENV] = to_wsl_path(common_dir, DISTRO, env)
     env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV, HEAD_ENV)))
     return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wsl_repo}/Scripts/verify/linux_verify.py', '--gpu', gpu, action, *arguments], env=env)
-
-
-def to_wsl_path(windows_path, env):
-    """Windows 경로를 이 배포판의 WSL 경로로 바꾼다(`wslpath -a`). 못 바꾸면 오류로 멈춘다 — 고정 경로로 대신하지 않는다."""
-    result = subprocess.run(['wsl.exe', '-d', DISTRO, '--', 'wslpath', '-a', windows_path.as_posix()], env=env, capture_output=True, text=True)
-    converted = result.stdout.strip()
-    if result.returncode != 0 or not converted.startswith('/'):
-        sys.exit(f'LinuxVerify: wslpath could not convert {windows_path} ({result.stderr.strip()})')
-    return converted
 
 
 def run_in_shell(command, **kwargs):

@@ -14,6 +14,7 @@ import socket
 
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.log_lines import problem_lines
 from common.process_session import DEFAULT_PRESET, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
@@ -21,7 +22,7 @@ from sessions.ctest_items import CtestItem
 _HOST_SCENARIO = "game/playground/automation/netpair/lockstep_host.scenario.xml"
 _CLIENT_SCENARIO = "game/playground/automation/netpair/lockstep_client.scenario.xml"
 _GAME = "Playground"
-_TIMEOUT_SECONDS = 900.0  # 시나리오 하나가 끝나기를 기다리는 최대 초(병력이 생기기까지 판의 시간이 실제 시간과 같다)
+_TIMEOUT_SECONDS = read_script_time_limit("_lockstepSessionSeconds")  # 시나리오 하나가 끝나기를 기다리는 최대 초(병력이 생기기까지 판의 시간이 실제 시간과 같다)
 
 CTEST_ITEMS = (CtestItem(("lockstep-session", "run"), 1200, (_HOST_SCENARIO, _CLIENT_SCENARIO)),)
 

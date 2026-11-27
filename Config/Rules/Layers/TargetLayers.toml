@@ -37,7 +37,7 @@ clientbuild = []
 reflectionparser = ["Engine", "ModuleAPI", "DevTools", "Editor", "ModuleManager", "App", "Server", "GameFramework", "Games"]
 
 # [guardfolder] 가드 이름 → 그 이름의 폴더(`Source/` 아래 어느 깊이든) 안 헤더를 모두 막는다. 같은 DLL(Engine · GameFramework · 게임 모듈 · DevTools)이 짓는 폴더라 타깃으로는
-# 가르지 못하지만, 서버 구성은 `Client/` 의 소스를(`SW_CLIENT_ONLY_SOURCE_PATTERNS`), 클라이언트 구성은 `Server/` 의 소스를(`SW_SERVER_ONLY_SOURCE_PATTERNS`) 짓지 않으므로
+# 가르지 못하지만, 서버 구성은 `Client/` 의 소스를, 클라이언트 구성은 `Server/` 의 소스를 짓지 않으므로(`TargetFolders.json` — 표 밖 같은 이름 폴더는 configure 가 멈춘다)
 # 그 구성의 모든 타깃에서 헤더를 막아도 된다. 키트의 `Client/` · `Server/` 는 따로 짓는 모듈(`GF_Client_<X>` · `GF_Server_<X>`)이라 모듈별 가드도 막는다.
 # 그 이름의 폴더가 하나도 없으면 configure 가 멈춘다. 공유 형식이 그 폴더에 있으면 폴더 이름이 거짓말이다 — 옮긴다(`Engine/Config/ServerConfig.h`).
 [guardfolder]

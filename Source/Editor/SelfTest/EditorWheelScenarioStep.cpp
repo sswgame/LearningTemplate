@@ -9,8 +9,6 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
-
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -70,5 +68,4 @@ namespace sw::editor
     } // namespace
 
     SW_AUTOMATION_STEP( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::run, &EditorWheelStepInternal::validate, AutomationStepOptions{}.withPrepare( &EditorWheelStepInternal::prepare ) );
-    SW_AUTOMATION_STEP_VALIDATOR( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::validate );
 } // namespace sw::editor

@@ -18,6 +18,8 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "sw/config/TimeLimits.gen.h"
+
 namespace sw
 {
     namespace
@@ -26,8 +28,8 @@ namespace sw
         {
             /** @brief 첫 장까지 최소로 기다리는 프레임 수입니다. 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다. */
             static constexpr uint32 kMinWarmupFrames = 10;
-            /** @brief 자리 잡음을 기다리는 벽시계 시한(초)입니다. Debug 빌드가 큰 씬을 읽고 셰이더를 처음 만드는 시간보다 넉넉하다. */
-            static constexpr uint32 kStabilityTimeoutSeconds = 120;
+            /** @brief 자리 잡음을 기다리는 벽시계 시한(초, `Config/Dev/TimeLimits.json`)입니다. Debug 빌드가 큰 씬을 읽고 셰이더를 처음 만드는 시간보다 넉넉하다. */
+            static constexpr uint32 kStabilityTimeoutSeconds = TimeLimitConfig::kStartupCaptureStabilitySeconds;
             /** @brief 같은 시한(마이크로초)입니다 — 단조 시계와 견준다. */
             static constexpr int64 kStabilityTimeoutMicroseconds = static_cast<int64>( kStabilityTimeoutSeconds ) * constant::time::kMicrosecondsPerSecond;
 

@@ -131,19 +131,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AutomationStepValidatorRegistration
-     * @brief 단계 종류의 검사 함수만 따로 올린 등록 항목입니다(`SW_AUTOMATION_STEP_VALIDATOR`). 단계 등록(`AutomationStepRegistration`)이 같은 함수를 가리키므로 둘이 어긋나지 않는다.
-     */
-    struct AutomationStepValidatorRegistration
-    {
-        const utf8*                    _pKind;     ///< 요소 이름입니다(단계 등록의 `_pKind` 와 같은 글).
-        AutomationStepValidateFunction _pValidate; ///< 모듈 없이 불러도 되는 순수 검사 함수입니다.
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @brief 조건의 문턱(`Config/Dev/ScenarioRun.json` 의 `_mapConditionThreshold.<조건 이름>`)을 조건을 등록한 기능이 받아 제 자리에 둡니다. 범위 밖이면 까닭입니다.
      * @details 공용 구조체에 칸을 더하지 않는다 — 기능마다 칸을 더하던 닫힌 집합체(배포 엔진 설정의 사진 정착 문턱 칸)가 세 갈래의 충돌 자리였다.
      */
@@ -203,12 +190,6 @@ namespace sw
         static void               unregisterStep( const AutomationStepRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationStepRegistration* find( string_view kind );
-
-        /** @brief 검사 함수만 올립니다. 이름이 비었거나 함수가 없거나 같은 이름이 이미 있으면 false 이고 올리지 않습니다. 단계 등록(`registerStep`)과 별개입니다. */
-        [[nodiscard]] static bool registerValidator( const AutomationStepValidatorRegistration* pRegistration );
-        static void               unregisterValidator( const AutomationStepValidatorRegistration* pRegistration );
-        /** @brief 검사 함수만 올린 등록을 이름으로 찾습니다. 없으면 nullptr 입니다(올라온 단계의 검사 함수는 `AutomationStepValidation::findValidator` 가 함께 봅니다). */
-        static const AutomationStepValidatorRegistration* findValidator( string_view kind );
 
         /** @brief 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
         [[nodiscard]] static bool registerBlocker( const AutomationBlocker* pBlocker );

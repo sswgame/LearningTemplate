@@ -2,9 +2,9 @@
  * @file EditorScenarioStepValidation.h
  * @brief 에디터 시나리오 단계(`EditorClick` · `EditorDrag` · `EditorHover` · `EditorText` · `EditorKey` · `EditorExpectObject` · `EditorExpectDockLayout` · `CaptureEditorUI`)의
  *        속성 읽기와 검사 함수를 정의합니다. ImGui · 렌더 · 에디터 컨텍스트를 모릅니다.
- * @details 검사 함수는 순수 함수라 에디터 모듈이 올라오지 않은 프로세스(nogpu 테스트)도 부를 수 있다. 그래서 단계를 그리는 `EditorScenarioSteps.cpp` 와 따로 두고,
+ * @details 검사 함수는 순수 함수라 창 · GPU 없이 부를 수 있다. 그래서 단계를 그리는 `EditorScenarioSteps.cpp` 와 따로 두고,
  *          그쪽은 이 파일의 읽기를 불러 ImGui 입력으로 옮기기만 한다(수정자는 비트 마스크로 읽고 ImGui 값으로의 바꿈은 그쪽이 한다).
- *          검사 함수는 `SW_AUTOMATION_STEP_VALIDATOR` 로도 올라가(`EditorScenarioStepValidation.cpp`) 단계 등록 없이 `AutomationStepValidation::findValidator` 가 찾는다.
+ *          검사 함수는 단계 등록(`SW_AUTOMATION_STEP`)에만 적는다. 실행기 없는 검사도 그 등록을 찾는다(`AutomationStepValidation::findValidator`).
  *          `EditorKey` 의 키 이름이 ImGui 가 아는 이름인지는 ImGui 의 이름표가 있어야 알 수 있어, 이 파일은 낱말 모양만 보고 이름은 단계의 준비 함수가 본다.
  */
 #pragma once

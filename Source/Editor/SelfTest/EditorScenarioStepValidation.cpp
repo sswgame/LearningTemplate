@@ -4,8 +4,6 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
-
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 
 namespace sw::editor
@@ -139,17 +137,4 @@ namespace sw::editor
             return {};
         return unexpected( Error{ ErrorKind::InvalidArgument, "needs file=\"….png\"", params._file } );
     }
-
-    // 에디터 모듈이 올라오지 않은 프로세스도 이 단계들의 속성을 검사할 수 있게, 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.
-    SW_AUTOMATION_STEP_VALIDATOR( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepValidation::validateClick );
-    SW_AUTOMATION_STEP_VALIDATOR( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepValidation::validateDrag );
-    SW_AUTOMATION_STEP_VALIDATOR( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepValidation::validateHover );
-    SW_AUTOMATION_STEP_SCHEMA( editorText, EditorScenarioStepValidation::kTextKind, EditorTextParams );
-    SW_AUTOMATION_STEP_SCHEMA( editorDropFiles, EditorScenarioStepValidation::kDropFilesKind, EditorDropFilesParams );
-    SW_AUTOMATION_STEP_VALIDATOR( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepValidation::validateKey );
-    SW_AUTOMATION_STEP_SCHEMA( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, EditorExpectObjectParams );
-    SW_AUTOMATION_STEP_SCHEMA( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, EditorDockLayoutParams );
-    SW_AUTOMATION_STEP_VALIDATOR( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorScenarioStepValidation::validateCapture );
-    SW_AUTOMATION_STEP_SCHEMA( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, EditorSelfTestParams );
-    SW_AUTOMATION_STEP_SCHEMA( editorWaitStable, EditorScenarioStepValidation::kWaitStableKind, EditorNoParams );
 } // namespace sw::editor

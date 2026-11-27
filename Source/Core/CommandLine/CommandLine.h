@@ -258,8 +258,10 @@ namespace sw
         bool isArgumentProvided( CommandLineArgument argument ) const;
 
         /**
-         * @brief 자동화 실행(`-unattended` 또는 `-scenario`)이면 true 입니다 — 사람의 사용자 설정 · 세이브 · 상태 폴더를 읽지도 쓰지도 않는 실행의 판정 하나입니다.
-         * @details 사용자 설정의 무인 자리(`UserSettingsManager`) · 사용자 데이터 뿌리 격리(`AutomationUserDataIsolation`) · 어서트 대화상자가 같은 판정을 쓴다.
+         * @brief 자동화 실행(`-unattended` 또는 `-scenario`)이면 true 입니다 — 사람이 지켜보지 않고 사람의 사용자 설정 · 세이브 · 상태 폴더를 읽지도 쓰지도 않는 실행의 판정 하나입니다.
+         * @details 사용자 설정의 무인 자리(`UserSettingsManager`) · 사용자 데이터 뿌리 격리(`AutomationUserDataIsolation`) · 어서트 대화상자 · 스플래시가 같은 판정을 쓴다(언리얼 `FApp::IsUnattended`).
+         *          전역 변수로 켜는 실행(`-gv_profileFrames` · `-gv_editorSelfTest`)을 사람 없이 돌리는 쪽은 `-unattended` 를 함께 준다(에디터 Test Runner 의 자식 실행처럼).
+         *          변수 이름으로 따로 가르지 않는다 — 이름을 바꾸면 판정이 조용히 빠졌다. 창을 화면 밖에 그리는 판정(`MainWindowSubsystem::shouldRenderOffScreen`)은 `-unattended` 만 본다.
          */
         bool isAutomatedRun() const;
 

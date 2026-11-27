@@ -8,7 +8,7 @@ Scripts/lint/rules/layer_cycles.py
 두 방향(순환) 만 여기서 막는다. 순환이 보이면 한쪽을 위 층으로 올리거나(층 표), 형식 · 창구를 아래로 내려 방향을 하나로 만든다.
 
 아직 순환이 남은 층은 표의 `[sameLayerCycle]`("층 번호" = "까닭")에 적는다 — 적지 않은 층은 모두 검사한다(새 층의 기본은 검사).
-키 · 층 찾기는 생성기(`Scripts/generate/` 의 층 생성기)와 같은 규칙이다: `Source/Engine/` 아래 경로 접두어, 가장 긴 것이 이긴다.
+키 · 층 찾기는 생성기와 같은 함수(`common/layer_table.py`)다: `Source/Engine/` 아래 경로 접두어, 가장 긴 것이 이긴다.
 
   py -3 -m Scripts lint layer-cycles [--self-check]
 """
@@ -16,26 +16,16 @@ Scripts/lint/rules/layer_cycles.py
 from __future__ import annotations
 
 import re
-import tomllib
 from collections import Counter
 from pathlib import Path
 from typing import Iterable, Mapping
 
+from common.layer_table import EDITOR_ROOT_LAYER, find_layer_key, get_layer_table_path, read_layer_table
 from lint.index_cache import open_facts
 from lint.lint_rule import LintRule
 from lint.lint_scope import LintScope, list_repo_files
 
 EXTENSIONS = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
-ROOT_LAYER_NAME = "<root>"   # 에디터 표: `Source/Editor` 바로 아래 파일
-
-
-def find_key(map_layer: dict[str, int], relative: str) -> str | None:
-    """`relative` 를 덮는 가장 긴 키(폴더 또는 파일). 없으면 None."""
-    best: str | None = None
-    for key in map_layer:
-        if (relative == key or relative.startswith(key + "/")) and (best is None or len(key) > len(best)):
-            best = key
-    return best
 
 
 def find_includes(module: str, text: str) -> list[str]:
@@ -47,11 +37,11 @@ def count_include_pairs(map_layer: dict[str, int], map_include: dict[str, list[s
     """같은 층의 다른 키 사이 include 수 — (include 하는 키, include 되는 키). `map_include` 는 모듈 기준 경로 → include 목록."""
     counter: Counter[tuple[str, str]] = Counter()
     for relative, list_include in map_include.items():
-        source = find_key(map_layer, relative) or (ROOT_LAYER_NAME if "/" not in relative and ROOT_LAYER_NAME in map_layer else None)
+        source = find_layer_key(map_layer, relative) or (EDITOR_ROOT_LAYER if "/" not in relative and EDITOR_ROOT_LAYER in map_layer else None)
         if source is None:
             continue
         for include in list_include:
-            target = find_key(map_layer, include)
+            target = find_layer_key(map_layer, include)
             if target is not None and target != source and map_layer[target] == map_layer[source]:
                 counter[(source, target)] += 1
     return counter
@@ -66,10 +56,6 @@ def find_cycles(map_layer: dict[str, int], counter: Counter[tuple[str, str]], se
     return list_problem
 
 
-def read_table(project_root: Path, module: str) -> dict:
-    return tomllib.loads((project_root / "Config" / "Rules" / "Layers" / f"{module}Layers.toml").read_text(encoding="utf-8"))
-
-
 def count_pairs(map_layer: dict[str, int], module: str, list_source: Iterable[tuple[str, str]]) -> Counter[tuple[str, str]]:
     return count_include_pairs(map_layer, {relative: find_includes(module, text) for relative, text in list_source})
 
@@ -78,7 +64,7 @@ def read_pairs(project_root: Path, module: str, map_layer: dict[str, int]) -> Co
     """같은 층 키 사이 include 수(`count_include_pairs`) — 파일마다의 include 는 색인(`index_cache`)에 두고, 판정은 파일마다 접은 쌍의 수(요약)만 읽는다."""
     head = f"Source/{module}/"
     list_path = [path for path in list_repo_files(project_root) if path.startswith(head) and path.endswith(EXTENSIONS)]
-    facts = open_facts(project_root, f"layer-cycles-{module}", [__file__, str(project_root / "Config" / "Rules" / "Layers" / f"{module}Layers.toml")], list_path,
+    facts = open_facts(project_root, f"layer-cycles-{module}", [__file__, str(get_layer_table_path(module, project_root))], list_path,
                       lambda _, text: find_includes(module, text), errors="replace",
                       contribute=lambda path, list_include: [f"{source}\t{target}" for (source, target), count in count_include_pairs(map_layer, {path[len(head):]: list_include}).items()
                                                             for _ in range(count)])
@@ -97,7 +83,7 @@ class LayerCyclesRule(LintRule):
         """순환은 두 방향이 모두 있어야 보이므로 판정은 늘 저장소 전체 색인으로 낸다. 커밋 훅은 Engine C++ 이 바뀌었을 때만 돈다."""
         if not scope.whole_repo and not scope.touches(("Source/Engine",), EXTENSIONS):
             return []
-        table = read_table(self.root, "Engine")
+        table = read_layer_table("Engine", self.root)
         map_layer: dict[str, int] = table["layer"]
         set_allowed_layer = {int(layer) for layer in table.get("sameLayerCycle", {})}
         return find_cycles(map_layer, read_pairs(self.root, "Engine", map_layer), set_allowed_layer)

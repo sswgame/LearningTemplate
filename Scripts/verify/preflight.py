@@ -32,7 +32,7 @@ from common.host_platform import is_windows_host
 from common.run_process import run_process
 from verify.preflight_run import SCRIPTS, PreflightOptions, PreflightRun, StageContext, list_start_names, list_tree_changes, make_windows_failure
 from verify.preflight_stages import MAX_TREE_LINES, list_stages
-from verify.history_store import read_verify_config
+from common.verify_config import read_verify_number
 
 
 def hold_verify_lock(path) -> IO[bytes] | bool:
@@ -73,7 +73,7 @@ class PreflightCommand(Command):
         sys.stdout.reconfigure(newline="\n")   # 끝 줄을 읽는 쪽(셸 · 감시)이 CR 을 떼지 않아도 되게
         root = context.root
         try:
-            ctest_jobs = int(read_verify_config(root, "_ctestJobs"))
+            ctest_jobs = int(read_verify_number("_ctestJobs", root))
         except SystemExit as error:
             print(error)
             return ExitCode.USAGE_ERROR

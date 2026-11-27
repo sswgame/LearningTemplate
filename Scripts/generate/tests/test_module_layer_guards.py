@@ -19,12 +19,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from generate.generator_output import GeneratorError  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from generate.editor_layer_guards import generate_editor_layer_guards  # noqa: E402
-from generate.module_layer_guards import LIST_LAYER_TABLE, assign_layers, require_no_stale_keys, find_layer_table, generate_module_layer_guards, read_layer_table  # noqa: E402
+from common.layer_table import EDITOR_ROOT_LAYER, find_layer, get_editor_layer_name, read_layer_table  # noqa: E402
+from generate.module_layer_guards import LIST_LAYER_TABLE, assign_layers, require_no_stale_keys, generate_module_layer_guards  # noqa: E402
 
 
 class EngineLayerTableTest(unittest.TestCase):
     def setUp(self) -> None:
-        self._map_layer = read_layer_table(find_layer_table("Engine").get_rule_file())
+        self._map_layer = read_layer_table("Engine")["layer"]
 
     def _assign(self, *list_relative: str) -> dict[str, int]:
         return assign_layers(self._map_layer, list_relative, "EngineLayers.toml", "Engine")
@@ -52,6 +53,23 @@ class EngineLayerTableTest(unittest.TestCase):
             require_no_stale_keys(map_layer, root_dir, "EngineLayers.toml")
         self.assertIn("Input/NoSuchMovedFile.cpp", str(context.exception))
         require_no_stale_keys(self._map_layer, root_dir, "EngineLayers.toml")   # 지금 표에는 낡은 줄이 없다
+
+
+class LayerLookupTest(unittest.TestCase):
+    """생성기와 린트(`layer-includes` · `layer-cycles`)가 함께 쓰는 판정(`common/layer_table.py`)."""
+
+    def test_longest_key_and_folder_boundary(self) -> None:
+        map_layer = {"A": 1, "A/Low": 0, "A/Low/x.h": 3}
+        self.assertEqual(find_layer(map_layer, "A/y.h"), 1)
+        self.assertEqual(find_layer(map_layer, "A/Low/y.h"), 0)
+        self.assertEqual(find_layer(map_layer, "A/Low/x.h"), 3)
+        self.assertIsNone(find_layer(map_layer, "AB/y.h"))
+
+    def test_editor_layer_name(self) -> None:
+        self.assertEqual(get_editor_layer_name("x.h"), EDITOR_ROOT_LAYER)
+        self.assertEqual(get_editor_layer_name("Common/x.h"), "Common")
+        self.assertEqual(get_editor_layer_name("Common/GUI/Theme/x.h"), "Common/GUI")
+        self.assertEqual(get_editor_layer_name("Panels/Profiler/x.h"), "Panels")
 
 
 class RealLayerTablesConfigureTest(unittest.TestCase):

@@ -7,7 +7,7 @@ Scripts/lint/rules/layer_includes.py
 드러나서, 층 위반이 커밋을 지나 Debug 빌드에서야 멈췄다(아무도 include 하지 않는 헤더는 빌드도 보지 않는다). 같은 표로 커밋 때 직접 include 를 먼저 본다.
 헤더마다 자기 층에서 검사되므로 직접 include 만 보아도 전이 include 가 덮인다 — 예외는 어느 층에서나 쓰는 에디터 `[prelude]` 헤더라, 그 헤더를 거친 include 는 따라간다.
 
-파일의 층은 생성기 · CMake 와 같은 규칙이다(가장 긴 키가 이긴다):
+파일의 층은 생성기와 같은 함수(`common/layer_table.py`)로 정한다(가장 긴 키가 이긴다):
 - Core: `[layer]` · `[sublayer]` 키. 단위 테스트(`/Tests/`)와 `Source/Core` 바로 아래 파일은 맨 위 층 부분이 짓는다(헤더는 가드가 없다).
 - Engine · GameFramework(`Runtime`): `[layer]` 키(파일 또는 폴더 접두어).
 - Editor: 층 이름(`Common/<하위>` · `Common` · 최상위 폴더 · `<root>`)의 `[layer]`.
@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import functools
 import re
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
+from common.layer_table import find_layer, get_editor_layer_name, read_layer_table
 from lint.lint_rule import LintRule, SourceFile
 from lint.lint_scope import LintScope, list_repo_files, read_text
 
@@ -40,39 +40,22 @@ class LayerModule:
     _set_prelude: frozenset[str]
 
 
-def find_longest_key(map_layer: dict[str, int], relative: str) -> int | None:
-    best: str | None = None
-    for key in map_layer:
-        if (relative == key or relative.startswith(key + "/")) and (best is None or len(key) > len(best)):
-            best = key
-    return map_layer[best] if best is not None else None
-
-
 def make_core_layer(table: dict) -> Callable[[str, bool], int | None]:
     map_layer = {**table["layer"], **table.get("sublayer", {})}
     top_layer = max(map_layer.values())
 
-    def find_layer(relative: str, is_includer: bool) -> int | None:
+    def find_core_layer(relative: str, is_includer: bool) -> int | None:
         if "/" not in relative:
             return top_layer if is_includer else None   # 바로 아래 파일: 맨 위 부분이 짓고, 헤더는 가드가 없다
         if "/Tests/" in f"/{relative}":
             return top_layer                           # 테스트는 맨 위 부분이 짓는다
-        return find_longest_key(map_layer, relative)
-    return find_layer
+        return find_layer(map_layer, relative)
+    return find_core_layer
 
 
 def make_module_layer(table: dict) -> Callable[[str, bool], int | None]:
     map_layer: dict[str, int] = table["layer"]
-    return lambda relative, is_includer: find_longest_key(map_layer, relative)
-
-
-def get_editor_layer_name(relative: str) -> str:
-    list_part = relative.split("/")
-    if len(list_part) == 1:
-        return "<root>"
-    if list_part[0] != "Common":
-        return list_part[0]
-    return "Common" if len(list_part) == 2 else f"Common/{list_part[1]}"
+    return lambda relative, is_includer: find_layer(map_layer, relative)
 
 
 def make_editor_layer(table: dict) -> Callable[[str, bool], int | None]:
@@ -106,16 +89,12 @@ def find_problems(module: LayerModule, found: Mapping[str, Sequence[str]], read_
     return list_problem
 
 
-def read_table(project_root: Path, name: str) -> dict:
-    return tomllib.loads((project_root / "Config" / "Rules" / "Layers" / f"{name}Layers.toml").read_text(encoding="utf-8"))
-
-
 def list_modules(project_root: Path) -> list[LayerModule]:
-    editor = read_table(project_root, "Editor")
+    editor = read_layer_table("Editor", project_root)
     return [
-        LayerModule("Core", "Core", make_core_layer(read_table(project_root, "Core")), frozenset()),
-        LayerModule("Engine", "Engine", make_module_layer(read_table(project_root, "Engine")), frozenset()),
-        LayerModule("GameFramework", "GameFramework/Runtime", make_module_layer(read_table(project_root, "GameFramework")), frozenset()),
+        LayerModule("Core", "Core", make_core_layer(read_layer_table("Core", project_root)), frozenset()),
+        LayerModule("Engine", "Engine", make_module_layer(read_layer_table("Engine", project_root)), frozenset()),
+        LayerModule("GameFramework", "GameFramework/Runtime", make_module_layer(read_layer_table("GameFramework", project_root)), frozenset()),
         LayerModule("Editor", "Editor", make_editor_layer(editor), frozenset(editor.get("prelude", {}))),
     ]
 

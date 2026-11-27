@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import builtins
 import io
-import json
 import subprocess
 import time
 from pathlib import Path
@@ -29,6 +28,7 @@ from typing import Sequence
 
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
+from common.verify_config import read_verify_number
 from lint.format_files import run_clang_format_batch, run_vcpkg_manifest_format, select_format_files, select_vcpkg_manifests
 from lint.index_cache import CACHE_FOLDER
 from lint.lint_rule import LintRule, find_orphan_tables, find_rules, format_rules, inspect_file, inspect_files
@@ -155,15 +155,9 @@ def run_self_check(rule: LintRule) -> str | None:
     return None
 
 
-VERIFY_CONFIG = "Config/Dev/Verify.json"   # `_hookBudgetMilliseconds` — 커밋 훅의 규칙 하나 · 도구 정책 훅 호출 하나의 시간 예산
-
-
 def read_hook_budget_seconds(project_root: Path) -> float:
-    """시간 예산(초) — 없으면 멈춘다(폴백 없음). 판정은 바꾸지 않고 경고만 낸다(시간은 기계 · 부하마다 달라 형식으로 지킬 것이 아니다)."""
-    value = json.loads((project_root / VERIFY_CONFIG).read_text(encoding="utf-8")).get("_hookBudgetMilliseconds")
-    if not isinstance(value, (int, float)) or isinstance(value, bool):
-        raise SystemExit(f"[lint] {VERIFY_CONFIG} 의 _hookBudgetMilliseconds 가 수가 아니다")
-    return float(value) / 1000.0
+    """커밋 훅의 규칙 하나 · 도구 정책 훅 호출 하나의 시간 예산(초, Verify.json `_hookBudgetMilliseconds`). 판정은 바꾸지 않고 경고만 낸다(시간은 기계 · 부하마다 달라 형식으로 지킬 것이 아니다)."""
+    return read_verify_number("_hookBudgetMilliseconds", project_root) / 1000.0
 
 
 def format_rule_times(list_time: Sequence[tuple[float, str]], whole_repo: bool, budget_seconds: float) -> str | None:

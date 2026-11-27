@@ -43,6 +43,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.host_platform import is_windows_host
 from common.paths import get_build_dir
 from package.pack_files import PACK_FOLDER_NAME
@@ -64,14 +65,14 @@ DEFAULT_SECONDS = 20
 #: 표지 파일 — App.cpp 의 kWebPersistentRoot(IDBFS 마운트) 아래다. 두 곳이 같은 자리를 쓴다.
 PROBE_PATH = "/persistent/.swwebcheck"
 #: 브라우저가 페이지를 열고 보고를 마칠 때까지의 여유(확인 시간 위에 더한다) — 묶음 내려받기 · wasm 컴파일 · IDBFS 읽기.
-LOAD_ALLOWANCE_SECONDS = 60
+LOAD_ALLOWANCE_SECONDS = read_script_time_limit("_webLoadAllowanceSeconds")
 #: 웹 오디오 백엔드(Engine/Audio/Web/WebAudioBackend.js)가 워클릿이 처음 샘플을 꺼냈을 때 Module.print 로 내는 줄의 앞머리 — 믹서 스레드 → 링 → 워클릿이 흐른다는 판정이다.
 AUDIO_STARTED_LINE = "O [WebAudio] output started"
-STOP_TIMEOUT_SECONDS = 10
+STOP_TIMEOUT_SECONDS = read_script_time_limit("_webStopSeconds")
 #: 시나리오 실행은 개발 빌드다 — 배포 빌드(`PRESET_NAME`)에는 실행기도 시나리오 팩도 없다.
 SCENARIO_PRESET_NAME = "Web-Release"
 #: 시나리오가 끝나기까지의 상한(초) — 시나리오의 프레임 시한이 먼저 진다. 이것은 앱이 멈춘 때의 끝이다.
-SCENARIO_SECONDS = 180
+SCENARIO_SECONDS = read_script_time_limit("_webScenarioSeconds")
 #: 확인 페이지의 보고 스크립트. `probe` 쿼리가 run 1(write) · run 2(read)를 가른다. Module.FS 는 Web.cmake 의 EXPORTED_RUNTIME_METHODS 가 내보낸다.
 REPORTER_SCRIPT = """<script>
 (() => {{
