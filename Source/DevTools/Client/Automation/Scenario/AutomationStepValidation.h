@@ -2,8 +2,8 @@
  * @file AutomationStepValidation.h
  * @brief 시나리오 단계를 실행기 없이 검사할 때, 검사 함수(`AutomationStepRegistration::_pValidate`)를 찾고 그것이 답할 수 있는 단계인지 가립니다.
  * @details 검사 함수는 순수 함수(단계 → 참 · 거짓과 이유)라 실행기 없이 부를 수 있다. 다만 두 가지가 이 프로세스에 모듈이 올라와 있어야 답이 나온다.
- *          (1) 단계 종류 자체 — 에디터 · App 의 단계는 그 모듈이 올라와야 등록된다. 그래서 검사 함수만 ImGui · 렌더에 기대지 않는 파일에 두고
- *              `SW_AUTOMATION_STEP_VALIDATOR` 로 따로 등록하면(진짜 등록은 같은 함수를 부른다) 모듈 없이도 검사할 수 있다.
+ *          (1) 단계 종류 자체 — 단계는 그것을 등록하는 모듈(에디터 · DevTools)이 올라와야 등록되고, 검사 함수는 그 등록(`SW_AUTOMATION_STEP`)에만 적는다.
+ *              검사만 따로 올리는 길은 두지 않는다. 같은 종류를 두 목록에 적으면 한쪽만 고치게 된다(언리얼 Automation 도 등록 매크로 하나다).
  *          (2) 감시 값 이름 · 전역 변수 이름 · 개발 명령 이름 — 등록표를 묻는다. 그런 단계를 부르면 "틀렸다" 와 "이 프로세스가 모른다" 가 같은 거짓으로 섞이므로,
  *              부르기 전에 `findUnresolvedDependency` 로 먼저 가른다. 모르는 단계는 통과로 세지 않고 "못 본 단계" 로 따로 센다.
  */
@@ -12,7 +12,6 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Registry/RegistrationList.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -28,7 +27,7 @@ namespace sw
     enum class AutomationStepDependency : uint8
     {
         Resolved,       ///< 모두 등록돼 있습니다. 검사 함수를 불러도 됩니다.
-        StepKind,       ///< 단계 종류도, 그 종류의 검사 함수도 이 프로세스에 등록돼 있지 않습니다(그 단계를 등록하는 모듈이 올라오지 않았다).
+        StepKind,       ///< 단계 종류가 이 프로세스에 등록돼 있지 않습니다(그 단계를 등록하는 모듈이 올라오지 않았다).
         Watch,          ///< `watch` 속성의 감시 값이 등록돼 있지 않습니다.
         GlobalVariable, ///< `Variable` · `ExpectVariable` 의 `name` 이 등록된 전역 변수가 아닙니다(엔진 서비스가 묶이지 않은 경우 포함).
         DevCommand,     ///< `DevCommand` 의 첫 낱말이 등록된 개발 명령이 아닙니다(Shipping 처럼 개발 명령이 없는 구성 포함).
@@ -38,7 +37,7 @@ namespace sw
     /** @brief `findValidator` 의 답입니다. */
     enum class AutomationValidatorResult : uint8
     {
-        Unknown,     ///< 이 단계 종류의 등록도 검사 함수 등록도 없습니다.
+        Unknown,     ///< 이 단계 종류의 등록이 없습니다.
         NoValidator, ///< 단계 종류는 있으나 검사 함수가 없습니다(속성 검사를 하지 않는 단계).
         Found,       ///< 검사 함수를 찾았습니다.
     };
@@ -47,11 +46,11 @@ namespace sw
 
 namespace sw
 {
-    /** @struct AutomationStepValidation @brief 단계를 실행 없이 검사하기 전의 확인 모음입니다. 검사 함수만 올리는 곳은 `AutomationStepRegistry::registerValidator` 입니다. */
+    /** @struct AutomationStepValidation @brief 단계를 실행 없이 검사하기 전의 확인 모음입니다. */
     struct SW_DEVTOOLS_API AutomationStepValidation
     {
         /**
-         * @brief @p kind 의 검사 함수를 찾습니다. 올라온 단계 등록(`AutomationStepRegistry`)이 먼저이고, 없으면 검사만 올린 등록입니다.
+         * @brief @p kind 의 검사 함수를 올라온 단계 등록(`AutomationStepRegistry`)에서 찾습니다.
          * @param outValidate `Found` 일 때만 채웁니다.
          */
         [[nodiscard]] static AutomationValidatorResult findValidator( string_view kind, AutomationStepValidateFunction& outValidate );
@@ -87,28 +86,4 @@ namespace sw
         [[nodiscard]] static const utf8* getDependencyLabel( AutomationStepDependency dependency );
     };
 } // namespace sw
-
-namespace sw
-{
-    /** @brief `SW_AUTOMATION_STEP_VALIDATOR` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게)(공통 틀 `StaticRegistrar`). */
-    SW_DEFINE_STATIC_REGISTRAR( AutomationStepValidatorRegistrar, const AutomationStepValidatorRegistration*, &AutomationStepRegistry::registerValidator, &AutomationStepRegistry::unregisterValidator );
-} // namespace sw
-
-#if !defined( SW_SHIPPING )
-
-    /**
-     * @brief 단계 종류의 검사 함수만 등록합니다(.cpp 의 파일 범위). 단계를 등록하는 모듈(에디터 · App)이 올라오지 않은 프로세스(nogpu 테스트)도 시나리오 데이터를 검사하게 한다.
-     * @details 검사 함수는 단계 등록(`SW_AUTOMATION_STEP`)이 받는 함수와 같아야 한다. 검사 함수를 ImGui · 렌더에 기대지 않는 파일에 두면 이 줄도 거기 둔다.
-     */
-    #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) SW_STATIC_REGISTRATION( automationStepValidator, ::sw::AutomationStepValidatorRegistration, ::sw::AutomationStepValidatorRegistrar, id, pKind, pValidate )
-
-    /** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateProperties<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
-    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateProperties<TParams> )
-
-#else
-
-// 자동화를 뺀 배포본(`SW_SHIPPING`): 등록하지 않고 본문 함수만 붙잡는다.
-    #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) [[maybe_unused]] static constexpr auto sw_automationStepValidatorUnused_##id = pValidate
-    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams )      SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateProperties<TParams> )
-
-#endif // !SW_SHIPPING
+>>>

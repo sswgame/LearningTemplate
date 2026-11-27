@@ -2,8 +2,6 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationBackendSteps.h"
 
-#include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
-
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 
@@ -52,7 +50,5 @@ namespace sw
         }
         return {};
     }
-
-    // App 이 올라오지 않은 프로세스(nogpu 테스트)도 이 단계의 속성을 검사할 수 있게, App 의 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.
-    SW_AUTOMATION_STEP_VALIDATOR( swapBackend, AutomationBackendSteps::kSwapBackendKind, &AutomationBackendSteps::validateSwapBackend );
+    >>>
 } // namespace sw
