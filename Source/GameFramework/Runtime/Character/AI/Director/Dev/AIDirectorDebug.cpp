@@ -86,9 +86,7 @@ namespace sw
     void AIDirector::dumpTrace( string& outText ) const
     {
         outText.clear();
-        if ( _pTrace == nullptr )
-            return;
-        for ( const AIDirectorEvent& event : *_pTrace )
+        for ( const AIDirectorEvent& event : _listTrace )
         {
             StringBuilder<constant::buffer::kMax256> line;
             line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str() );

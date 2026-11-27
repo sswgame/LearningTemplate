@@ -60,7 +60,7 @@ namespace sw
         , _spawnDirector{}
         , _listPoolState{}
         , _eventBuffer{}
-        , _pTrace{}
+        , _listTrace{}
         , _listScratchWeight{}
         , _pProfile{ nullptr }
         , _pSpawnTable{ nullptr }
@@ -74,8 +74,6 @@ namespace sw
         , _phaseIndex{ -1 }
         , _cycle{ 0 }
     {
-        if constexpr ( kTraceEnabled )
-            _pTrace = make_unique<RingBuffer<AIDirectorEvent, kMaxTraceEvent>>();
     }
 
     void AIDirector::initialize( const AIDirectorProfile* pProfile, const SpawnTable* pSpawnTable, uint32 seed )
@@ -94,8 +92,7 @@ namespace sw
         const uint32 spawnSeed = _seed ^ AIDirectorInternal::kSpawnSeedSalt;
         _spawnDirector.initialize( _pSpawnTable, spawnSeed != 0 ? spawnSeed : GameRandom::kDefaultSeed ); // 시드가 소금값이면 0(난수의 고정점)이 된다. 나온 스폰 수열을 지키려고 deriveSeed 로 바꾸지 않는다
         _eventBuffer.clear();
-        if ( _pTrace != nullptr )
-            _pTrace->clear();
+        _listTrace.clear();
         _time       = 0.0f;
         _phaseTime  = 0.0f;
         _intensity  = 0.0f;
@@ -436,7 +433,11 @@ namespace sw
     {
         _eventBuffer.push( event );
         if constexpr ( kTraceEnabled )
-            _pTrace->push( event ); // 최근 사건은 `dumpTrace` 가 보여 준다
+        {
+            if ( _listTrace.size() >= kMaxTraceEvent )
+                _listTrace.pop_front();    // 가득 차면 가장 오래된 것을 버린다
+            _listTrace.push_back( event ); // 최근 사건은 `dumpTrace` 가 보여 준다
+        }
     }
 
     void AIDirector::pollEvents( vector<AIDirectorEvent>& outListEvent )
@@ -506,8 +507,7 @@ namespace sw
         {
             _spawnDirector.setAllowedTags( _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )]._listSpawnTag );
             _eventBuffer.clear();
-            if ( _pTrace != nullptr )
-                _pTrace->clear();
+            _listTrace.clear();
         }
         io.value( _builtinModel );
         io.value( _spawnDirector );

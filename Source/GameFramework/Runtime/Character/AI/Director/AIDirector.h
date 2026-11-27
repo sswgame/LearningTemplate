@@ -8,7 +8,7 @@
  *          스폰 자체는 `SpawnDirector` 가 하고 단계가 예산 배율과 태그를 바꾼다. 조건은 일정의 `ScheduleCondition` 을, 난수는 `GameRandom` 을 쓴다.
  */
 #pragma once
-#include "Core/Container/RingBuffer.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
@@ -16,7 +16,6 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -245,7 +244,7 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<PoolState> _listPoolState;
         SW_TRANSIENT NotificationBuffer<AIDirectorEvent> _eventBuffer;
-        SW_TRANSIENT unique_ptr<RingBuffer<AIDirectorEvent, kMaxTraceEvent>> _pTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다. 배포는 비어 있다(`kTraceEnabled`) — 모든 구성에서 배치는 같고 저장소만 개발 구성에 있다
+        SW_TRANSIENT deque<AIDirectorEvent> _listTrace; ///< 최근 사건(오래된 것부터, 최대 `kMaxTraceEvent`). 배포는 쌓지 않아 비어 있다(`kTraceEnabled`) — 배치는 모든 구성에서 같고 저장소만 개발 구성에서 찬다. `StateIO::readAtomic` 이 감독을 복사하므로 복사되는 컨테이너다
         SW_TRANSIENT vector<float32> _listScratchWeight;
         const AIDirectorProfile*     _pProfile;
         const SpawnTable*            _pSpawnTable;
