@@ -14,8 +14,8 @@
 
 ### 통합 중
 
-- main(push 전): 이름 · 폴더 바로잡기 세 물결(N1 · N2 · N3 · N4+GUID · N5 · N6 · N7 · N8a · N8b · N9 LogicCircuit · N10 Digest)과 재발 방지 N11 을 합쳤다. 병합 빌드의 빠진 include · 지운 X-macro 줄 · 잘못 나뉜 개발 소스 · Host/Client 경로를 고쳐 Release · Server 빌드와 단위 133 개가 통과한다. preflight 전체(`bash Scripts/verify/preflight.sh --no-linux`)가 남았다.
-- 다음 묶음: 사용자 요청(2026-11-27) "이름 정리가 끝나면 전체를 확인해 구조적 리팩토링" — push 뒤 층마다 조사 갈래를 맡겨(상용 엔진과 견준 구조 결함 · 중복 · 주인 없는 Util · 층 위반 후보) 계획을 세우고 물결로 고친다.
+- main(push 전): 이름 · 폴더 바로잡기 전체 + N11, 구조 리팩토링 1 물결 R1 그래픽 판정 표 · R2 열거 감시 이름화 · R3 Core 쓰기 정책 · DynamicLibrary · SampleStatistics · R4 StrictRead · 템플릿 로더 · 서버 정책 Config · AssetIDKey · R5 TargetFolders 표 · 층 해석 공통 모듈 · 무인 판정 · TimeLimits.json · R6 개발 멤버 배포 제외 · HUD 바인딩 매크로 · LedgerAssetID · Server RPC Validate 를 합쳤다. Release · Server 빌드와 단위 134 개가 통과한다. preflight 전체가 남았다(R2 가 바꾼 시나리오 292 줄은 `changed` 단계가 돈다).
+- 리팩토링 2 물결 후보: 에셋 정체성 C++ · 파이썬 단일화(App 커맨드릿 정본), IOCP · epoll 연결 상태기계 합치기, 예측 폰 복제 PredictedPawnReplicator, 손 serializeState → RuntimeState, FileUtil 쪼개기, FramePSOManager::Impl · 장치 클래스 분해, 큰 클래스 분해.
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`), 메모리 추적기 · 로그 글 철자(`Allocation size` 등).
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
 
@@ -30,6 +30,15 @@
 - EditorStability → EditorSettle 은 하지 않는다(11-13 settle → stable 결정). 에디터 Job 파일 · Commands 값 형식 옮기기는 층 껍데기에 걸려 남았다. 메인 폴더의 빈 폴더 Core/Console · Core/Diagnostics/Dev 를 지운다.
 - N4 밖의 resourceRoot · resourceID · _listResourceFolder · EditorResourceCatalog* · CookInputKind::Resource, 시나리오 이름 resourcecondition · resourcesave · netresourcedigest. Vulkan SamplerSpec · RigIKNodes LimitSpec. 키트 Dev/ 의 `*GameModeComponentDevTools` · `*DevCommands` 접미. VocabularyCheck(Engine/Behavior 와 함께). — N11 기준선 또는 다음 묶음.
 - N11 기준선(NamingWordsBaseline · FolderLayoutBaseline)에 올라간 옛 이름 · 파일 이름은 그 파일을 고칠 때 줄인다(`--ratchet`). 린트 규칙 id 와 파일 이름이 다른 곳(feature_references.py ↔ feature-refs).
+
+### 리팩토링 1 물결에서 남긴 몫
+
+- R1: trait 깃발 전체 private 화(외부 사용 약 60 곳), FrameRecorder 의 종류별 엔진 자원 칸, 다른 큰 switch 표에 `-Wimplicit-fallthrough` 오류 걸기. 쿠킹 요청에서 그림자 · 깊이 프리패스 표 단계 PS 가 빠진 것을 cook 테스트로 확인.
+- R2: 열거 없이 수로 내는 감시(Editor.GizmoOperation · Fighting.MatchWinner · Voxel · Shooter ControllerKind · Editor.HoveredObject · DebugTargetFollowsSelection).
+- R3: UnionFind · AtomicSlot · FrameClock 후보, 토큰 없는 set…Rule setter(Engine · GameFramework). Linux 전용 Alsa · X11 은 Linux 빌드로 확인.
+- R4: 로더로 옮기지 않은 종류(NavMesh · PhysicsSettings · FontCatalog · TimeZone · AudioGraph · PhysicsAsset · AudioEvent 프리셋 · 손 XML 읽기), loadFromXMLText 비공개화, validate 결과 형식 다섯 가지 통일, CharacterDataReader ↔ XMLReadUtil.
+- R5: Core 층 판정(CMake ↔ lint) 이중 정의, A1 · A4 · E6, test_tool_policy.py 의 Verify.json 직접 읽기. 웹 · Android configure 확인.
+- R6: 와이어 · 저장 구조체 `_assetID` 의 string 칸, compareBuild · CharacterMirrorUtil, 봇 조향 비율 · SRPG 리터럴.
 
 ## 1. 다음 순서
 
