@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/ScopedDeferredLog.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHITextureDesc.h"
@@ -109,8 +110,8 @@ namespace sw
         {
             const uint32 mipWidth  = ( desc._width >> mip ) > 0 ? ( desc._width >> mip ) : 1u;
             const uint32 mipHeight = ( desc._height >> mip ) > 0 ? ( desc._height >> mip ) : 1u;
-            const uint64 blocksX   = ( mipWidth + block._blockWidth - 1 ) / block._blockWidth;
-            const uint64 blocksY   = ( mipHeight + block._blockHeight - 1 ) / block._blockHeight;
+            const uint64 blocksX   = MathUtil::divideAndRoundUp( mipWidth, block._blockWidth );
+            const uint64 blocksY   = MathUtil::divideAndRoundUp( mipHeight, block._blockHeight );
             sliceBytes += blocksX * blocksY * block._blockBytes;
         }
         return sliceBytes * sliceCount;

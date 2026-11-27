@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -25,8 +26,8 @@ namespace sw
             return false;
         const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
         const uint32 mipHeight = ( height >> mip ) > 0 ? ( height >> mip ) : 1u;
-        const uint32 blocksX   = ( mipWidth + info._blockWidth - 1 ) / info._blockWidth;
-        const uint32 blocksY   = ( mipHeight + info._blockHeight - 1 ) / info._blockHeight;
+        const uint32 blocksX   = MathUtil::divideAndRoundUp( mipWidth, info._blockWidth );
+        const uint32 blocksY   = MathUtil::divideAndRoundUp( mipHeight, info._blockHeight );
         outSpan._pData         = nullptr;
         outSpan._offsetBytes   = 0;
         outSpan._rowBytes      = blocksX * info._blockBytes;

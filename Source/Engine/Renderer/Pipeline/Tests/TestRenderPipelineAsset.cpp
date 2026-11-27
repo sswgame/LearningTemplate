@@ -15,6 +15,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHIRenderPassInfo.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -308,7 +309,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassLoads )
     const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
     SW_EXPECT_TRUE( pass._type == RenderPassKind::Compute );
     SW_EXPECT_EQUAL( string( "MyCS" ), pass._computeEntryPoint );
-    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Compute ).hasFlag( RenderPassTraitFlag::kPipelineCompute ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Compute ).isPipelineComputePass() );
 }
 
 /** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 실행이 받아 줄 수 없는 선언은 읽기 오류다. 진입점 칸은 컴퓨트 패스만 쓴다 */
@@ -846,6 +847,96 @@ SW_TEST_CASE( RenderPipelineAssetTest, TemporalPassBindsHistoryAndJitterByDescri
     SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ "engine/pipeline/deferredpipeline.xml" }, deferredText ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, StringUtil::replace( deferredText, "_bTemporalJitter=\"true\"", "" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, StringUtil::replace( deferredText, "_type=\"VolumetricClouds\"", "_type=\"VolumetricClouds\" _bTemporalJitter=\"true\"" ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] XML 이 셰이더를 고르는 Compute 패스의 기록 역할(`_historyRole`)은 로드 오류다 — RW 칸 바인딩 컴퓨트는 역할 칸으로 기록을 읽지 않는다
+ * @details 변이: 기록 역할 검사가 컴퓨트 여부를 표의 실행 종류(`isComputePass`) 대신 엔진 컴퓨트만으로 보면 Compute 종류를 그래픽스 패스로 보고 이 파이프라인을 읽어 마지막 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, PipelineComputeHistoryRoleIsRejected )
+{
+    const auto makeXML = []( string_view passAttributes )
+    {
+        StringBuilder<constant::buffer::kMax1024> xml;
+        xml.appendFormat( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                          "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                          "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Load\" _bHistory=\"true\"/>"
+                          "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"Compute\" %# %#>"
+                          "<_listInput><item>A</item></_listInput><_listOutput><item>B</item></_listOutput></RenderGraphPassDesc></_listPass></RenderPipelineDesc>",
+                          ComputePassTestUtil::withShader(), passAttributes );
+        return string( xml.view() );
+    };
+    RenderPipelineAsset accepted; // 기록 첨부를 쓰는 컴퓨트 패스 자체는 맞다
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( accepted, makeXML( "" ) ) );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassHistoryRoleNotBound" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_historyRole=\"GBufferAlbedo\"" ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 패스의 컴퓨트 여부 · 범위는 표의 칸 하나가 답한다 — 그래프 접근과 첨부 RW 생성이 같은 판정을 본다
+ * @details 변이: 첨부 RW 판정(`isUnorderedAccessAttachment`)이 Compute 종류만 보면 컴퓨트 구현으로 도는 블룸 다운샘플 출력을 RW 로 만들지 않아 첫 묶음의 단언이 진다.
+ *          이름 바인딩 컴퓨트의 입력까지 RW 로 보면 마지막 묶음이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, ComputeExecutionComesFromTheKindTable )
+{
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Compute ).isComputePass() );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::GPUCull ).isComputePass() );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::GPUCull ).isPipelineComputePass() );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::BloomDownsample ).isComputePass() );
+    static_assert( isViewPassType( RenderPassKind::Fullscreen ) && isRepeatablePassType( RenderPassKind::Shadow ), "표의 범위 칸은 컴파일 때 답한다" );
+    static_assert( isFramePassType( RenderPassKind::GPUCull ) && isPipelinePassType( RenderPassKind::InstanceSort ) == false, "컬링 안의 정렬 디스패치는 XML 에 적지 않는다" );
+
+    vector<RenderGraphPassDesc> listPass( 1 );
+    RenderGraphPassDesc&        pass = listPass[0];
+    pass._type                       = RenderPassKind::BloomDownsample;
+    pass._implementation             = RenderPassExecutionMode::Compute;
+    pass._listInput                  = { "Source" };
+    pass._listOutput                 = { "Bright" };
+    SW_EXPECT_TRUE( isUnorderedAccessAttachment( listPass, "Bright", true ) );
+    SW_EXPECT_FALSE( isUnorderedAccessAttachment( listPass, "Bright", false ) ); // 에뮬 백엔드는 픽셀 구현이 돈다
+    SW_EXPECT_FALSE( isUnorderedAccessAttachment( listPass, "Source", true ) );
+
+    pass._type           = RenderPassKind::Compute;
+    pass._implementation = RenderPassExecutionMode::Pixel;
+    SW_EXPECT_TRUE( isUnorderedAccessAttachment( listPass, "Source", false ) ); // RW 칸 바인딩은 입력도 RW 로 읽는다
+    pass._inputBinding = RenderPassInputBinding::Name;
+    SW_EXPECT_FALSE( isUnorderedAccessAttachment( listPass, "Source", false ) ); // 이름 바인딩은 셰이더 읽기 번호로 읽는다
+    SW_EXPECT_TRUE( isUnorderedAccessAttachment( listPass, "Bright", false ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 패스의 셰이더 스테이지 목록은 함수 하나가 정한다 — 런타임 PSO 와 쿠커가 같은 목록으로 돈다
+ * @details 변이: 픽셀 스테이지 판정이 컬러 RT 수를 보지 않으면 그림자 줄에 PS 가 생겨 첫 단언이 진다. 컴퓨트 구현을 빠뜨리면 블룸 다운샘플 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, PassShaderStagesComeFromOneFunction )
+{
+    const EngineDefaultAssets&   assets = engine::getSubsystem<EngineDefaultAssets>();
+    const RenderPassShaderStages shadow = enumeratePassShaderStages( RenderPassKind::Shadow, nullptr, nullptr, {}, assets );
+    SW_EXPECT_TRUE( shadow.hasStage( ShaderStage::Vertex ) && shadow.hasStage( ShaderStage::Pixel ) == false ); // 컬러 출력이 없다
+    const RenderPassShaderStages cull = enumeratePassShaderStages( RenderPassKind::GPUCull, nullptr, nullptr, {}, assets );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, cull._listStage.size() );
+    SW_EXPECT_TRUE( cull._listStage[0]._stage == ShaderStage::Compute );
+    SW_EXPECT_EQUAL( string( "CSMain" ), cull._listStage[0]._entryPoint );
+
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ "engine/pipeline/deferredpipeline.xml" } ) );
+    const RenderGraphPassDesc* pLighting = deferred.findUniquePass<RenderPassKind::Lighting>();
+    SW_REQUIRE_TRUE( pLighting != nullptr );
+    const RenderPassShaderStages lighting = enumeratePassShaderStages( RenderPassKind::Lighting, pLighting, pLighting, deferred.getDesc()._listAttachment, assets );
+    SW_EXPECT_TRUE( lighting.hasStage( ShaderStage::Vertex ) && lighting.hasStage( ShaderStage::Pixel ) );
+    SW_EXPECT_FALSE( lighting._computeImplementation.has_value() );
+
+    RenderGraphPassDesc downsample;
+    downsample._type                   = RenderPassKind::BloomDownsample;
+    downsample._implementation         = RenderPassExecutionMode::Compute;
+    const RenderPassShaderStages bloom = enumeratePassShaderStages( RenderPassKind::BloomDownsample, &downsample, &downsample, {}, assets );
+    SW_REQUIRE_TRUE( bloom._computeImplementation.has_value() );
+    SW_EXPECT_TRUE( VectorUtil::contains( bloom._computeImplementation->_listDefine, string( kPassComputeImplementationDefine ) ) );
+    SW_EXPECT_TRUE( bloom.hasStage( ShaderStage::Pixel ) ); // 에뮬 백엔드가 쓰는 픽셀 구현도 함께 나온다(출력 선언이 없으면 표의 RT 수)
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
@@ -1550,9 +1641,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
     SW_EXPECT_LOG( "RenderPipelineAsset.PassNoComputeImplementation" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
-    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::BloomDownsample ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
-    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::DepthOfField ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
-    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Bloom ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::BloomDownsample ).hasComputeImplementation() );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::DepthOfField ).hasComputeImplementation() );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Bloom ).hasComputeImplementation() );
 
     // 셰이더는 픽셀 구현과 같은 파일 · define 에 컴퓨트 define 하나를 더한다 — 쿠커와 런타임이 같은 함수를 부른다.
     RenderGraphPassDesc downsample{};
@@ -1593,7 +1684,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, DeferredTileVariantsAddTheClassDefine )
     SW_EXPECT_TRUE( VectorUtil::contains( simple._listDefine, string( "SW_DEFERRED_TILE_CLASS=1" ) ) );
     SW_EXPECT_TRUE( VectorUtil::contains( complex._listDefine, string( "SW_DEFERRED_TILE_CLASS=0" ) ) );
     const RenderPassKindInfo& classify = getRenderPassKindInfo( RenderPassKind::DeferredTileClassify );
-    SW_EXPECT_TRUE( classify.hasFlag( RenderPassTraitFlag::kCompute ) && classify.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) &&
+    SW_EXPECT_TRUE( classify.isComputePass() && classify.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) &&
                     classify.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) );
 }
 

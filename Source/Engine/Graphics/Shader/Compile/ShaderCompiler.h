@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/EnumArray.h"
+#include "Core/Container/span.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -274,8 +275,9 @@ namespace sw
         Source,  ///< 소스 · 형식마다 파일 하나(`ShaderSourceRecord`) — 쿠킹이 같은 묶음으로 다시 온다
     };
 
-    /** @brief 묶음 컴파일의 결과 하나를 받습니다 — 요청 번호(목록의 자리)와 결과. */
-    using ShaderCompiledDelegate = Delegate<void( uint32 requestIndex, const ShaderCompileResult& result )>;
+    /** @brief 묶음 컴파일의 결과 하나를 부른 쪽 값 하나로 바꿉니다 — 요청 번호(목록의 자리)와 결과를 받는다(`ShaderCompiler::compileBatch`). */
+    template <typename TValue>
+    using ShaderCompileTransform = Delegate<TValue( uint32 requestIndex, const ShaderCompileResult& result )>;
 
     /**
      * @class ShaderCompiler
@@ -294,14 +296,22 @@ namespace sw
          */
         static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc, ShaderCompileClaims* pClaims = nullptr );
         /**
-         * @brief 요청 묶음을 병렬로 컴파일하고 요청마다 결과를 @p onCompiled 에 한 번씩 넘깁니다(쿠킹 · 데우기).
+         * @brief 요청 묶음을 병렬로 컴파일하고 결과를 요청 차례대로 돌려줍니다(핫 리로드 · 테스트).
          * @details 요청마다 DDC 를 보고, 없는 것만 한 번 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).
          *          같은 글 가운데 목록에서 가장 앞선 요청이 컴파일하므로 워커 수와 무관하게 같은 바이트다. 소스는 묶음 동안 한 번만 읽는다(`ShaderCompileSession`).
+         *          결과 칸은 이 함수가 쥐고 요청마다 한 번 채운다 — 부르는 쪽이 워커에서 컨테이너를 만지는 길이 없다.
          *          언리얼 `FShaderCompilingManager` 의 작업 묶음 · 중복 작업 합치기(`FShaderJobCache`) 자리다.
          * @param recordScope 기록을 요청마다 쓸지 소스마다 한 번 쓸지
-         * @param onCompiled 워커에서 동시에 불린다(요청 번호 순서가 아니다)
          */
-        static void compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompiledDelegate& onCompiled );
+        [[nodiscard]] static vector<ShaderCompileResult> compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope );
+
+        /**
+         * @brief 위와 같이 컴파일하되 결과마다 @p transform 이 돌려준 값만 요청 차례의 칸에 남깁니다 — 바이트코드를 모두 쥐지 않고 결과마다 일을 하는 묶음(쿠킹 · 데우기)이 쓴다.
+         * @details @p transform 은 워커에서 동시에 불린다(요청 번호 순서가 아니다). 그 반환값을 이 함수가 그 요청의 칸에 둔다 — 콜백은 출력 칸을 받지 않는다.
+         *          쿠킹 묶음은 변형이 만 단위라(엔진 DX12 약 2 만) 결과를 모두 모으면 바이트코드가 묶음 끝까지 메모리에 남는다.
+         */
+        template <typename TValue>
+        [[nodiscard]] static vector<TValue> compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompileTransform<TValue>& transform );
 
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
@@ -336,5 +346,32 @@ namespace sw
          *          함수 정적의 소멸 순서에서 내리면 로더 잠금 아래 FreeLibrary 가 된다.
          */
         [[nodiscard]] static void* findDXCCreateInstance();
+
+    private:
+        /** @brief 결과 하나를 요청 칸 하나에 두는 입구입니다(워커에서 동시에 불린다 — 칸은 요청마다 하나라 겹치지 않는다). */
+        using SlotWriteDelegate = Delegate<void( uint32 requestIndex, const ShaderCompileResult& result )>;
+
+        /** @brief `compileBatch` 의 값 칸입니다. `vector::operator[]` 를 워커에서 부르지 않게 창(span)으로 쓴다. */
+        template <typename TValue>
+        struct TransformSlots
+        {
+            span<TValue>                          _slot;
+            const ShaderCompileTransform<TValue>* _pTransform{ nullptr };
+
+            void write( uint32 requestIndex, const ShaderCompileResult& result ) { _slot[requestIndex] = ( *_pTransform )( requestIndex, result ); }
+        };
+
+        /** @brief 묶음 컴파일의 본체입니다. 요청마다 @p writeSlot 을 꼭 한 번 부른다. */
+        static void runBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const SlotWriteDelegate& writeSlot );
     };
+
+    template <typename TValue>
+    vector<TValue> ShaderCompiler::compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompileTransform<TValue>& transform )
+    {
+        static_assert( std::is_same_v<TValue, bool> == false, "vector<bool> packs bits - workers would write the same byte; return uint8" );
+        vector<TValue>         listValue( listDesc.size() );
+        TransformSlots<TValue> slots{ span<TValue>( listValue.data(), listValue.size() ), &transform };
+        runBatch( listDesc, recordScope, SW_DELEGATE_METHOD( SlotWriteDelegate, &TransformSlots<TValue>::write, &slots ) );
+        return listValue;
+    }
 } // namespace sw

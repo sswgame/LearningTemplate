@@ -143,7 +143,7 @@ namespace sw
             }
         };
         // 컴퓨트 종류의 텍스처 입력은 RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다. 깊이 히스토리를 읽는 HZB 짓기 · GPU 입자). UAV 읽기다.
-        const RenderGraphAccess textureInputAccess = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead;
+        const RenderGraphAccess textureInputAccess = getRenderPassKindInfo( pass._type ).isComputePass() ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead;
         append( pass._listInput, RenderGraphAccess::ShaderRead, textureInputAccess );
         append( pass._listOutput, RenderGraphAccess::UnorderedAccess, RenderGraphAccess::RenderTarget );
         append( pass._listIndirectArgs, RenderGraphAccess::IndirectArgs, RenderGraphAccess::IndirectArgs );
@@ -494,7 +494,7 @@ namespace sw
                     if ( pass._depthAttachment.empty() == false || pass._minPostQuality != 0 )
                         report( "RenderPipelineAsset.FramePassViewField", pass._name, "_depthAttachment and _minPostQuality are view pass fields" );
                     // 컴퓨트 큐는 드로우 · 렌더 타깃 상태를 모른다 — 표의 컴퓨트 종류만 비동기 큐에 둘 수 있다(깊이 히스토리는 풀스크린 드로우다).
-                    if ( pass._queue == RHIQueueKind::AsyncCompute && getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) == false )
+                    if ( pass._queue == RHIQueueKind::AsyncCompute && getRenderPassKindInfo( pass._type ).isComputePass() == false )
                         report( "RenderPipelineAsset.FramePassAsyncNotCompute", pass._name, "_queue AsyncCompute needs a compute pass type - this type draws on the graphics queue" );
                     for ( const string& name : pass._listInput )
                     {
@@ -568,9 +568,10 @@ namespace sw
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     // 이름 바인딩 · 값은 컴퓨트 패스의 루트 상수, 풀스크린 패스의 PassCB 끝 칸이다 — 다른 패스는 읽는 쪽이 없다.
-                    const bool bNamed      = pass._inputBinding == RenderPassInputBinding::Name;
-                    const bool bFullscreen = pass._type == RenderPassKind::Fullscreen;
-                    if ( ( bNamed || pass._listValue.empty() == false ) && pass._type != RenderPassKind::Compute && bFullscreen == false )
+                    const bool bNamed           = pass._inputBinding == RenderPassInputBinding::Name;
+                    const bool bFullscreen      = pass._type == RenderPassKind::Fullscreen;
+                    const bool bPipelineCompute = getRenderPassKindInfo( pass._type ).isPipelineComputePass();
+                    if ( ( bNamed || pass._listValue.empty() == false ) && bPipelineCompute == false && bFullscreen == false )
                         report( "RenderPipelineAsset.PassNamedBindingNotCompute", pass, "_inputBinding Name and _listValue are for a Compute or Fullscreen pass" );
                     if ( bFullscreen )
                     {
@@ -606,9 +607,9 @@ namespace sw
                     if ( pass._hullEntryPoint.empty() != pass._domainEntryPoint.empty() )
                         report( "RenderPipelineAsset.PassHullNeedsDomain", pass, "_hullEntryPoint and _domainEntryPoint go together" );
                     // 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 패스 셰이더의 스테이지와 신호가 맞지 않는다.
-                    if ( bHasOptionalStage && ( pass._type == RenderPassKind::Compute || getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader ) ) )
+                    if ( bHasOptionalStage && ( bPipelineCompute || getRenderPassKindInfo( pass._type ).usesMaterialShader() ) )
                         report( "RenderPipelineAsset.PassOptionalStageNotAllowed", pass, "geometry, hull and domain stages need a pass that draws with its own shader (not a material shader, not a Compute pass)" );
-                    if ( pass._type != RenderPassKind::Compute )
+                    if ( bPipelineCompute == false )
                     {
                         if ( pass._computeEntryPoint.empty() == false )
                             report( "RenderPipelineAsset.PassComputeEntryOnCompute", pass, "_computeEntryPoint is only for a Compute pass" );
@@ -710,7 +711,8 @@ namespace sw
                                          sourcePath, pass._name, pass._historyRole );
                         ++issueCount;
                     }
-                    const bool bRegistryBinding = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) == false && pass._inputBinding == RenderPassInputBinding::Role;
+                    // 컴퓨트 종류(XML 이 셰이더를 고르는 Compute 포함)는 기록 역할 칸을 읽지 않는다 — RW 칸 셋이나 이름(`g_<출력>HistoryIndex`)으로 읽는다.
+                    const bool bRegistryBinding = getRenderPassKindInfo( pass._type ).isComputePass() == false && pass._inputBinding == RenderPassInputBinding::Role;
                     if ( pass._historyRole.empty() == false && bRegistryBinding == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassHistoryRoleNotBound", "[%#] pass '%#': _historyRole needs a graphics pass with _inputBinding=\"Role\" - a name-bound pass reads g_<output>HistoryIndex",
@@ -917,7 +919,7 @@ namespace sw
                     ++issueCount;
                 }
                 // 컴퓨트 구현은 표가 가진 종류만 고를 수 있다 — 없는 구현을 적으면 실행이 읽지 않는 칸이다.
-                if ( pass._implementation == RenderPassExecutionMode::Compute && getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) == false )
+                if ( pass._implementation == RenderPassExecutionMode::Compute && getRenderPassKindInfo( pass._type ).hasComputeImplementation() == false )
                 {
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNoComputeImplementation", "[%#] pass '%#': type '%#' has no compute implementation - _implementation must be Pixel", sourcePath, pass._name,
                                      getEnumName( pass._type ) );

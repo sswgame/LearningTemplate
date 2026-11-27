@@ -390,8 +390,8 @@ namespace sw
         // 피라미드는 풀(텍스처) 크기의 배치로 만든다 — 자동 렌더 배율의 사각형은 그보다 작아 늘 들어간다(`HZBOcclusion::record` 가 확인한다).
         constexpr RHIBufferUsage kUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
         const HZBLayout          layout = HZBLayout::make( depth._width, depth._height );
-        view._occlusionColumns          = FrameRendererUtil::divideRoundUp( depth._width, FrameRendererUtil::kOcclusionTileSize );
-        view._occlusionRows             = FrameRendererUtil::divideRoundUp( depth._height, FrameRendererUtil::kOcclusionTileSize );
+        view._occlusionColumns          = MathUtil::divideAndRoundUp( depth._width, FrameRendererUtil::kOcclusionTileSize );
+        view._occlusionRows             = MathUtil::divideAndRoundUp( depth._height, FrameRendererUtil::kOcclusionTileSize );
         const bool bCreated             = view._hzb.ensureCapacity( _pDevice, static_cast<uint32>( 2 * sizeof( float32 ) ), layout._texelCount, kUsage, true, true, nullptr ) &&
                               view._occlusionTiles.ensureCapacity( _pDevice, sizeof( float32 ), view._occlusionColumns * view._occlusionRows, kUsage, true, true, nullptr );
         if ( bCreated == false )
@@ -414,7 +414,7 @@ namespace sw
         const TransientAttachmentPool::Attachment albedo = view._transientPool.find( attachmentNames()._gbufferAlbedo );
         if ( albedo._texture == 0 )
             return;
-        view._deferredTileCapacity = FrameRendererUtil::divideRoundUp( albedo._width, kDeferredTileSize ) * FrameRendererUtil::divideRoundUp( albedo._height, kDeferredTileSize );
+        view._deferredTileCapacity = MathUtil::divideAndRoundUp( albedo._width, kDeferredTileSize ) * MathUtil::divideAndRoundUp( albedo._height, kDeferredTileSize );
     }
 
     void FrameViewResources::releaseViewTransients( FrameViewTarget& view )
@@ -483,7 +483,7 @@ namespace sw
                 const RenderPassInputRole role   = resolveRenderPassInputRole( attachment._name, bDepth, attachment._role );
                 // 그림자 맵(방향광 · 점광 스폿 아틀라스 둘)은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
                 const bool bShadowAtlas = role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap;
-                const bool bCompute     = FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name );
+                const bool bCompute     = isUnorderedAccessAttachment( _pipeline.getGraphPass(), attachment._name, _pDevice->supportsNativeBindlessSampling() );
                 const bool bLeased      = name != attachmentNames()._sceneDepth; // 장면 깊이는 다음 프레임의 깊이 기록이 읽는다
                 bool       bMade        = false;
                 if ( bShadowAtlas )

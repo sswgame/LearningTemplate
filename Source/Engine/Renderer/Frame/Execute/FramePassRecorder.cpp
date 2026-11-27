@@ -34,6 +34,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 namespace sw
 {

@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
@@ -25,6 +26,7 @@
 namespace sw
 {
     struct ComputeShaderParameterInfo;
+    enum class ShaderStage : uint8; // ShaderCompiler.h — 스테이지 목록(`RenderPassShaderStage`)만 쓰므로 컴파일러 헤더를 끌어오지 않는다
     /**
      * @brief G버퍼 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
      * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그립니다. 그 셰이더가
@@ -136,14 +138,14 @@ namespace sw
         static constexpr uint32 kDepthTest  = BitUtil::bit( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
         static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다. 없는 종류는 XML 이 깊이 쓰기를 켤 수 없다(로드 오류 `PassDepthWriteNotWritable`).
         // 비트 2 · 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
-        // 여러 번 둘 수 있는 종류는 깃발이 아니라 `isRepeatablePassType` 이다 — 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)가 컴파일 때 그것을 본다.
+        // 여러 번 둘 수 있는 종류는 깃발이 아니라 표의 범위(`RenderPassScope::RepeatableView`)다 — `isRepeatablePassType` 이 컴파일 때 그것을 본다.
+        // 비트 9 · 23 · 28 도 비어 있다 — 컴퓨트인지는 깃발이 아니라 실행 종류 칸 하나(`RenderPassKindInfo::isComputePass`)가 답한다.
         static constexpr uint32 kDepthOnly             = BitUtil::bit( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
         static constexpr uint32 kDrawsSceneMeshes      = BitUtil::bit( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
         static constexpr uint32 kDrawsTransparentBatch = BitUtil::bit( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).
         static constexpr uint32 kUsesMaterialShader    = BitUtil::bit( 6 );  ///< 머티리얼이 선언한 `.hlsl` 로 교체한다(아니면 패스 셰이더에 define 만 적용한다).
         static constexpr uint32 kAppliesViewMode       = BitUtil::bit( 7 );  ///< 뷰 모드(Unlit, Wireframe)를 받는다.
         static constexpr uint32 kGenericFullscreen     = BitUtil::bit( 8 );  ///< 선언한 입력을 역할로 바인딩하고 첫 출력에 풀스크린 삼각형 하나를 그린다.
-        static constexpr uint32 kCompute               = BitUtil::bit( 9 );  ///< 컴퓨트 PSO 다(`CSMain`).
         static constexpr uint32 kRequiresGPUCulling    = BitUtil::bit( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
         static constexpr uint32 kHasInputContract      = BitUtil::bit( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
         static constexpr uint32 kCullFront             = BitUtil::bit( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다(Back 은 로드 오류 `PassCullFrontKind`).
@@ -197,8 +199,6 @@ namespace sw
          * @brief 컴퓨트가 엔진 텍스처를 읽어야 해서 네이티브 bindless 샘플링(DX12 · Vulkan)이 있는 백엔드에서만 PSO 를 만든다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다(binding.hlsli).
          */
         static constexpr uint32 kRequiresNativeBindless = BitUtil::bit( 22 );
-        /** @brief 파이프라인 XML 의 패스가 컴퓨트 셰이더를 고른다(`RenderPassKind::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`). */
-        static constexpr uint32 kPipelineCompute = BitUtil::bit( 23 );
         /**
          * @brief 머티리얼이 렌더 타깃과 상관없는 렌더 상태(깊이 · 스텐실 · 채우기)를 덮을 수 있는 색 패스다. 없는 씬 메시 패스(그림자 · 깊이 프리패스 · 외곽선)는 컬 · 앞면 방향만 받는다.
          * @details 그림자 · 프리패스에 머티리얼의 깊이 비교 · 스텐실이 들어가면 깊이의 모양이 색 패스와 어긋난다. 언리얼도 머티리얼의 Two Sided 만 깊이 패스에 넘긴다(기억에 의존한 비교).
@@ -213,16 +213,10 @@ namespace sw
          */
         static constexpr uint32 kWritesVelocity = BitUtil::bit( 26 );
         /**
-         * @brief 컬러 출력 없이 픽셀 스테이지가 깊이(SV_Depth)를 쓰는 내부 패스다(그림자 캐시 복원). 컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`)
-         *        이 패스만 남긴다. 쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.
+         * @brief 컬러 출력 없이 픽셀 스테이지가 깊이(SV_Depth)를 쓰는 내부 패스다(그림자 캐시 복원). 컬러가 없는 패스는 픽셀 스테이지가 없는데(`enumeratePassShaderStages`)
+         *        이 패스만 남긴다. 런타임 PSO 와 쿠커가 같은 스테이지 목록을 본다.
          */
         static constexpr uint32 kWritesPixelDepth = BitUtil::bit( 27 );
-        /**
-         * @brief 일반 풀스크린 패스지만 컴퓨트 구현(같은 셰이더 파일의 `CSMain`, define `SW_PASS_COMPUTE`)도 있어 XML 의 `_implementation="Compute"` 로 고를 수 있다(블룸 다운샘플 · 피사계 심도).
-         * @details 컴퓨트 구현은 입력을 bindless 번호로 직접 읽어 네이티브 bindless(DX12 · Vulkan)에서만 돈다 — 에뮬 백엔드(DX11 · GL · WebGPU)는 픽셀 구현이 돈다(능력이 정한 길).
-         *          어느 쪽이 나은지는 측정으로 정한다(언리얼 블룸 · DOF 의 r.*.Compute 스위치 자리). 비트 27 — W10 이 더한 kWritesVelocity 와 겹치지 않게 26 을 비워 둔다.
-         */
-        static constexpr uint32 kComputeImplementation = BitUtil::bit( 28 );
         /**
          * @brief 화면 회전 출력 패스다(`RenderPassKind::ScreenRotation`) — `kOutputPass` 와 함께 붙고, 대상은 스왑체인 이미지 하나라 PSO 를 백버퍼 포맷으로만 만들며
          *        서피스를 돌릴 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만 만든다(`FramePSOManager::collectOutputPSOJobs`).
@@ -254,6 +248,33 @@ namespace sw
         Straight,      ///< 곧은 알파(src × a + dst × (1 - a))
         Premultiplied, ///< 미리 곱한 알파(src + dst × (1 - a))
     };
+
+    /**
+     * @enum RenderPassExecution
+     * @brief 패스 종류가 GPU 에서 도는 방식입니다. "컴퓨트인가" 는 이 칸 하나가 답한다(언리얼 RDG `ERDGPassFlags::Raster · Compute`, 유니티 `AddRasterRenderPass` · `AddComputePass` 와 같은 자리).
+     */
+    enum class RenderPassExecution : uint8
+    {
+        Graphics,          ///< 그래픽스 PSO 로 그린다
+        GraphicsOrCompute, ///< 그래픽스가 기본이고, XML `_implementation="Compute"` 면 같은 셰이더 파일의 `CSMain`(define `SW_PASS_COMPUTE`)이 네이티브 bindless 에서 돈다(블룸 다운샘플 · 피사계 심도)
+        EngineCompute,     ///< 표의 셰이더로 도는 컴퓨트 PSO 다(`CSMain`)
+        PipelineCompute,   ///< XML 이 셰이더를 고르는 컴퓨트 PSO 다(`RenderPassKind::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`)
+    };
+
+    /**
+     * @enum RenderPassScope
+     * @brief 패스 종류를 파이프라인 XML 의 어디에 적을 수 있는지입니다. 표가 줄마다 적는다 — 열거자 순서로 짐작하지 않는다.
+     */
+    enum class RenderPassScope : uint8
+    {
+        Unset,          ///< 표가 적지 않았다 — 표 검사(`isTableConsistent`)가 거절한다
+        View,           ///< 뷰 그래프(`_listPass`). 뷰마다 다시 돌고 한 파이프라인에 한 번 둔다
+        RepeatableView, ///< 뷰 그래프에 여럿 둘 수 있다(`isRepeatablePassType`) — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다
+        Frame,          ///< 프레임 그래프(`_listFramePass`). 프레임에 한 번 모든 뷰의 몫을 기록한다(`FramePassRecorder`)
+        Internal,       ///< XML 에 적을 수 없다 — 엔진 내부 슬롯 · 다른 패스 안의 디스패치 · Invalid
+    };
+
+    struct RenderPassKindTable;
 
     /**
      * @struct RenderPassKindInfo
@@ -326,8 +347,21 @@ namespace sw
          */
         constexpr bool usesMaterialShader() const { return hasFlag( RenderPassTraitFlag::kUsesMaterialShader ); }
 
-        /** @brief 컴퓨트 PSO 로 도는 종류인지 반환합니다(표의 엔진 컴퓨트 `kCompute` · XML 이 셰이더를 고르는 `kPipelineCompute`). 그래픽스 PSO 를 만들지 않는다. */
-        constexpr bool isComputePass() const { return hasFlag( RenderPassTraitFlag::kCompute | RenderPassTraitFlag::kPipelineCompute ); }
+        // 실행 종류 · 범위는 private 칸이고 아래 이름 있는 질의로만 읽는다 — 같은 질문을 깃발 · 종류 비교 · 구현 칸으로 따로 묻던 곳이 갈라져 Compute 종류를 그래픽스로 본 결함이 났다.
+
+        /** @brief 컴퓨트 PSO 로 도는 종류인지 반환합니다(표의 엔진 컴퓨트 · XML 이 셰이더를 고르는 `RenderPassKind::Compute`). 그래픽스 PSO 를 만들지 않는다. */
+        constexpr bool isComputePass() const { return _execution == RenderPassExecution::EngineCompute || _execution == RenderPassExecution::PipelineCompute; }
+        /** @brief XML 이 컴퓨트 셰이더를 고르는 종류(`RenderPassKind::Compute`)인지 반환합니다. 첨부를 RW 텍스처로 묶고 PSO 를 패스 이름으로 찾는다. */
+        constexpr bool isPipelineComputePass() const { return _execution == RenderPassExecution::PipelineCompute; }
+        /** @brief 그래픽스 패스지만 컴퓨트 구현(`_implementation="Compute"`)을 고를 수 있는 종류인지 반환합니다. 구현을 실제로 고른 패스인지는 `passRunsComputeImplementation` 이다. */
+        constexpr bool hasComputeImplementation() const { return _execution == RenderPassExecution::GraphicsOrCompute; }
+
+        /** @brief 뷰 그래프(`_listPass`)에 적는 종류인지 반환합니다. */
+        constexpr bool isViewPass() const { return _scope == RenderPassScope::View || _scope == RenderPassScope::RepeatableView; }
+        /** @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있는지 반환합니다. */
+        constexpr bool isRepeatableViewPass() const { return _scope == RenderPassScope::RepeatableView; }
+        /** @brief 프레임 그래프(`_listFramePass`)에 적는 종류인지 반환합니다. */
+        constexpr bool isFramePass() const { return _scope == RenderPassScope::Frame; }
 
         /**
          * @brief 이 패스에 뷰 모드(Unlit, Wireframe, Normals, Depth, Overdraw)를 적용하는지 반환합니다.
@@ -338,13 +372,6 @@ namespace sw
          * @note 메시 외곽선 패스는 머티리얼 셰이더를 쓰지만 뷰 모드를 받지 않습니다. 외곽선은 보기 방식이 아니라 화면의 일부이기 때문입니다.
          */
         constexpr bool shouldApplyViewMode() const { return hasFlag( RenderPassTraitFlag::kAppliesViewMode ); }
-
-        /**
-         * @brief 패스 서술 없이 이 표만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
-         * @details 파이프라인에 그 종류의 패스가 없으면 `FramePSOManager::makePassPSODesc` 은 표의 컬러 타깃 수로 PSO 를 만들고, 0이면 PS 를
-         *          붙이지 않는다. 쿠커가 같은 판정으로 쿠킹한다. 서술이 있는 패스는 `FrameRendererUtil::hasPixelStage( pass, listAttachment )` 를 쓴다.
-         */
-        constexpr bool hasPixelStage() const { return _colorTargetCount > 0; }
 
         /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/Rendering.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
         RenderStateOverride::Scope getMaterialStateScope() const
@@ -417,7 +444,7 @@ namespace sw
 
         /**
          * @brief 깊이만 쓰는 패스가 패스 셰이더(shadow_depth.hlsl)로 등장 디더 변형을 그릴 때 픽셀 스테이지를 붙이는지 반환합니다.
-         * @details 패스 셰이더의 깊이 패스는 컬러 출력이 없어 픽셀 스테이지가 없다(`hasPixelStage`). 등장 디더는 픽셀을 버리므로 그 변형에만 붙인다 —
+         * @details 패스 셰이더의 깊이 패스는 컬러 출력이 없어 픽셀 스테이지가 없다(`enumeratePassShaderStages`). 등장 디더는 픽셀을 버리므로 그 변형에만 붙인다 —
          *          붙이지 않으면 프리패스가 물체의 깊이를 다 써 기본 패스가 버린 픽셀 자리에 뒤의 물체가 그려지지 않는다(구멍).
          *          머티리얼 셰이더로 그리는 깊이 배치(알파 컷오프)는 그 셰이더의 픽셀 스테이지가 이미 있고, 정점 변형만인 배치는 디더 없이 깊이를 쓴다.
          *          런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
@@ -441,6 +468,8 @@ namespace sw
         }
 
     private:
+        friend struct RenderPassKindTable;
+
         /** @brief 입력 계약의 역할에 기록 칸 @p historyRole(Invalid 면 없음)을 더한 집합입니다. 표의 기본값과 서술이 덮은 값을 같은 식으로 센다. */
         constexpr uint64 getReadableRoleMask( RenderPassInputRole historyRole ) const
         {
@@ -455,13 +484,105 @@ namespace sw
                 mask |= uint64{ 1 } << static_cast<uint32>( historyRole );
             return mask;
         }
+
+    private:
+        RenderPassExecution _execution{ RenderPassExecution::Graphics }; ///< GPU 에서 도는 방식입니다(표가 정한다)
+        RenderPassScope     _scope{ RenderPassScope::Unset };            ///< XML 의 어디에 적는지입니다(표가 줄마다 적는다)
     };
 } // namespace sw
 
+#include "Engine/Renderer/Pipeline/RenderPassKindTable.inl"
+
 namespace sw
 {
-    /** @brief 패스 종류의 사실을 반환합니다. 테이블에 없는 값이면 Invalid 항목을 반환합니다. */
-    SW_API const RenderPassKindInfo& getRenderPassKindInfo( RenderPassKind type );
+    /** @brief 표 밖의 종류 값(잘못된 캐스트 · 낡은 열거 값)을 오류로 남기고 멈춥니다. 조용히 Invalid 줄로 물러나면 그 패스가 아무것도 안 하는 채로 지나간다. */
+    [[noreturn]] SW_API void reportRenderPassKindOutOfRange( uint32 value );
+
+    /** @brief 패스 종류의 사실을 반환합니다. 표 밖의 값이면 오류로 멈춘다(`reportRenderPassKindOutOfRange`). 표가 헤더에 있어 컴파일 때도 답한다. */
+    constexpr const RenderPassKindInfo& getRenderPassKindInfo( RenderPassKind type )
+    {
+        const uint32 index = static_cast<uint32>( type );
+        if ( index >= kRenderPassKindCount )
+            reportRenderPassKindOutOfRange( index );
+        return kRenderPassKindTable._arrRow[index];
+    }
+
+    /** @brief 뷰 그래프(`_listPass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 뷰마다 다시 도는 패스입니다(내부 슬롯 · 프레임 패스 · Invalid 는 제외합니다). */
+    constexpr bool isViewPassType( RenderPassKind type )
+    {
+        return getRenderPassKindInfo( type ).isViewPass();
+    }
+
+    /**
+     * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FramePassRecorder`).
+     * @details 이 종류들이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
+     *          InstanceSort · InstanceSortMultiPass · IndirectArgsReset 는 GPUCull 패스 안의 다른 디스패치라 따로 선언하지 않는다(표의 범위가 Internal 이다). 입자 정렬 · 메시 쓰기는 시뮬레이션과 읽는 상태가 달라
+     *          (렌더 입력 · 인자를 UAV 로 쓰고 셰이더 읽기로 읽는다) 따로 선언한다 — 패스 몸통은 전이하지 않고 그래프가 패스 사이에 낸다(렌더 그래프 접근 핸들 ②).
+     */
+    constexpr bool isFramePassType( RenderPassKind type )
+    {
+        return getRenderPassKindInfo( type ).isFramePass();
+    }
+
+    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(뷰 패스 또는 프레임 패스 — 내부 슬롯과 Invalid 는 제외합니다). */
+    constexpr bool isPipelinePassType( RenderPassKind type )
+    {
+        return isViewPassType( type ) || isFramePassType( type );
+    }
+
+    /**
+     * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있으면 true 입니다(표의 범위 `RepeatableView`) — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다.
+     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute · Fullscreen 은 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
+     *          나머지 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`). 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)는 이 종류를 컴파일 때 거절한다 —
+     *          "그 종류의 첫 패스" 는 둘째 패스의 서술을 조용히 버린다. 언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다.
+     */
+    constexpr bool isRepeatablePassType( RenderPassKind type )
+    {
+        return getRenderPassKindInfo( type ).isRepeatableViewPass();
+    }
+
+    /**
+     * @brief 패스 @p pass 가 이 장치에서 컴퓨트 구현(`_implementation="Compute"`)으로 도는지 반환합니다. 네이티브 bindless(DX12 · Vulkan)에서만 돌고 에뮬 백엔드는 픽셀 구현이다.
+     * @details PSO 생성(`FramePSOManager`) · 실행(`executeGenericFullscreenPass`) · 그래프 접근 · 첨부 RW 생성이 이 답 하나를 본다 — 하나만 컴퓨트로 보면 UAV 용도 없는 첨부를 RW 로 묶는다.
+     */
+    inline bool passRunsComputeImplementation( const RenderGraphPassDesc& pass, bool bNativeBindless )
+    {
+        return bNativeBindless && pass._implementation == RenderPassExecutionMode::Compute && getRenderPassKindInfo( pass._type ).hasComputeImplementation();
+    }
+
+    /** @brief 패스 @p pass 가 컬러 출력을 컴퓨트로 쓰는지(그래프 접근 UAV · 첨부를 RW 로 만든다) 반환합니다 — 컴퓨트 종류이거나 컴퓨트 구현으로 도는 패스다. */
+    inline bool passWritesOutputsAsUAV( const RenderGraphPassDesc& pass, bool bNativeBindless )
+    {
+        return getRenderPassKindInfo( pass._type ).isComputePass() || passRunsComputeImplementation( pass, bNativeBindless );
+    }
+
+    /** @brief 패스 @p pass 가 입력을 RW 텍스처로 읽는지(UAV 읽기) 반환합니다 — RW 칸 바인딩(`_inputBinding="Role"`)의 파이프라인 컴퓨트 패스다. 이름 바인딩은 셰이더 읽기 번호로 읽는다. */
+    inline bool passReadsInputsAsUAV( const RenderGraphPassDesc& pass )
+    {
+        return getRenderPassKindInfo( pass._type ).isPipelineComputePass() && pass._inputBinding == RenderPassInputBinding::Role;
+    }
+
+    /**
+     * @brief 첨부 @p attachmentName 을 어느 패스가 RW 로 쓰거나 읽으면 true 입니다 — 그 첨부는 UAV 용도로 만들어야 합니다(첨부 생성 · 나눠 쓰기 키).
+     * @details 그래프 접근(`FrameRecorder` 의 패스 선언)과 같은 판정(`passWritesOutputsAsUAV` · `passReadsInputsAsUAV`)이라 컴퓨트 구현으로 도는 풀스크린 패스의 출력도 든다.
+     */
+    inline bool isUnorderedAccessAttachment( const vector<RenderGraphPassDesc>& listPass, string_view attachmentName, bool bNativeBindless )
+    {
+        for ( const RenderGraphPassDesc& pass : listPass )
+        {
+            for ( const string& name : pass._listOutput )
+            {
+                if ( name == attachmentName && passWritesOutputsAsUAV( pass, bNativeBindless ) )
+                    return true;
+            }
+            for ( const string& name : pass._listInput )
+            {
+                if ( name == attachmentName && passReadsInputsAsUAV( pass ) )
+                    return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * @struct RenderPassShaderSelection
@@ -496,6 +617,46 @@ namespace sw
      * @details 런타임 PSO(`FramePSOManager`)와 쿠커가 함께 부른다. 진입점은 컴퓨트 스테이지 기본값(`CSMain`)이다.
      */
     SW_API RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets );
+
+    /** @struct RenderPassShaderStage @brief 패스 PSO 하나가 컴파일하는 셰이더 스테이지 하나입니다. */
+    struct RenderPassShaderStage
+    {
+        ShaderStage    _stage{};
+        string         _shaderPath;
+        string         _entryPoint; ///< 해석한 진입점입니다(XML 이 비우면 스테이지 기본값). 지오메트리 · 헐 · 도메인은 XML 이 적은 패스만 나온다
+        vector<string> _listDefine;
+    };
+
+    /** @struct RenderPassShaderStages @brief 패스 하나가 컴파일하는 셰이더 스테이지 전부입니다(`enumeratePassShaderStages`). */
+    struct RenderPassShaderStages
+    {
+        /** @brief 패스 PSO 의 스테이지입니다 — 컴퓨트 종류는 CS 하나, 그래픽스는 VS 에 컬러 출력(또는 픽셀 깊이)이 있으면 PS, XML 이 적으면 GS · HS · DS 입니다. */
+        vector<RenderPassShaderStage> _listStage;
+        /** @brief 컴퓨트 구현(`_implementation="Compute"`)의 CS 입니다. 네이티브 bindless 에서만 돌지만(`passRunsComputeImplementation`) 쿠커는 늘 굽는다(에뮬 백엔드는 픽셀 구현이 돈다). */
+        optional<RenderPassShaderStage> _computeImplementation;
+
+        /** @brief 스테이지 @p stage 가 있으면 true 입니다. */
+        [[nodiscard]] bool hasStage( ShaderStage stage ) const
+        {
+            for ( const RenderPassShaderStage& entry : _listStage )
+            {
+                if ( entry._stage == stage )
+                    return true;
+            }
+            return false;
+        }
+    };
+
+    /**
+     * @brief 패스 하나가 컴파일하는 셰이더 스테이지(경로 · 진입점 · define)를 정합니다. 런타임 PSO 생성(`FramePSOManager`)과 셰이더 쿠커(`ShaderCookRequestCollector`)가 이 답 하나로 돈다.
+     * @details 두 곳이 단계 목록을 따로 셈하면 한쪽이 PSO 를 만드는 패스를 다른 쪽이 굽지 않아 Shipping 에서 PSO 가 없다 — 언리얼 `ShouldCompilePermutation` 을 쿠커와 런타임이 같이 부르는 자리다.
+     *          경로 · define 은 `selectRenderPassShader` 다. 픽셀 스테이지는 컬러 RT 수(고정 포맷이면 표의 수, 아니면 @p pTargetDesc 의 출력 선언)가 0 보다 크거나 픽셀 깊이를 쓰는 종류(`kWritesPixelDepth`)에만 있다.
+     * @param pPassDesc   파이프라인의 패스 서술입니다. nullptr 이면 표만으로 정한다(엔진 슬롯).
+     * @param pTargetDesc 컬러 출력을 정하는 서술입니다. 파이프라인 패스는 @p pPassDesc 와 같고, 내부 슬롯은 대신 그리는 패스의 서술입니다.
+     * @param listAttachment 파이프라인의 첨부 선언입니다(컬러 출력 수를 센다).
+     */
+    SW_API RenderPassShaderStages enumeratePassShaderStages( RenderPassKind type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
+                                                             const vector<RenderPassAttachment>& listAttachment, const EngineDefaultAssets& engineDefaultAssets );
 
     /**
      * @brief 조명 패스 @p lightingDesc 의 타일 종류 @p tileClass 변형이 컴파일할 셰이더 경로와 define 입니다 — 조명 패스의 것에 `SW_DEFERRED_TILE_CLASS=<종류>` 를 더한다.

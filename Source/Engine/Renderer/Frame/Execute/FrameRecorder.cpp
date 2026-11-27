@@ -824,13 +824,12 @@ namespace sw
             // 순서는 쓰기 사슬을 따른다. 이 패스보다 먼저 선언한 읽는 패스는 앞 버전을 읽고 이 패스 앞에 온다.
             // 컴퓨트로 쓰는 패스는 그 첨부를 UAV 로 선언한다. 패스 몸통이 전이하지 않고 레벨 콜백이 RW 텍스처 상태로 옮긴다(Compute 패스는 입력을 RW 텍스처로 읽기만 한다, UAV 읽기).
             // 앞 컴퓨트의 쓰기 뒤에 오는 UAV 접근은 레벨 콜백이 텍스처 UAV 배리어를 낸다(`RenderGraphBarrier::_bUAVBarrier`).
-            const bool                        bComputePass   = pass._type == RenderPassKind::Compute;
-            const bool                        bComputeOutput = bComputePass || ( pass._implementation == RenderPassExecutionMode::Compute && bNativeBindless );
+            // 첨부를 RW 로 만드는 쪽(`isUnorderedAccessAttachment`)과 같은 판정이다 — 둘이 갈리면 UAV 용도 없는 첨부를 RW 로 묶는다.
+            const bool                        bComputeOutput = passWritesOutputsAsUAV( pass, bNativeBindless );
+            const bool                        bRWInput       = passReadsInputsAsUAV( pass ); // 이름 바인딩은 셰이더 읽기 번호로 읽는다(`executeNamedComputePass`)
             vector<RenderGraphResourceAccess> listAccess;
             for ( const string& in : pass._listInput )
             {
-                // RW 칸 바인딩 컴퓨트 패스는 입력을 RW 텍스처로 읽는다. 이름 바인딩은 셰이더 읽기 번호로 읽는다(`executeNamedComputePass`).
-                const bool bRWInput = bComputePass && pass._inputBinding == RenderPassInputBinding::Role;
                 addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bRWInput ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead );
             }
             for ( const string& out : pass._listOutput )
@@ -947,7 +946,7 @@ namespace sw
             // 칸마다 32 비트로 옮겨 해시한다(구조체째 해시하면 정렬 채움 바이트가 섞인다).
             // 공간이 다르면 크기가 다를 수 있다(시간 업스케일) — 나눗수 칸에 공간을 함께 싣는다.
             const uint32 sizeWord = attachment._resolutionDivisor | ( static_cast<uint32>( attachment._resolutionSpace ) << 16u );
-            uint32       arrDescWord[7]{ static_cast<uint32>( attachment._format ), sizeWord, FrameRendererUtil::isComputeOutputOrInput( listPass, attachment._name ) ? 1u : 0u, 0u, 0u, 0u, 0u };
+            uint32       arrDescWord[7]{ static_cast<uint32>( attachment._format ), sizeWord, isUnorderedAccessAttachment( listPass, attachment._name, _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u, 0u, 0u, 0u, 0u };
             Memory::copy( &arrDescWord[3], &attachment._clearColor._x, sizeof( float32 ) );
             Memory::copy( &arrDescWord[4], &attachment._clearColor._y, sizeof( float32 ) );
             Memory::copy( &arrDescWord[5], &attachment._clearColor._z, sizeof( float32 ) );

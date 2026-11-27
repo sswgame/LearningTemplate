@@ -505,11 +505,11 @@ namespace sw
 
                 /** @param listOrder 세운 요청 번호 가운데 이 토막의 [@p begin, @p end) */
                 BatchChunk( const vector<ShaderCompileDesc>& listDesc, const vector<uint32>& listOrder, size_t begin, size_t end, ShaderRecordScope recordScope, ShaderCompileSession& session,
-                            const ShaderCompiledDelegate& onCompiled )
+                            const Delegate<void( uint32, const ShaderCompileResult& )>& writeSlot )
                     : _listDesc{ listDesc }
                     , _listRequest( listOrder.begin() + static_cast<ptrdiff_t>( begin ), listOrder.begin() + static_cast<ptrdiff_t>( end ) )
                     , _session{ session }
-                    , _onCompiled{ onCompiled }
+                    , _writeSlot{ writeSlot }
                     , _listSetup( end - begin )
                     , _listActionKey( end - begin, 0 )
                     , _listPending( end - begin )
@@ -596,7 +596,7 @@ namespace sw
                         }
                         ShaderCompileResult result;
                         setError( opened.error(), result );
-                        _onCompiled( _slotRequest[index], result );
+                        _writeSlot( _slotRequest[index], result );
                     }
                 }
 
@@ -641,7 +641,7 @@ namespace sw
                     const bool bRecorded = _recordScope == ShaderRecordScope::Source && result._bSuccess && result._record._listInput.empty() == false;
                     if ( bRecorded )
                         _slotWritten[index] = WrittenResult{ result._record._listInput, _slotActionKey[index], result._record._outputHash, false };
-                    _onCompiled( _slotRequest[index], result );
+                    _writeSlot( _slotRequest[index], result );
                 }
 
                 /** @brief 요청마다 DDC 를 보고, 없으면 전처리해 글 키를 구합니다. 글로 겹치지 않는 요청은 여기서 컴파일합니다. */
@@ -654,7 +654,7 @@ namespace sw
                         ShaderCompileResult result;
                         if ( findInSourceRecord( index, result ) )
                         {
-                            _onCompiled( _slotRequest[index], result );
+                            _writeSlot( _slotRequest[index], result );
                             continue;
                         }
                         optional<PendingCompile> pending = prepare( std::move( *_slotSetup[index] ), &_session, result );
@@ -750,22 +750,22 @@ namespace sw
                 }
 
             private:
-                const vector<ShaderCompileDesc>& _listDesc;
-                vector<uint32>                   _listRequest; ///< 토막 안 번호 → 요청 번호
-                ShaderCompileSession&            _session;
-                const ShaderCompiledDelegate&    _onCompiled;
-                vector<optional<CompileSetup>>   _listSetup;      ///< 요청마다 한 칸. 준비에 들어가면 비운다
-                vector<uint64>                   _listActionKey;  ///< 요청마다 동작 키
-                vector<optional<PendingCompile>> _listPending;    ///< 요청마다 한 칸. 적중 · 실패 · 바로 컴파일한 요청은 비어 있다
-                vector<WrittenResult>            _listWritten;    ///< 요청마다 한 칸(소스 기록을 쓰는 묶음만)
-                vector<Group>                    _listGroup;      ///< 소스 무리(소스 기록을 쓰는 묶음만)
-                vector<uint32>                   _listGroupIndex; ///< 요청마다 `_listGroup` 자리
-                vector<uint32>                   _listWinner;     ///< 컴파일하는 요청(토막 안 번호)
-                vector<Follower>                 _listFollower;   ///< 같은 글의 나머지 요청
-                vector<ShaderCompileResult>      _listResult;     ///< `_listWinner` 와 짝
-                unordered_map<uint64, uint32>    _mapWinner;      ///< 글 키 → 컴파일하는 요청
-                mutex                            _mutex;          ///< `_mapWinner` 와 진 요청의 글
-                ShaderRecordScope                _recordScope;
+                const vector<ShaderCompileDesc>&                            _listDesc;
+                vector<uint32>                                              _listRequest; ///< 토막 안 번호 → 요청 번호
+                ShaderCompileSession&                                       _session;
+                const Delegate<void( uint32, const ShaderCompileResult& )>& _writeSlot;      ///< 요청마다 꼭 한 번 — 결과 칸은 `ShaderCompiler::compileBatch` 가 쥔다
+                vector<optional<CompileSetup>>                              _listSetup;      ///< 요청마다 한 칸. 준비에 들어가면 비운다
+                vector<uint64>                                              _listActionKey;  ///< 요청마다 동작 키
+                vector<optional<PendingCompile>>                            _listPending;    ///< 요청마다 한 칸. 적중 · 실패 · 바로 컴파일한 요청은 비어 있다
+                vector<WrittenResult>                                       _listWritten;    ///< 요청마다 한 칸(소스 기록을 쓰는 묶음만)
+                vector<Group>                                               _listGroup;      ///< 소스 무리(소스 기록을 쓰는 묶음만)
+                vector<uint32>                                              _listGroupIndex; ///< 요청마다 `_listGroup` 자리
+                vector<uint32>                                              _listWinner;     ///< 컴파일하는 요청(토막 안 번호)
+                vector<Follower>                                            _listFollower;   ///< 같은 글의 나머지 요청
+                vector<ShaderCompileResult>                                 _listResult;     ///< `_listWinner` 와 짝
+                unordered_map<uint64, uint32>                               _mapWinner;      ///< 글 키 → 컴파일하는 요청
+                mutex                                                       _mutex;          ///< `_mapWinner` 와 진 요청의 글
+                ShaderRecordScope                                           _recordScope;
                 // 병렬 단계가 칸을 읽고 쓰는 창 — 워커마다 제 칸만 쓴다. `vector::operator[]` 를 워커에서 부르면 겹친 쓰기로 잡힌다(`RaceDetectContext`). 단계 앞에서(한 스레드) 다시 잡는다.
                 span<optional<CompileSetup>>   _slotSetup{};
                 span<uint64>                   _slotActionKey{};
@@ -928,7 +928,21 @@ namespace sw
         return result;
     }
 
-    void ShaderCompiler::compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const ShaderCompiledDelegate& onCompiled )
+    vector<ShaderCompileResult> ShaderCompiler::compileBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope )
+    {
+        struct ResultSlots
+        {
+            span<ShaderCompileResult> _slot;
+
+            void write( uint32 requestIndex, const ShaderCompileResult& result ) { _slot[requestIndex] = result; }
+        };
+        vector<ShaderCompileResult> listResult( listDesc.size() );
+        ResultSlots                 slots{ span<ShaderCompileResult>( listResult.data(), listResult.size() ) };
+        runBatch( listDesc, recordScope, SW_DELEGATE_METHOD( SlotWriteDelegate, &ResultSlots::write, &slots ) );
+        return listResult;
+    }
+
+    void ShaderCompiler::runBatch( const vector<ShaderCompileDesc>& listDesc, ShaderRecordScope recordScope, const SlotWriteDelegate& writeSlot )
     {
         using Internal = ShaderCompilerInternal;
         ShaderCompileSession session{ engine::getSubsystem<AssetPaths>() };
@@ -938,7 +952,7 @@ namespace sw
             size_t end = begin;
             while ( end < listOrder.size() && end - begin < Internal::BatchChunk::kChunkSize )
                 end = Internal::findGroupEnd( listDesc, listOrder, end );
-            Internal::BatchChunk chunk{ listDesc, listOrder, begin, end, recordScope, session, onCompiled };
+            Internal::BatchChunk chunk{ listDesc, listOrder, begin, end, recordScope, session, writeSlot };
             chunk.run();
             begin = end;
         }

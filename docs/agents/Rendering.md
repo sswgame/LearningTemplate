@@ -47,7 +47,7 @@
 ### 컴퓨트 패스
 
 - `_type="Compute"`: 컬러 출력 하나, 입력 최대 둘(깊이는 `SceneDepthCopy` 를 읽는다), 입출력이 겹치지 않는다. 값은 `compute_pass.hlsli` 루트 상수. GL 은 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다.
-- `_implementation="Compute"`(표의 `kComputeImplementation` 종류만)는 측정이 이득을 보일 때 그 패스에 한 줄 적는다. 네이티브 bindless 백엔드만 컴퓨트로 돈다. 값은 루트 상수로(컴퓨트 PSO 에 PassCB 가 없다).
+- `_implementation="Compute"`(표의 실행 종류가 `GraphicsOrCompute` 인 종류만)는 측정이 이득을 보일 때 그 패스에 한 줄 적는다. 네이티브 bindless 백엔드만 컴퓨트로 돈다. 값은 루트 상수로(컴퓨트 PSO 에 PassCB 가 없다).
 
 ### 후처리
 

@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/Frustum.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Sky/SkyLight.h"
@@ -197,7 +198,7 @@ namespace sw
     uint32 LightProbeElementBuilder::computeRealtimeElementCount( uint32 probeCount )
     {
         const uint32 momentCount = probeCount * shaderslot::kProbeVisibilityFloat4Count;
-        const uint32 roundedUp   = ( momentCount + shaderslot::kLightProbeFloat4Count - 1u ) / shaderslot::kLightProbeFloat4Count * shaderslot::kLightProbeFloat4Count;
+        const uint32 roundedUp   = MathUtil::align<uint32>( momentCount, shaderslot::kLightProbeFloat4Count );
         return probeCount * shaderslot::kLightProbeFloat4Count + roundedUp;
     }
 

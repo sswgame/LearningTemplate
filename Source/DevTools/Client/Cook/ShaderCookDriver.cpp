@@ -181,7 +181,8 @@ namespace sw
             };
 
             /**
-             * @brief 쿠킹 한 번의 묶음 컴파일이 내는 결과를 받습니다(`ShaderCompiler::compileBatch` — 워커에서 동시에 불린다). 컴파일 요청 하나가 사슬(같은 바이너리 파일을 만드는 작업의 묶음) 하나라 두 스레드가 한 파일을 쓰지 않습니다.
+             * @brief 쿠킹 한 번의 묶음 컴파일 결과를 사슬마다 작업 결과로 바꿉니다(`ShaderCompiler::compileBatch` 의 변환 — 워커에서 동시에 불린다). 컴파일 요청 하나가 사슬(같은 바이너리 파일을 만드는 작업의 묶음) 하나라 두 스레드가 한 파일을 쓰지 않습니다.
+             *        반환값은 compileBatch 가 사슬 칸에 둔다 — 이 형식은 결과 칸을 쥐지 않는다.
              * @details `ContentHash` · `ShaderCooker::writeBinary` · `ShaderReflectionData::reflect` · `ShaderBindingValidatorIssue::validate` 가 스레드 안전해야 하고,
              *          그 확인은 각 함수의 주석에 있다.
              */
@@ -189,19 +190,15 @@ namespace sw
             {
                 const vector<FormatTask>*        _pListTask{ nullptr };
                 const vector<vector<uint32>>*    _pListChain{ nullptr };
-                const vector<ShaderCompileDesc>* _pListDesc{ nullptr };   ///< 사슬과 짝
-                FormatResult*                    _pListResult{ nullptr }; ///< 작업 수만큼. 작업 `i` 는 `_pListResult[i]` 에만 쓴다
+                const vector<ShaderCompileDesc>* _pListDesc{ nullptr }; ///< 사슬과 짝
                 ReflectionMemo                   _reflectionMemo{};
 
-                /** @brief 사슬 @p chainIndex 의 컴파일 결과를 씁니다. 사슬의 첫 작업이 쓰고 리플렉션을 뽑으며, 나머지(중복 요청)는 실패만 함께 센다. */
-                void finishChain( uint32 chainIndex, const ShaderCompileResult& compileResult )
+                /** @brief 사슬 @p chainIndex 의 컴파일 결과로 사슬의 첫 작업 결과를 만듭니다(바이너리를 쓰고 리플렉션을 뽑는다). 나머지(중복 요청)는 묶음 뒤에 실패만 함께 센다. */
+                FormatResult finishChain( uint32 chainIndex, const ShaderCompileResult& compileResult )
                 {
-                    const vector<uint32>& listTaskIndex = ( *_pListChain )[chainIndex];
-                    finishTask( ( *_pListTask )[listTaskIndex.front()], ( *_pListDesc )[chainIndex], compileResult, _pListResult[listTaskIndex.front()] );
-                    for ( const uint32 taskIndex : listTaskIndex )
-                    {
-                        _pListResult[taskIndex]._bCompileFailed = _pListResult[listTaskIndex.front()]._bCompileFailed;
-                    }
+                    FormatResult result;
+                    finishTask( ( *_pListTask )[( *_pListChain )[chainIndex].front()], ( *_pListDesc )[chainIndex], compileResult, result );
+                    return result;
                 }
 
                 /** @brief 작업 하나의 바이너리를 쓰고(내용이 다를 때만) 그 리플렉션을 결과 칸에 담습니다. */
@@ -421,8 +418,20 @@ namespace sw
                 {
                     listDesc.push_back( makeCompileDesc( listTask[listTaskIndex.front()], state._enginePolicy ) );
                 }
-                BatchReceiver receiver{ &listTask, &listChain, &listDesc, outListResult.data() };
-                ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &BatchReceiver::finishChain, &receiver ) );
+                BatchReceiver        receiver{ &listTask, &listChain, &listDesc };
+                vector<FormatResult> listChainResult =
+                    ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source, SW_DELEGATE_METHOD( ShaderCompileTransform<FormatResult>, &BatchReceiver::finishChain, &receiver ) );
+                // 사슬의 첫 작업이 결과를 갖고, 같은 바이너리를 만드는 나머지 작업은 실패만 함께 센다(한 스레드 — 묶음 뒤).
+                for ( size_t chainIndex = 0; chainIndex < listChain.size(); ++chainIndex )
+                {
+                    const vector<uint32>& listTaskIndex  = listChain[chainIndex];
+                    const bool            bFailed        = listChainResult[chainIndex]._bCompileFailed;
+                    outListResult[listTaskIndex.front()] = std::move( listChainResult[chainIndex] );
+                    for ( const uint32 taskIndex : listTaskIndex )
+                    {
+                        outListResult[taskIndex]._bCompileFailed = bFailed;
+                    }
+                }
             }
 
             /**

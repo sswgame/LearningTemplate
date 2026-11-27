@@ -599,7 +599,7 @@ namespace sw
     void GPUScene::collectSortStages( uint32 count, vector<GPUSortStage>& outListStage )
     {
         constexpr uint32 kThreadsPerBlock = kGPUSortMaxElements / 2u; // 그룹 하나가 블록 하나(스레드 하나가 쌍 하나)
-        const uint32     blockThreads     = ( ( count + kGPUSortMaxElements - 1u ) / kGPUSortMaxElements ) * kThreadsPerBlock;
+        const uint32     blockThreads     = MathUtil::divideAndRoundUp<uint32>( count, kGPUSortMaxElements ) * kThreadsPerBlock;
         outListStage.clear();
         outListStage.push_back( GPUSortStage{ GPUSortStageKind::Block, 0, blockThreads } );
         uint32 sortLength = kGPUSortMaxElements;

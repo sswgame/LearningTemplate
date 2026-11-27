@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderRequestLog.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -49,18 +48,8 @@ namespace sw
                 return nullopt;
             }
 
-            /** @brief 묶음 컴파일에서 진 요청을 셉니다(워커에서 불린다). */
-            struct FailureCounter
-            {
-                atomic<uint32> _failedCount{ 0 };
-
-                void recordResult( uint32 requestIndex, const ShaderCompileResult& result )
-                {
-                    (void)requestIndex;
-                    if ( result._bSuccess == false )
-                        _failedCount.fetch_add( 1 );
-                }
-            };
+            /** @brief 묶음 컴파일 결과 하나가 졌으면 1 입니다 — 데우기는 바이트코드를 쥐지 않고 진 수만 센다(워커에서 불린다). */
+            static uint8 isFailed( uint32 /*requestIndex*/, const ShaderCompileResult& result ) { return result._bSuccess ? 0 : 1; }
         };
     } // namespace
 } // namespace sw
@@ -233,9 +222,11 @@ namespace sw
             desc._enginePolicy = enginePolicy;
         }
 
-        Internal::FailureCounter counter;
-        ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Request, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &Internal::FailureCounter::recordResult, &counter ) );
-        summary._failedCount = counter._failedCount.load();
+        const vector<uint8> listFailed = ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Request, SW_DELEGATE_FUNCTION( ShaderCompileTransform<uint8>, &Internal::isFailed ) );
+        for ( const uint8 bFailed : listFailed )
+        {
+            summary._failedCount += bFailed;
+        }
         return summary;
     }
 
