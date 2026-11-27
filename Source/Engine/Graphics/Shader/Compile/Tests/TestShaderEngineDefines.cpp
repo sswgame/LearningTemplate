@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
@@ -17,18 +16,6 @@ namespace
 {
     struct ShaderEngineDefinesTestUtil
     {
-        /** @brief 묶음 컴파일의 실패 결과를 요청마다 셉니다(워커에서 불린다). */
-        struct BatchCounter
-        {
-            atomic<uint32> _arrFailedCount[3]{};
-
-            void recordResult( uint32 requestIndex, const ShaderCompileResult& result )
-            {
-                if ( result._bSuccess == false )
-                    _arrFailedCount[requestIndex].fetch_add( 1 );
-            }
-        };
-
         /** @brief @p listDefine 에서 이름이 @p pName 인 define 의 수를 세고, 하나라도 있으면 마지막 값을 @p outValue 에 둡니다. */
         static uint32 countDefine( const vector<ShaderMacroDefine>& listDefine, const utf8* pName, string& outValue )
         {
@@ -119,19 +106,27 @@ SW_TEST_CASE( ShaderEngineDefinesTest, CompileWithoutEnginePolicyFails )
     SW_EXPECT_TRUE( StringUtil::contains( result._errorMessage, "engine policy" ) );
 }
 
-/** @brief [ShaderEngineDefinesTest] 묶음 컴파일은 요청마다 결과를 한 번씩 넘긴다 — 컴파일하지 못하는 요청도 실패 결과를 받는다 */
+/** @brief [ShaderEngineDefinesTest] 묶음 컴파일은 요청마다 결과 칸 하나를 돌려준다 — 컴파일하지 못하는 요청도 실패 결과를 받고, 변환 입구도 요청마다 한 칸이다 */
 SW_TEST_CASE( ShaderEngineDefinesTest, BatchReportsEveryRequestOnce )
 {
     ShaderCompileDesc desc{};
     desc._entryPoint = "PSMain";
     desc._stage      = ShaderStage::Pixel;
-    const vector<ShaderCompileDesc>           listDesc( 3, desc );
-    ShaderEngineDefinesTestUtil::BatchCounter counter;
+    const vector<ShaderCompileDesc> listDesc( 3, desc );
     SW_EXPECT_LOG( "ShaderCompiler.EnginePolicyMissing" );
-    ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderEngineDefinesTestUtil::BatchCounter::recordResult, &counter ) );
-    for ( const atomic<uint32>& count : counter._arrFailedCount )
+    const vector<ShaderCompileResult> listResult = ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source );
+    SW_REQUIRE_EQUAL( listDesc.size(), listResult.size() );
+    for ( const ShaderCompileResult& result : listResult )
     {
-        SW_EXPECT_EQUAL( 1u, count.load() );
+        SW_EXPECT_FALSE( result._bSuccess );
+    }
+    const auto requestNumber = []( uint32 requestIndex, const ShaderCompileResult& /*result*/ )
+    { return requestIndex + 1; };
+    const vector<uint32> listNumber = ShaderCompiler::compileBatch( listDesc, ShaderRecordScope::Source, SW_DELEGATE_LAMBDA( ShaderCompileTransform<uint32>, requestNumber ) );
+    SW_REQUIRE_EQUAL( listDesc.size(), listNumber.size() );
+    for ( uint32 index = 0; index < static_cast<uint32>( listNumber.size() ); ++index )
+    {
+        SW_EXPECT_EQUAL( index + 1, listNumber[index] ); // 값은 그 요청의 칸에 든다
     }
 }
 
