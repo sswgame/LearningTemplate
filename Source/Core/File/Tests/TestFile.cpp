@@ -1032,8 +1032,8 @@ SW_TEST_CASE( FileTest, SecondCheckoutRuleBindAssertsAndTokenReleasesRule )
  */
 SW_TEST_CASE( FileTest, ExternalChangesAdvanceBothEpochs )
 {
-    const sw::uint64 creationEpoch = sw::FileUtil::getCreationEpoch();
-    const sw::uint64 removalEpoch  = sw::FileUtil::getRemovalEpoch();
+    const uint64 creationEpoch = sw::FileUtil::getCreationEpoch();
+    const uint64 removalEpoch  = sw::FileUtil::getRemovalEpoch();
     sw::FileUtil::recordExternalChanges();
     SW_EXPECT_TRUE( sw::FileUtil::getCreationEpoch() > creationEpoch );
     SW_EXPECT_TRUE( sw::FileUtil::getRemovalEpoch() > removalEpoch );

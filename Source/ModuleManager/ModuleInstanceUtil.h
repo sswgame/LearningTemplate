@@ -6,6 +6,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/EngineABIDigest.h"
@@ -13,8 +14,6 @@
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
-
-#include "ModuleManager/ModuleLibraryHandle.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -45,7 +44,7 @@ namespace sw
      */
     struct ModuleInstanceUtil
     {
-        /** @brief API 표 @p TAPI 가 만드는 인스턴스 핸들 형식입니다(`create` 의 반환 — `GameHandle` · `EditorHandle`). 라이브러리 핸들(`ModuleLibraryHandle`)과 다른 형식이다. */
+        /** @brief API 표 @p TAPI 가 만드는 인스턴스 핸들 형식입니다(`create` 의 반환 — `GameHandle` · `EditorHandle`). 라이브러리 핸들(`DynamicLibraryView`)과 다른 형식이다. */
         template <typename TAPI>
         using InstanceHandleOf = decltype( std::declval<const TAPI&>().create() );
 
@@ -53,9 +52,9 @@ namespace sw
          * @brief 모듈이 이 호스트와 같은 헤더(표 구조 · 경계 구조체)로 빌드됐는지 대조합니다 — 모든 동적 모듈과 같은 엔진 ABI 다이제스트 대조다(`engine::isModuleBuiltWithThisEngine`).
          * @details `create != nullptr && destroy != nullptr` 만으로는 막지 못합니다 — 그 둘은 표 맨 앞이라 가운데에 끼워도 채워진다. 핫 리로드는 모듈만 다시 빌드해 이 어긋남이 생기는 바로 그 상황이다.
          */
-        static bool matchesModuleABI( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )
+        static bool matchesModuleABI( DynamicLibraryView library, const ModuleAPISymbols& symbols )
         {
-            return engine::isModuleBuiltWithThisEngine( library.getOSHandle(), symbols._pModuleName );
+            return engine::isModuleBuiltWithThisEngine( library, symbols._pModuleName );
         }
 
         /**
@@ -63,7 +62,7 @@ namespace sw
          * @details 리로드 전 검사(`is*LibraryUsable`)와 바인딩(`bind*API`)이 같은 절차를 씁니다.
          */
         template <typename TAPI, typename TExportFn>
-        [[nodiscard]] static bool exportAPIFromLibrary( ModuleLibraryHandle library, const ModuleAPISymbols& symbols, TAPI& outAPI )
+        [[nodiscard]] static bool exportAPIFromLibrary( DynamicLibraryView library, const ModuleAPISymbols& symbols, TAPI& outAPI )
         {
             outAPI = {};
             if ( library.isValid() == false || matchesModuleABI( library, symbols ) == false )
@@ -80,7 +79,7 @@ namespace sw
 
         /** @brief 새 라이브러리로 리로드해도 되는지(ABI 가 맞고 API 표에 만들기 · 부수기가 있는지) 봅니다 — 리로드 전 검사(에디터 · 게임 공통). */
         template <typename TAPI, typename TExportFn>
-        [[nodiscard]] static bool isLibraryUsable( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )
+        [[nodiscard]] static bool isLibraryUsable( DynamicLibraryView library, const ModuleAPISymbols& symbols )
         {
             TAPI api{};
             return exportAPIFromLibrary<TAPI, TExportFn>( library, symbols, api ) && api.create != nullptr && api.destroy != nullptr;

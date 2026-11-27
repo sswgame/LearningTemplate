@@ -239,7 +239,7 @@ namespace sw
         suspendModules( ModuleScope::Host, true, FlushReason::Reload );
     }
 
-    void EditorGameModuleManager::onAfterEditorReload( ModuleLibraryHandle library )
+    void EditorGameModuleManager::onAfterEditorReload( DynamicLibraryView library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         if ( bindEditorAPI( library ) == false )
@@ -256,7 +256,7 @@ namespace sw
         }
     }
 
-    bool EditorGameModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
+    bool EditorGameModuleManager::isEditorLibraryUsable( DynamicLibraryView library ) const
     {
         return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols );
     }
@@ -315,7 +315,7 @@ namespace sw
     // API 바인딩 · 인스턴스
     // ======================================================================
 
-    bool EditorGameModuleManager::bindEditorAPI( ModuleLibraryHandle library )
+    bool EditorGameModuleManager::bindEditorAPI( DynamicLibraryView library )
     {
         if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols, _editorAPI ) == false )
             return false;

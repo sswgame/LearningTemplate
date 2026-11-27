@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Graphics/View/FrameViewports.h"
@@ -21,7 +22,6 @@
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
 #include "ModuleManager/IReloadableModuleClient.h"
-#include "ModuleManager/ModuleLibraryHandle.h"
 #include "ModuleManager/ModuleManagerAPI.h"
 
 namespace sw
@@ -117,7 +117,7 @@ namespace sw
          * @details 모듈 수명은 이 클래스가 압니다. 부르는 쪽이 ModuleHotReloadManager 를 직접 알 필요가 없습니다. RHI 백엔드 교체가
          *          모듈을 다시 만들 때 이 핸들로 같은 DLL 을 다시 바인딩합니다.
          */
-        ModuleLibraryHandle getLoadedModuleHandle( string_view moduleName ) const;
+        DynamicLibraryView getLoadedModuleHandle( string_view moduleName ) const;
 
         /**
          * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 라이브러리를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
@@ -200,14 +200,14 @@ namespace sw
          * @brief 게임 모듈이 다시 로드된 직후에 불립니다. API 를 바인딩하고 인스턴스를 만든 뒤 상태를 복원합니다.
          * @param library 새로 로드된 라이브러리. 배포 구성은 정적 링크라 쓰지 않습니다.
          */
-        void onAfterGameReload( ModuleLibraryHandle library );
+        void onAfterGameReload( DynamicLibraryView library );
         /** @brief GameFramework 와 키트 DLL 을 언로드하기 직전에 불립니다. 게임과 같은 절차를 밟습니다. */
         void onBeforeGameplayDLLReload();
         /**
          * @brief 키트 DLL 이 다시 로드된 직후에 불립니다. 씬이 캐시한 TypeInfo 포인터를 새 DLL 의 것으로 바꿉니다.
          * @details 이 작업을 빠뜨리면 살아 있는 오브젝트가 언로드된 DLL 의 TypeInfo 를 가리킵니다.
          */
-        void onAfterGameplayDLLReload( ModuleLibraryHandle library );
+        void onAfterGameplayDLLReload( DynamicLibraryView library );
         /**
          * @brief 연쇄 교체 대상이 모두 준비된 뒤 첫 commit 직전에 불립니다. 게임 쪽 모듈(SWGame · GameFramework · 키트)이 섞여 있으면 게임을 먼저 언로드합니다.
          * @details 에디터 모듈과 에디터 확장(`GF_EditorPlugin_*`)만의 배치는 게임을 건드리지 않는다 — 언로드하면 다시 만들 쪽(게임 리로드 콜백)이 오지 않아
@@ -220,7 +220,7 @@ namespace sw
          * @brief 새 게임 라이브러리가 이 호스트와 같은 API 테이블로 빌드됐는지 확인합니다(ABI 버전, 지문, `exportGameAPI`). 옛 라이브러리를 언로드하기 전에 불립니다.
          * @details 여기서 거절하면 옛 게임이 그대로 돈다. 같은 검사를 옛 라이브러리를 언로드한 뒤(`onAfterGameReload`)에야 하면 거절이 곧 게임을 잃는 일이 된다.
          */
-        bool isGameLibraryUsable( ModuleLibraryHandle library ) const;
+        bool isGameLibraryUsable( DynamicLibraryView library ) const;
         /**
          * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 모듈을 부르지 않고 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
@@ -248,7 +248,7 @@ namespace sw
 
         // 4) 모듈 바인딩
         /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameAPI` 를, 개발 구성은 DLL 심볼을 씁니다. */
-        [[nodiscard]] bool bindGameAPI( ModuleLibraryHandle library );
+        [[nodiscard]] bool bindGameAPI( DynamicLibraryView library );
 
         // 5) 장치 교체 · 다시 만들기
         /**
@@ -326,7 +326,7 @@ namespace sw
          */
         [[nodiscard]] bool startGameInstance();
         /** @brief `_gameAPI` 를 채웁니다. 개발은 @p library 의 심볼(ABI 대조 포함), 정적 모듈 구성은 링크된 `exportGameAPI` 다(이 함수만 `SW_WITH_DYNAMIC_MODULES` 로 가른다). */
-        [[nodiscard]] bool exportGameAPITable( ModuleLibraryHandle library );
+        [[nodiscard]] bool exportGameAPITable( DynamicLibraryView library );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
         void fillModuleSubsystemScope( SubsystemScope& outScope, bool bGameModule ) const;
         /** @brief 장치를 다시 만든 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
@@ -364,9 +364,9 @@ namespace sw
             explicit GameReloadClient( GameModuleManager& owner )
                 : _owner( owner ) {}
             void               onBeforeReload() override { _owner.onBeforeGameReload(); }
-            void               onAfterReload( ModuleLibraryHandle library ) override { _owner.onAfterGameReload( library ); }
+            void               onAfterReload( DynamicLibraryView library ) override { _owner.onAfterGameReload( library ); }
             void               onReloadFault( uint32 faultCode ) override { _owner.onGameReloadFault( faultCode ); }
-            [[nodiscard]] bool isLibraryUsable( ModuleLibraryHandle library ) override { return _owner.isGameLibraryUsable( library ); }
+            [[nodiscard]] bool isLibraryUsable( DynamicLibraryView library ) override { return _owner.isGameLibraryUsable( library ); }
 
         private:
             GameModuleManager& _owner;
@@ -382,9 +382,9 @@ namespace sw
             explicit KitReloadClient( GameModuleManager& owner )
                 : _owner( owner ) {}
             void               onBeforeReload() override { _owner.onBeforeGameplayDLLReload(); }
-            void               onAfterReload( ModuleLibraryHandle library ) override { _owner.onAfterGameplayDLLReload( library ); }
+            void               onAfterReload( DynamicLibraryView library ) override { _owner.onAfterGameplayDLLReload( library ); }
             void               onReloadFault( uint32 faultCode ) override;
-            [[nodiscard]] bool isLibraryUsable( ModuleLibraryHandle library ) override;
+            [[nodiscard]] bool isLibraryUsable( DynamicLibraryView library ) override;
 
         private:
             GameModuleManager& _owner;

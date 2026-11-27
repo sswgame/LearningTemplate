@@ -16,7 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioSubsystem.h"
@@ -117,7 +117,7 @@ namespace sw
         vector<float32>                                                  _listRender;          /**< 엔진이 렌더한 블록(엔진 채널 순서)입니다. */
         vector<float32>                                                  _listDevice;          /**< 장치에 쓰는 블록(ALSA 채널 순서)입니다. */
         thread                                                           _streamThread;        /**< 스트림 스레드입니다. */
-        void*                                                            _pLibrary;            /**< `libasound.so.2` 핸들입니다. */
+        DynamicLibrary                                                   _library;             /**< `libasound.so.2` 입니다. */
         void*                                                            _pPCM;                /**< 열린 재생 장치입니다. */
         uint32                                                           _channelCount;        /**< 스트림의 채널 수입니다. */
         atomic<uint64>                                                   _underrunCount;       /**< 쓰기 실패를 복원한 수입니다(스트림 스레드가 쓰고 게임 스레드가 읽는다). */
@@ -137,7 +137,6 @@ namespace sw
             , _listRender{}
             , _listDevice{}
             , _streamThread{}
-            , _pLibrary{ nullptr }
             , _pPCM{ nullptr }
             , _channelCount{ 0 }
             , _underrunCount{ 0 }
@@ -147,19 +146,19 @@ namespace sw
         /** @brief 라이브러리에서 함수를 찾습니다. 하나라도 없으면 false 입니다. */
         bool bindFunctions()
         {
-            _pfnOpen                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_open>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_open" ) );
-            _pfnClose                  = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_close>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_close" ) );
-            _pfnSetParams              = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_set_params>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_set_params" ) );
-            _pfnWritei                 = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_writei>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_writei" ) );
-            _pfnRecover                = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_recover>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_recover" ) );
-            _pfnDrop                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_drop>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_drop" ) );
-            _pfnHwParamsMalloc         = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_malloc>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_malloc" ) );
-            _pfnHwParamsFree           = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_free>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_free" ) );
-            _pfnHwParamsAny            = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_any>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_any" ) );
+            _pfnOpen                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_open>( _library.findSymbol( "snd_pcm_open" ) );
+            _pfnClose                  = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_close>( _library.findSymbol( "snd_pcm_close" ) );
+            _pfnSetParams              = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_set_params>( _library.findSymbol( "snd_pcm_set_params" ) );
+            _pfnWritei                 = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_writei>( _library.findSymbol( "snd_pcm_writei" ) );
+            _pfnRecover                = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_recover>( _library.findSymbol( "snd_pcm_recover" ) );
+            _pfnDrop                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_drop>( _library.findSymbol( "snd_pcm_drop" ) );
+            _pfnHwParamsMalloc         = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_malloc>( _library.findSymbol( "snd_pcm_hw_params_malloc" ) );
+            _pfnHwParamsFree           = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_free>( _library.findSymbol( "snd_pcm_hw_params_free" ) );
+            _pfnHwParamsAny            = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_any>( _library.findSymbol( "snd_pcm_hw_params_any" ) );
             _pfnHwParamsGetChannelsMax = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_get_channels_max>(
-                ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_get_channels_max" ) );
+                _library.findSymbol( "snd_pcm_hw_params_get_channels_max" ) );
             _pfnConfigFreeGlobal = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_config_update_free_global>(
-                ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_config_update_free_global" ) );
+                _library.findSymbol( "snd_config_update_free_global" ) );
             const bool bCoreFunctions  = _pfnOpen != nullptr && _pfnClose != nullptr && _pfnSetParams != nullptr && _pfnWritei != nullptr && _pfnRecover != nullptr;
             const bool bQueryFunctions = _pfnDrop != nullptr && _pfnHwParamsMalloc != nullptr && _pfnHwParamsFree != nullptr && _pfnHwParamsAny != nullptr &&
                                          _pfnHwParamsGetChannelsMax != nullptr && _pfnConfigFreeGlobal != nullptr;
@@ -180,9 +179,9 @@ namespace sw
 
     bool AlsaAudioBackend::openDevice( AudioOutputDevice& outDevice )
     {
-        using Internal   = AlsaAudioBackendInternal;
-        _impl->_pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libasound.so.2" );
-        if ( _impl->_pLibrary == nullptr )
+        using Internal  = AlsaAudioBackendInternal;
+        _impl->_library = DynamicLibrary::loadSystem( "libasound.so.2" );
+        if ( _impl->_library.isValid() == false )
         {
             SW_LOG_INFO_ID( "AlsaAudioBackend.ALSALibasoundNotAvailable", "ALSA (libasound.so.2) is not available. Rendering offline." );
             return false;
@@ -302,11 +301,7 @@ namespace sw
             (void)_impl->_pfnConfigFreeGlobal(); // 캐시를 비우는 것뿐이라 실패해도 닫기는 이어 간다
             _impl->_pfnConfigFreeGlobal = nullptr;
         }
-        if ( _impl->_pLibrary != nullptr )
-        {
-            ModuleLibraryUtil::unloadDynamicLibrary( _impl->_pLibrary );
-            _impl->_pLibrary = nullptr;
-        }
+        _impl->_library.reset();
     }
 
     uint64 AlsaAudioBackend::getUnderrunCount() const

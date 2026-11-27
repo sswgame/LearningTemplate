@@ -12,7 +12,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
@@ -114,9 +114,9 @@ namespace sw
     #if defined( SW_PLATFORM_WINDOWS )
             /** @brief TracyClient.dll 에서 @p pSymbol 을 찾아 @p outFunction 에 넣습니다. */
             template <typename TFunction>
-            static void findClientFunction( void* pClient, const utf8* pSymbol, TFunction& outFunction )
+            static void findClientFunction( DynamicLibraryView client, const utf8* pSymbol, TFunction& outFunction )
             {
-                outFunction = reinterpret_cast<TFunction>( ModuleLibraryUtil::getDynamicSymbol( pClient, pSymbol ) );
+                outFunction = reinterpret_cast<TFunction>( client.findSymbol( pSymbol ) );
             }
     #endif
 
@@ -134,22 +134,22 @@ namespace sw
                 const AbsolutePath clientText = ProcessRoots::get()._binary.join( "TracyClient.dll" );
                 if ( FileUtil::isRegularFile( clientText ) == false )
                     return api;
-                void* const hClient = ModuleLibraryUtil::loadLibraryAt( clientText );
-                if ( hClient == nullptr )
+                const DynamicLibraryView client = DynamicLibrary::loadAt( clientText ).leakForProcessLifetime(); // 함수 표가 프로세스 끝까지 쓴다
+                if ( client.isValid() == false )
                     return api;
-                findClientFunction( hClient, "___tracy_connected", api._pfnConnected );
-                findClientFunction( hClient, "___tracy_emit_zone_begin", api._pfnZoneBegin );
-                findClientFunction( hClient, "___tracy_emit_zone_end", api._pfnZoneEnd );
-                findClientFunction( hClient, "___tracy_emit_frame_mark", api._pfnFrameMark );
-                findClientFunction( hClient, "___tracy_emit_plot", api._pfnPlot );
-                findClientFunction( hClient, "___tracy_emit_memory_alloc_named", api._pfnMemoryAllocate );
-                findClientFunction( hClient, "___tracy_emit_memory_free_named", api._pfnMemoryFree );
-                findClientFunction( hClient, "___tracy_emit_gpu_new_context", api._pfnGPUNewContext );
-                findClientFunction( hClient, "___tracy_emit_gpu_context_name", api._pfnGPUContextName );
-                findClientFunction( hClient, "___tracy_emit_gpu_time_sync", api._pfnGPUTimeSync );
-                findClientFunction( hClient, "___tracy_emit_gpu_zone_begin", api._pfnGPUZoneBegin );
-                findClientFunction( hClient, "___tracy_emit_gpu_time", api._pfnGPUTime );
-                findClientFunction( hClient, "___tracy_emit_gpu_zone_end", api._pfnGPUZoneEnd );
+                findClientFunction( client, "___tracy_connected", api._pfnConnected );
+                findClientFunction( client, "___tracy_emit_zone_begin", api._pfnZoneBegin );
+                findClientFunction( client, "___tracy_emit_zone_end", api._pfnZoneEnd );
+                findClientFunction( client, "___tracy_emit_frame_mark", api._pfnFrameMark );
+                findClientFunction( client, "___tracy_emit_plot", api._pfnPlot );
+                findClientFunction( client, "___tracy_emit_memory_alloc_named", api._pfnMemoryAllocate );
+                findClientFunction( client, "___tracy_emit_memory_free_named", api._pfnMemoryFree );
+                findClientFunction( client, "___tracy_emit_gpu_new_context", api._pfnGPUNewContext );
+                findClientFunction( client, "___tracy_emit_gpu_context_name", api._pfnGPUContextName );
+                findClientFunction( client, "___tracy_emit_gpu_time_sync", api._pfnGPUTimeSync );
+                findClientFunction( client, "___tracy_emit_gpu_zone_begin", api._pfnGPUZoneBegin );
+                findClientFunction( client, "___tracy_emit_gpu_time", api._pfnGPUTime );
+                findClientFunction( client, "___tracy_emit_gpu_zone_end", api._pfnGPUZoneEnd );
     #elif defined( SW_PLATFORM_POSIX )
                 api._pfnConnected      = &___tracy_connected;
                 api._pfnZoneBegin      = &___tracy_emit_zone_begin;

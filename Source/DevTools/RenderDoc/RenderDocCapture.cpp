@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
@@ -25,19 +26,19 @@ namespace sw
             inline static RENDERDOC_API_1_6_0* _s_pAPI = nullptr;
             inline static atomic<bool>         _s_bTried{ false };
 
-            /** @brief 설치된 RenderDoc 라이브러리를 로드합니다. Windows 는 설치 폴더(`%ProgramFiles%/RenderDoc`), Linux 는 동적 링커 검색 경로입니다. 없으면 nullptr 입니다. */
-            static void* loadInstalledLibrary( const string& libraryName )
+            /** @brief 설치된 RenderDoc 라이브러리를 로드하고 프로세스 끝까지 둡니다(API 포인터가 기댄다). Windows 는 설치 폴더(`%ProgramFiles%/RenderDoc`), Linux 는 동적 링커 검색 경로입니다. 없으면 빈 뷰입니다. */
+            static DynamicLibraryView loadInstalledLibrary( const string& libraryName )
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 string programFiles;
                 if ( Process::tryReadEnvironmentNonEmpty( "ProgramFiles", programFiles ) == false )
-                    return nullptr;
+                    return {};
                 const AbsolutePath libraryPath = AbsolutePath::tryMake( programFiles ).value_or( AbsolutePath{} ).join( "RenderDoc" ).join( libraryName );
                 if ( libraryPath.empty() || FileUtil::isRegularFile( libraryPath ) == false )
-                    return nullptr; // 설치하지 않았다 - 로드 실패 경고를 내지 않는다
-                return ModuleLibraryUtil::loadLibraryAt( libraryPath );
+                    return {}; // 설치하지 않았다 - 로드 실패 경고를 내지 않는다
+                return DynamicLibrary::loadAt( libraryPath ).leakForProcessLifetime();
 #elif defined( SW_PLATFORM_POSIX )
-                return ModuleLibraryUtil::loadSystemLibrary( libraryName );
+                return DynamicLibrary::loadSystem( libraryName ).leakForProcessLifetime();
 #else
     #error "Unsupported platform"
 #endif
@@ -47,11 +48,11 @@ namespace sw
             static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
             {
                 // 주입된 RenderDoc 은 참조 없이 빌리지 않는다 - 고정해 API 포인터(`_s_pAPI`)가 사는 동안 내려가지 않게 한다.
-                const string libraryName = ModuleLibraryUtil::formatSharedLibraryName( "renderdoc" );
-                void*        pModule     = ModuleLibraryUtil::findLoadedLibrary( libraryName );
-                if ( pModule == nullptr && bLoadIfMissing )
-                    pModule = loadInstalledLibrary( libraryName );
-                return reinterpret_cast<pRENDERDOC_GetAPI>( ModuleLibraryUtil::getDynamicSymbol( pModule, "RENDERDOC_GetAPI" ) ); // 모듈이 없으면 nullptr
+                const string       libraryName = ModuleLibraryUtil::formatSharedLibraryName( "renderdoc" );
+                DynamicLibraryView renderDoc   = DynamicLibraryView::findLoadedAndPin( libraryName );
+                if ( renderDoc.isValid() == false && bLoadIfMissing )
+                    renderDoc = loadInstalledLibrary( libraryName );
+                return reinterpret_cast<pRENDERDOC_GetAPI>( renderDoc.findSymbol( "RENDERDOC_GetAPI" ) ); // 모듈이 없으면 nullptr
             }
 
             static bool runCapture( const vector<string>& listArgument, string& outReply )

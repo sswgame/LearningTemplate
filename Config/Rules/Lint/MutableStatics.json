@@ -28,7 +28,7 @@
         "Source/Core/Diagnostics/Windows/WindowsCallStackCapture.cpp|s_symbolMutex": "DbgHelp 심볼 처리기는 프로세스에 하나이고 스레드 안전하지 않다 — 라이브러리의 프로세스 전역 상태를 지키는 참조 수 · 잠금이다.",
         "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_arrReason": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
         "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_bStopReportThread": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
-        "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_hDumpModule": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
+        "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_dumpModule": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
         "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_hReportFinished": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
         "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_hReportRequested": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
         "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_hReportThread": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",

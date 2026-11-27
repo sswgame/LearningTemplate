@@ -7,7 +7,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -25,14 +25,14 @@ namespace sw
 
             /**
              * @brief 기본 어댑터(RHI 가 고르는 0 번)의 이름과 전용 메모리를 읽습니다. dxgi.dll 을 링크하지 않고 올려 쓴다 — Engine 은 DXGI 를 링크하지 않는다.
-             * @details 이미 올라와 있어도 `loadSystemLibrary` 로 참조를 하나 가진다(프로세스 끝까지 둔다). `GetModuleHandleW` 로 빌리면 다른 코드가 내릴 때 함수 포인터가 허공을 가리킨다.
+             * @details 이미 올라와 있어도 `DynamicLibrary::loadSystem` 으로 참조를 하나 가진다(프로세스 끝까지 둔다). `GetModuleHandleW` 로 빌리면 다른 코드가 내릴 때 함수 포인터가 허공을 가리킨다.
              */
             static void probeAdapter( HardwareDetectionResult& result )
             {
-                void* const pModule = ModuleLibraryUtil::loadSystemLibrary( "dxgi.dll" );
-                if ( pModule == nullptr )
+                const DynamicLibraryView dxgi = DynamicLibrary::loadSystem( "dxgi.dll" ).leakForProcessLifetime(); // 팩토리 함수 포인터가 기대므로 프로세스 끝까지 둔다
+                if ( dxgi.isValid() == false )
                     return;
-                const PfnCreateDXGIFactory1 pfnCreateFactory = reinterpret_cast<PfnCreateDXGIFactory1>( ModuleLibraryUtil::getDynamicSymbol( pModule, "CreateDXGIFactory1" ) );
+                const PfnCreateDXGIFactory1 pfnCreateFactory = reinterpret_cast<PfnCreateDXGIFactory1>( dxgi.findSymbol( "CreateDXGIFactory1" ) );
                 if ( pfnCreateFactory == nullptr )
                     return;
                 Microsoft::WRL::ComPtr<IDXGIFactory1> factory;

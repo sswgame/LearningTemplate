@@ -17,7 +17,7 @@
 
 #include "sw/config/ConfigConstants.h"
 
-// 동적 모듈 구성에만 있다 — 정적 구성(배포 · 웹 · Android 개발)은 에디터 모듈이 없고 모듈 라이브러리를 올리고 내리는 길(`ModuleLibraryUtil::unloadModuleLibrary`)도 짓지 않는다.
+// 동적 모듈 구성에만 있다 — 정적 구성(배포 · 웹 · Android 개발)은 에디터 모듈이 없고 모듈 라이브러리를 내리는 길(`DynamicLibrary::unloadModule`)도 짓지 않는다.
 // 부르는 자리(아래 작업 표의 본문)는 `build::kStaticModules` 로 가른다 — 버려지는 갈래라 정의가 없어도 된다(docs/agents/CppStyle.md "Build configuration switches" 첫 줄).
 #if SW_WITH_DYNAMIC_MODULES
     #include "Core/File/FileUtil.h"
@@ -37,7 +37,7 @@ namespace sw
 {
     EditorModuleHeadlessSession::EditorModuleHeadlessSession()
         : _listExtension{}
-        , _pLibrary{ nullptr }
+        , _editorLibrary{}
         , _loadCount{ 0 }
         , _entryCallCount{ 0 }
         , _bLoadAttempted{ SW_FALSE }
@@ -51,15 +51,15 @@ namespace sw
         for ( auto it = _listExtension.rbegin(); it != _listExtension.rend(); ++it )
         {
             engine::unregisterModuleTypes( it->_name );
-            (void)ModuleLibraryUtil::unloadModuleLibrary( it->_name, it->_pLibrary ); // 남으면 프로세스 끝까지 로드된 채다(이유는 경고로 남는다)
+            (void)it->_library.unloadModule(); // 남으면 프로세스 끝까지 로드된 채다(이유는 경고로 남는다)
         }
         if ( _bTypesRegistered == SW_TRUE )
             engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
-        if ( _pLibrary != nullptr )
+        if ( _editorLibrary.isValid() )
         {
             SW_LOG_INFO_ID( "EditorModuleCommandlets.SessionUnloaded", "Editor module loaded %# time(s) for %# commandlet(s)", _loadCount, _entryCallCount );
             // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
-            (void)ModuleLibraryUtil::unloadModuleLibrary( sw::config::kTargetEditorModule, _pLibrary );
+            (void)_editorLibrary.unloadModule();
         }
     }
 
@@ -67,15 +67,15 @@ namespace sw
     {
         if ( _bLoadAttempted == SW_FALSE )
         {
-            _bLoadAttempted                      = SW_TRUE;
-            const AbsolutePath        modulePath = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-            const ModuleLibraryHandle library{ FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( modulePath ) : nullptr };
+            _bLoadAttempted               = SW_TRUE;
+            const AbsolutePath modulePath = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
+            DynamicLibrary     library    = FileUtil::exists( modulePath ) ? DynamicLibrary::loadAt( modulePath ) : DynamicLibrary{};
             if ( library.isValid() == false )
             {
                 SW_LOG_ERROR_ID( "EditorModuleCommandlets.NeedsEditorModuleBin", "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
                 return nullptr;
             }
-            _pLibrary = library.getOSHandle();
+            _editorLibrary = std::move( library );
             ++_loadCount;
             // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
             if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
@@ -84,16 +84,16 @@ namespace sw
                 return nullptr;
             }
             _bTypesRegistered = SW_TRUE;
-            if ( ModuleInstanceUtil::matchesModuleABI( library, kEditorModuleSymbols ) == false )
+            if ( ModuleInstanceUtil::matchesModuleABI( _editorLibrary.getView(), kEditorModuleSymbols ) == false )
             {
                 engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
                 _bTypesRegistered = SW_FALSE;
                 return nullptr; // 대조가 이유를 남겼다
             }
         }
-        if ( _pLibrary == nullptr || _bTypesRegistered == SW_FALSE )
+        if ( _editorLibrary.isValid() == false || _bTypesRegistered == SW_FALSE )
             return nullptr;
-        void* const pEntry = ModuleLibraryHandle{ _pLibrary }.findSymbol( pSymbol );
+        void* const pEntry = _editorLibrary.findSymbol( pSymbol );
         if ( pEntry == nullptr )
         {
             SW_LOG_ERROR_ID( "EditorModuleCommandlets.EditorModuleDoesNot", "The editor module does not export %#", pSymbol );
@@ -114,13 +114,13 @@ namespace sw
             const ModuleManifest* const pManifest = catalog.findManifest( moduleName );
             if ( pManifest == nullptr || pManifest->_kind != ModuleKind::EditorExtension )
                 continue;
-            void* const pLibrary = ModuleLibraryUtil::loadLibraryAt( ModuleLibraryUtil::findModuleLibraryPath( moduleName ) );
-            if ( pLibrary == nullptr )
+            DynamicLibrary library = DynamicLibrary::loadAt( ModuleLibraryUtil::findModuleLibraryPath( moduleName ) );
+            if ( library.isValid() == false )
             {
                 SW_LOG_ERROR_ID( "EditorModuleCommandlets.CannotLoadExtension", "Editor extension module %# could not be loaded", moduleName );
                 return false;
             }
-            _listExtension.push_back( ExtensionLibrary{ moduleName, pLibrary } );
+            _listExtension.push_back( ExtensionLibrary{ moduleName, std::move( library ) } );
             if ( engine::registerModuleTypes( moduleName ) == false )
                 return false; // 등록이 이유를 남겼다
         }
@@ -223,7 +223,7 @@ namespace sw
     // 정적 모듈 구성 — 에디터 모듈이 없다. 작업 표가 세션을 쥐지만 작업은 모듈을 찾기 전에 실패로 답한다(`build::kStaticModules`).
     EditorModuleHeadlessSession::EditorModuleHeadlessSession()
         : _listExtension{}
-        , _pLibrary{ nullptr }
+        , _editorLibrary{}
         , _loadCount{ 0 }
         , _entryCallCount{ 0 }
         , _bLoadAttempted{ SW_FALSE }

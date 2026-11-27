@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioPCM.h"
@@ -72,7 +72,7 @@ namespace sw
 
             /**
              * @brief Media Foundation · XAudio2 함수 표입니다. 처음 쓸 때 시스템 DLL 을 올려 한 번 채우고 프로세스 끝까지 둡니다.
-             * @details 수명. 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_hMfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
+             * @details 수명. 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_mfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
              *          `GetModuleHandleW`(참조를 늘리지 않는다)로 빌린 모듈은 쓰지 않는다 — 다른 코드가 같은 DLL 을 내리면 포인터가 허공을 가리킨다.
              *          백엔드를 닫을 때 내리지 않는 이유: 대체 디코더(`decodeWithMediaFoundation`)는 클립 캐시의 워커 태스크가 백엔드와 무관하게 부르고,
              *          정적 소멸자 · `DllMain` 에서의 `FreeLibrary` 는 로더 잠금 아래라 금지다. 라이브러리 안의 전역 상태(Media Foundation 플랫폼 · COM)는
@@ -98,10 +98,10 @@ namespace sw
                 PFN_MFCreateMFByteStreamOnStream       _pfnMFCreateMFByteStreamOnStream{ nullptr };
                 PFN_SHCreateMemStream                  _pfnSHCreateMemStream{ nullptr };
                 PFN_XAudio2Create                      _pfnXAudio2Create{ nullptr };
-                HMODULE                                _hMfPlat{ nullptr };      ///< mfplat.dll 참조(프로세스 끝까지)
-                HMODULE                                _hMfReadWrite{ nullptr }; ///< mfreadwrite.dll 참조
-                HMODULE                                _hShlwapi{ nullptr };     ///< shlwapi.dll 참조
-                HMODULE                                _hXAudio2{ nullptr };     ///< xaudio2_9.dll 참조
+                DynamicLibraryView                     _mfPlat{};      ///< mfplat.dll 참조(프로세스 끝까지)
+                DynamicLibraryView                     _mfReadWrite{}; ///< mfreadwrite.dll 참조
+                DynamicLibraryView                     _shlwapi{};     ///< shlwapi.dll 참조
+                DynamicLibraryView                     _xAudio2{};     ///< xaudio2_9.dll 참조
 
                 /** @brief Media Foundation 디코드에 필요한 함수가 모두 있으면 true 입니다. */
                 bool hasMediaFoundation() const
@@ -111,29 +111,29 @@ namespace sw
                 }
             };
 
-            /** @brief 참조를 가진 모듈 @p hModule 에서 @p pSymbol 을 찾습니다. 모듈이나 함수가 없으면 nullptr 입니다. */
+            /** @brief 참조를 가진 모듈 @p library 에서 @p pSymbol 을 찾습니다. 모듈이나 함수가 없으면 nullptr 입니다. */
             template <typename TFunction>
-            static TFunction findSystemFunction( HMODULE hModule, const utf8* pSymbol )
+            static TFunction findSystemFunction( DynamicLibraryView library, const utf8* pSymbol )
             {
-                return reinterpret_cast<TFunction>( ModuleLibraryUtil::getDynamicSymbol( hModule, pSymbol ) ); // 모듈이 없으면 nullptr
+                return reinterpret_cast<TFunction>( library.findSymbol( pSymbol ) ); // 모듈이 없으면 nullptr
             }
 
             /** @brief System32 의 DLL 마다 참조를 하나씩 잡고 함수 표를 채웁니다. 없는 DLL · 함수는 nullptr 로 남깁니다. */
             static SystemAudioAPI loadSystemAudioAPI()
             {
                 SystemAudioAPI api{};
-                api._hMfPlat              = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "mfplat.dll" ) );
-                api._hMfReadWrite         = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "mfreadwrite.dll" ) );
-                api._hShlwapi             = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "shlwapi.dll" ) );
-                api._hXAudio2             = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "xaudio2_9.dll" ) );
-                api._pfnMFStartup         = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( api._hMfPlat, "MFStartup" );
-                api._pfnMFShutdown        = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( api._hMfPlat, "MFShutdown" );
-                api._pfnMFCreateMediaType = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( api._hMfPlat, "MFCreateMediaType" );
+                api._mfPlat               = DynamicLibrary::loadSystem( "mfplat.dll" ).leakForProcessLifetime(); // 함수 표가 프로세스 끝까지 쓴다
+                api._mfReadWrite          = DynamicLibrary::loadSystem( "mfreadwrite.dll" ).leakForProcessLifetime();
+                api._shlwapi              = DynamicLibrary::loadSystem( "shlwapi.dll" ).leakForProcessLifetime();
+                api._xAudio2              = DynamicLibrary::loadSystem( "xaudio2_9.dll" ).leakForProcessLifetime();
+                api._pfnMFStartup         = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( api._mfPlat, "MFStartup" );
+                api._pfnMFShutdown        = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( api._mfPlat, "MFShutdown" );
+                api._pfnMFCreateMediaType = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( api._mfPlat, "MFCreateMediaType" );
                 api._pfnMFCreateSourceReaderFromByteStream =
-                    findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromByteStream>( api._hMfReadWrite, "MFCreateSourceReaderFromByteStream" );
-                api._pfnMFCreateMFByteStreamOnStream = findSystemFunction<SystemAudioAPI::PFN_MFCreateMFByteStreamOnStream>( api._hMfPlat, "MFCreateMFByteStreamOnStream" );
-                api._pfnSHCreateMemStream            = findSystemFunction<SystemAudioAPI::PFN_SHCreateMemStream>( api._hShlwapi, "SHCreateMemStream" );
-                api._pfnXAudio2Create                = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( api._hXAudio2, "XAudio2Create" );
+                    findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromByteStream>( api._mfReadWrite, "MFCreateSourceReaderFromByteStream" );
+                api._pfnMFCreateMFByteStreamOnStream = findSystemFunction<SystemAudioAPI::PFN_MFCreateMFByteStreamOnStream>( api._mfPlat, "MFCreateMFByteStreamOnStream" );
+                api._pfnSHCreateMemStream            = findSystemFunction<SystemAudioAPI::PFN_SHCreateMemStream>( api._shlwapi, "SHCreateMemStream" );
+                api._pfnXAudio2Create                = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( api._xAudio2, "XAudio2Create" );
                 return api;
             }
 

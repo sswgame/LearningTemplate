@@ -153,29 +153,30 @@ namespace sw
 #if SW_WITH_DYNAMIC_MODULES
     bool RHIBackendRegistry::tryLoadModule( RHIBackend backend, string_view modulePath )
     {
-        const optional<AbsolutePath> libraryPath   = AbsolutePath::tryMake( modulePath );
-        void*                        pModuleHandle = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
-        if ( pModuleHandle == nullptr )
+        const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( modulePath );
+        DynamicLibrary               library     = libraryPath.has_value() ? DynamicLibrary::loadAt( *libraryPath ) : DynamicLibrary{};
+        if ( library.isValid() == false )
             return false;
 
         // 백엔드 모듈이 이 엔진과 같은 헤더로 빌드됐는지 — 빌드가 모듈마다 박은 엔진 ABI 다이제스트(`RHIModuleEntry.h`)를 돌고 있는 엔진의 것과 대조한다.
+        // 아래의 거절은 모두 `unloadModule` 로 내린다(의존 라이브러리는 남긴다).
         const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
         if ( pInfo == nullptr )
         {
             SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotInTable", "Backend %# has no descriptor in RHIBackendInfoTable (%#)", static_cast<int32>( backend ), modulePath );
-            (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
+            (void)library.unloadModule();
             return false;
         }
-        if ( engine::isModuleBuiltWithThisEngine( pModuleHandle, pInfo->_pModuleName ) == false )
+        if ( engine::isModuleBuiltWithThisEngine( library.getView(), pInfo->_pModuleName ) == false )
         {
-            (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
+            (void)library.unloadModule();
             return false;
         }
 
-        PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "createRHIDevice" ) );
+        PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( library.findSymbol( "createRHIDevice" ) );
         if ( pfnCreate == nullptr )
         {
-            (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
+            (void)library.unloadModule();
             return false;
         }
 
@@ -185,7 +186,7 @@ namespace sw
         } );
 
         registerBackend( backend, factory, RHIAvailability::query( backend ) );
-        _listLoadedModule.push_back( LoadedModule{ backend, pModuleHandle, string{ modulePath } } );
+        _listLoadedModule.push_back( LoadedModule{ backend, std::move( library ) } );
 
         SW_LOG_INFO_ID( "RHIBackendRegistry.LoadedModuleBackend", "Loaded module %# for backend %#", modulePath, RHI::getBackendTypeName( backend ) );
         return true;
@@ -214,9 +215,9 @@ namespace sw
         }
 
         // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 남아 있을 뿐이다. 이유는 경고로 남는다.
-        for ( const LoadedModule& module : _listLoadedModule )
+        for ( LoadedModule& module : _listLoadedModule )
         {
-            (void)ModuleLibraryUtil::unloadModuleLibrary( module._modulePath, module._pHandle );
+            (void)module._library.unloadModule();
         }
         _listLoadedModule.clear();
 #endif
