@@ -297,6 +297,7 @@ SW_TEST_CASE( LiveOpsLogicTest, KillSwitchHidesEverything )
 SW_TEST_CASE( LiveOpsLogicTest, JSONRoundTrip )
 {
     SW_EXPECT_LOG( "JSON.ParseError" );
+    SW_EXPECT_LOG( "Serialization.NotRead" ); // 깨진 JSON 은 엄격한 읽기가 어느 형식인지 더해 알린다
     LiveOpsFixture rig;
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
     rig.update( kStartMs );

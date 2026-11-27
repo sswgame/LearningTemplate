@@ -76,6 +76,7 @@ SW_TEST_CASE( AssetRefTest, WrongKindInADocumentDoesNotLoad )
 {
     AssetRefSample sample;
     SW_EXPECT_LOG( "AssetRef.WrongType" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" ); // 거절한 값은 엄격한 읽기가 읽지 못한 칸으로 알린다
     (void)JSONSerializer::deserialize( &sample, *AssetRefSample::StaticType(), R"({"_reference":"common/materials/a.material"})" );
     SW_EXPECT_TRUE( sample._reference.empty() );
 }
@@ -150,6 +151,7 @@ SW_TEST_CASE( AssetRefTest, BuiltinAndCatalogInADocument )
 
     AssetRefSample wrongShape;
     SW_EXPECT_LOG( "AssetRef.WrongType" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" ); // 거절한 값은 엄격한 읽기가 읽지 못한 칸으로 알린다
     (void)JSONSerializer::deserialize( &wrongShape, *AssetRefSample::StaticType(), R"({"_builtin":"Cube"})" );
     SW_EXPECT_TRUE( wrongShape._builtin.empty() );
 
