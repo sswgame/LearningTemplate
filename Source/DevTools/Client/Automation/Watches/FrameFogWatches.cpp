@@ -12,15 +12,15 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool readFogVolumeState( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] bool readFogVolumeState( const GameObjectManager* pManager, AutomationWatchValue& outValue )
         {
             (void)pManager;
-            outValue = static_cast<float64>( FrameFog::getLastMainVolumeState() );
+            outValue.setEnum( FrameFog::getLastMainVolumeState() );
             return true;
         }
     } // namespace
 
     SW_AUTOMATION_WATCH( renderFogVolumeState, "Render.FogVolumeState",
-                         "Volumetric fog state of the main view last frame (0 no fog, 1 off in the settings, 2 underwater, 3 no device, 4 no compute PSO, 5 buffer failed, 6 active)",
+                         "FogVolumeState name of the main view volumetric fog last frame (Active when it ran)",
                          &readFogVolumeState );
 } // namespace sw

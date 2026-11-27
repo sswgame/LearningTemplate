@@ -16,16 +16,16 @@
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="material"/>
 	<EditorWaitStable/>
-	<Expect watch="Engine.FramePacingState" equals="3"/>
+	<Expect watch="Engine.FramePacingState" is="Automation"/>
 	<Variable name="gv_framePacing" value="WindowState"/>
 	<!-- 기동 알림이 사라지고 조용한 프레임이 쌓이면 유휴에 든다. 유휴 중의 프레임은 최대 100 ms 라, 유휴에 든 뒤에는 고정 대기를 두지 않는다(유휴는 아래 조건 대기가 확인한다) -->
 	<WaitUntil watch="Editor.NotificationCount" equals="0" timeoutFrames="20000"/>
-	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<WaitUntil watch="Engine.FramePacingState" is="EditorIdle" timeoutFrames="600"/>
 	<!-- ① 키 입력: Quick Open 으로 머티리얼을 연다 — 유휴 중에 친 키가 그대로 문서를 연다. 다음 프레임에 깨어 있어야 한다(Wait 1 이 시험 내용이다) -->
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
 	<EditorKey key="Ctrl+P"/>
 	<AdvanceSimulation frames="1"/> <!-- 다음 프레임에 깨어 있어야 한다 — 한 프레임이 테스트 내용이다 -->
-	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Expect watch="Engine.FramePacingState" isOneOf="Foreground,Background"/>
 	<EditorWaitStable/>
 	<EditorText value="previewred.material"/>
 	<EditorWaitStable/>
@@ -34,23 +34,23 @@
 	<!-- 미리보기 창은 틱하는 씬을 그려 연속 프레임을 청한다 — 닫으면 다시 조용해진다 -->
 	<EditorWaitStable/>
 	<DevCommand line="panel.close material"/>
-	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<WaitUntil watch="Engine.FramePacingState" is="EditorIdle" timeoutFrames="600"/>
 	<!-- ② 마우스 이동: 유휴 중의 이동이 바로 깨운다 -->
 	<EditorHover mark="sceneView.canvas" anchor="0.30,0.50"/>
 	<AdvanceSimulation frames="1"/> <!-- 다음 프레임에 깨어 있어야 한다 — 한 프레임이 테스트 내용이다 -->
-	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Expect watch="Engine.FramePacingState" isOneOf="Foreground,Background"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.60,0.50"/>
-	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<WaitUntil watch="Engine.FramePacingState" is="EditorIdle" timeoutFrames="600"/>
 	<!-- ③ 알림: 떠 있는 동안은 깨어 있고, 시간이 지나 사라진 뒤 다시 잔다 -->
 	<DevCommand line="notify.push 1 idle scenario toast"/>
 	<WaitUntil watch="Editor.NotificationCount" equals="1" timeoutFrames="10"/>
 	<Expect watch="Editor.NotificationCount" equals="1"/>
-	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Expect watch="Engine.FramePacingState" isOneOf="Foreground,Background"/>
 	<WaitUntil watch="Editor.NotificationCount" equals="0" timeoutFrames="20000"/>
-	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<WaitUntil watch="Engine.FramePacingState" is="EditorIdle" timeoutFrames="600"/>
 	<Variable name="gv_framePacing" value="Auto"/>
-	<WaitUntil watch="Engine.FramePacingState" equals="3" timeoutFrames="10"/>
-	<Expect watch="Engine.FramePacingState" equals="3"/>
+	<WaitUntil watch="Engine.FramePacingState" is="Automation" timeoutFrames="10"/>
+	<Expect watch="Engine.FramePacingState" is="Automation"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

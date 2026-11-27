@@ -41,9 +41,9 @@ namespace sw::editor
 {
     namespace
     {
-        [[nodiscard]] bool readPlayState( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readPlayState( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
-            outValue = static_cast<float64>( static_cast<uint32>( EditorPlaySession::getState() ) );
+            outValue.setEnum( EditorPlaySession::getState() );
             return true;
         }
 
@@ -409,7 +409,7 @@ namespace sw::editor
         return true;
     }
 
-    SW_AUTOMATION_WATCH( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &readPlayState );
+    SW_AUTOMATION_WATCH( editorPlayState, "Editor.PlayState", "PlaySessionState name of the play session", &readPlayState );
     SW_AUTOMATION_WATCH( editorPlaySimulating, "Editor.PlaySimulating", "While a session runs: 1 simulating (ejected or Simulate), 0 the player is possessed",
                          &readPlaySimulating );
     SW_AUTOMATION_WATCH( editorSceneDirty, "Editor.SceneDirty", "1 while the edited scene has unsaved changes", &readSceneDirty );

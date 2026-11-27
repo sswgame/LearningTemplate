@@ -11,31 +11,31 @@
 	<WaitRenderStable/> <!-- 렌더가 선 뒤에 교체한다 -->
 	<SwapBackend backend="dx11"/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<WaitUntil watch="RHI.Backend" equals="0" timeoutFrames="60"/>
+	<WaitUntil watch="RHI.Backend" is="DirectX11" timeoutFrames="60"/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<WaitRenderStable/> <!-- 새 백엔드로 다시 그려 자리 잡은 뒤에 다음 교체 -->
 	<SwapBackend backend="dx12"/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<WaitUntil watch="RHI.Backend" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="RHI.Backend" is="DirectX12" timeoutFrames="60"/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<WaitRenderStable/> <!-- 새 백엔드로 다시 그려 자리 잡은 뒤에 다음 교체 -->
 	<SwapBackend backend="vk"/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<WaitUntil watch="RHI.Backend" equals="2" timeoutFrames="60"/>
+	<WaitUntil watch="RHI.Backend" is="Vulkan" timeoutFrames="60"/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<WaitRenderStable/> <!-- 새 백엔드로 다시 그려 자리 잡은 뒤에 다음 교체 -->
 	<SwapBackend backend="gl"/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<WaitUntil watch="RHI.Backend" equals="3" timeoutFrames="60"/>
+	<WaitUntil watch="RHI.Backend" is="OpenGL" timeoutFrames="60"/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<WaitRenderStable/> <!-- 새 백엔드로 다시 그려 자리 잡은 뒤에 다음 교체 -->
 	<SwapBackend backend="dx12"/>
 	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
-	<WaitUntil watch="RHI.Backend" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="RHI.Backend" is="DirectX12" timeoutFrames="60"/>
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<Pass/>

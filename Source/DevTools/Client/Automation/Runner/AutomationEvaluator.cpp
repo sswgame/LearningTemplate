@@ -138,7 +138,7 @@ namespace sw
         bool                                     bOk       = true;
         string                                   rule;
         StringBuilder<constant::buffer::kMax256> text;
-        const bool                               bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
+        const bool                               bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "isOneOf" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
         if ( bNumberRule && value._bText )
         {
             text.appendFormat( "%# is text ('%#') - compare it with is=\"…\"", subject, value._text );
@@ -222,6 +222,18 @@ namespace sw
             bOk = valueText == *step.findAttribute( "is" );
             StringBuilder<constant::buffer::kMax256> ruleText;
             ruleText.appendFormat( "is '%#'", *step.findAttribute( "is" ) );
+            rule = string( ruleText.view() );
+        }
+        else if ( const string* pIsOneOf = step.findAttribute( "isOneOf" ); pIsOneOf != nullptr )
+        {
+            // 쉼표로 가른 글 가운데 하나다(앞뒤 공백을 뗀다) — 열거 감시가 여러 상태 중 어디로든 끝날 수 있을 때(준비됨 또는 실패) 번호 크기 비교 대신 쓴다.
+            bOk = false;
+            for ( const string_view choice : StringUtil::split( *pIsOneOf, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+            {
+                bOk = bOk || string_view{ valueText } == choice;
+            }
+            StringBuilder<constant::buffer::kMax256> ruleText;
+            ruleText.appendFormat( "is one of '%#'", *pIsOneOf );
             rule = string( ruleText.view() );
         }
         else

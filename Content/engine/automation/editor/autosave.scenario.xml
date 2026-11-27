@@ -94,7 +94,7 @@
 	<EditorClick mark="toolbar.play"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
@@ -102,11 +102,11 @@
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<Expect watch="Editor.AutosaveRestoredCount" equals="1"/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<EditorWaitStable/>
 	<!-- ⑤ 폐기 -->
 	<DevCommand line="panel.focus recovered_work"/>

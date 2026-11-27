@@ -12,7 +12,7 @@
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<!-- ① 허브 접속 -->
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>

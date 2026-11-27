@@ -25,7 +25,7 @@
 	<Expect watch="Render.DeviceRecreateCount" equals="0"/>
 	<DevCommand line="rhi.removeDevice"/>
 	<WaitUntil watch="Render.DeviceRecreateCount" equals="1" timeoutFrames="600"/>
-	<Expect watch="RHI.Backend" equals="1"/>
+	<Expect watch="RHI.Backend" is="DirectX12"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<ExpectLog id="Render.DeviceLostQuit" count="0"/>
 	<!-- 다시 만든 장치로 계속 그린다 — 사진이 써져야 Pass 가 끝난다 -->

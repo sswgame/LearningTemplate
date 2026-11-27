@@ -11,6 +11,7 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 // 카탈로그 창 왼쪽 목록입니다 — 파일을 종류 · 에셋 id 순으로 두고, 거르개에 맞는 파일을 종류별로 묶습니다(ImGui 없음).
@@ -61,17 +62,21 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 마지막 검증의 결과입니다. */
+    ENUM()
+    enum class CatalogValidationState : uint8
+    {
+        None = 0,
+        Passed,
+        Failed
+    };
+
     /** @class CatalogFileSession @brief 파일 머리말을 참고하세요. */
     class CatalogFileSession
     {
     public:
-        /** @brief 마지막 검증의 결과입니다. */
-        enum class ValidationState : uint8
-        {
-            None = 0,
-            Passed,
-            Failed
-        };
+        /** @brief 마지막 검증의 결과입니다(`CatalogValidationState`). */
+        using ValidationState = CatalogValidationState;
 
         CatalogFileSession();
 

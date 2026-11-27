@@ -17,7 +17,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<Expect watch="Interaction.HeldMaxDistance" target="EntryChild" equals="3"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="EntryFixed" equals="2"/>
@@ -35,6 +35,6 @@
 	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/filechild.interactions.xml (inlines scratch/catalogcascade/parent.interactions.xml)" count="1"/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<Pass/>
 </Scenario>

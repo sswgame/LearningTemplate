@@ -26,7 +26,7 @@
 	<Press slot="Key.W"/>
 	<Press slot="Key.LeftShift"/>
 	<AdvanceSimulation frames="120"/>
-	<Expect watch="Mount.Gait" target="Bessie" equals="4"/>
+	<Expect watch="Mount.Gait" target="Bessie" is="Gallop"/>
 	<Expect watch="Mount.Speed" target="Bessie" atLeast="8"/>
 	<Expect watch="Western.Stamina" target="Bessie" atMost="0.9"/>
 	<Expect watch="Object.Z" target="Bessie" atLeast="6"/>
@@ -36,7 +36,7 @@
 	<Release slot="Key.W"/>
 	<Release slot="Key.LeftShift"/>
 	<!-- 감속(8 m/s²)으로 선다. -->
-	<WaitUntil watch="Mount.Gait" target="Bessie" equals="0" timeoutFrames="180"/>
+	<WaitUntil watch="Mount.Gait" target="Bessie" is="Idle" timeoutFrames="180"/>
 	<!-- 키트 단계(GF_OpenWorldWestern 이 등록): 귀리(oats)는 스태미나 게이지를 가득 채운다 — 질주로 쓴 만큼이 바로 돌아온다. -->
 	<Expect watch="Western.Stamina" target="Bessie" atMost="0.9"/>
 	<FeedHorse horse="Bessie" food="oats"/>

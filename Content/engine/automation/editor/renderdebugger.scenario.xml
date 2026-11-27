@@ -25,7 +25,7 @@
 	<DevCommand line="panel.focus render_debugger"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
-	<Expect watch="Editor.RenderDebuggerTab" equals="0"/>
+	<Expect watch="Editor.RenderDebuggerTab" is="FrameDebugger"/>
 	<!-- 1) 프레임 디버거 -->
 	<EditorClick mark="renderDebugger.enable"/>
 	<WaitUntil watch="Editor.RenderDebuggerEvents" atLeast="3" timeoutWallSeconds="10"/>
@@ -48,7 +48,7 @@
 	<!-- 2) 렌더 그래프 -->
 	<EditorWaitStable/>
 	<EditorClick mark="renderDebugger.tab.graph"/>
-	<WaitUntil watch="Editor.RenderDebuggerTab" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.RenderDebuggerTab" is="RenderGraph" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.RenderDebuggerGraphPasses" atLeast="1" timeoutWallSeconds="10"/>
 	<Store watch="Editor.RenderDebuggerGraphPasses" as="passes"/>
 	<WaitUntil watch="Editor.RenderDebuggerGraphNodes" sameAs="passes" timeoutWallSeconds="10"/>
@@ -60,7 +60,7 @@
 	<!-- 3) 가림 · 스트리밍, 보기 모드 전환 -->
 	<EditorWaitStable/>
 	<EditorClick mark="renderDebugger.tab.occlusion"/>
-	<WaitUntil watch="Editor.RenderDebuggerTab" equals="3" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.RenderDebuggerTab" is="Occlusion" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<!-- 떠 있는 렌더 디버거 창이 씬 뷰 툴바의 보기 모드 콤보 목록을 덮는다 — 닫고 고른 뒤 다시 열어 탭이 남는지 본다 -->
 	<DevCommand line="panel.close render_debugger"/>
@@ -69,14 +69,14 @@
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.wireframe"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="2" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Wireframe" timeoutFrames="90"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.lit"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="0" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Lit" timeoutFrames="90"/>
 	<DevCommand line="panel.focus render_debugger"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.RenderDebuggerTab" equals="3"/>
+	<Expect watch="Editor.RenderDebuggerTab" is="Occlusion"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="renderdebugger/occlusion.png" everyBackend="true"/>
 	<EditorWaitStable/>

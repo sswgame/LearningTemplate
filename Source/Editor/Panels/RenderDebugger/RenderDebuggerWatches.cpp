@@ -30,7 +30,7 @@ namespace sw::editor
         };
 
         /** @brief 렌더 디버거 창 값 하나를 읽습니다. 창이 열려 있지 않으면 값을 내지 않습니다. */
-        [[nodiscard]] bool readRenderDebuggerValue( RenderDebuggerWatchKind kind, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerValue( RenderDebuggerWatchKind kind, AutomationWatchValue& outValue )
         {
             const EditorPanelManager*  pPanels = getWatchPanelManager( __func__ );
             const RenderDebuggerPanel* pPanel  = pPanels != nullptr ? pPanels->findPanel<RenderDebuggerPanel>() : nullptr;
@@ -40,37 +40,37 @@ namespace sw::editor
             {
                 case RenderDebuggerWatchKind::Tab:
                 {
-                    outValue = static_cast<float64>( pPanel->getTab() );
+                    outValue.setEnum( pPanel->getTab() );
                     break;
                 }
                 case RenderDebuggerWatchKind::EventCount:
                 {
-                    outValue = static_cast<float64>( pPanel->getEventCount() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getEventCount() ) );
                     break;
                 }
                 case RenderDebuggerWatchKind::StopEvent:
                 {
-                    outValue = static_cast<float64>( pPanel->getStopEventIndex() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getStopEventIndex() ) );
                     break;
                 }
                 case RenderDebuggerWatchKind::GraphPasses:
                 {
-                    outValue = static_cast<float64>( pPanel->getGraphPassCount() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getGraphPassCount() ) );
                     break;
                 }
                 case RenderDebuggerWatchKind::GraphNodes:
                 {
-                    outValue = static_cast<float64>( pPanel->getDrawnGraphNodeCount() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getDrawnGraphNodeCount() ) );
                     break;
                 }
                 case RenderDebuggerWatchKind::BufferCount:
                 {
-                    outValue = static_cast<float64>( pPanel->getBufferCount() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getBufferCount() ) );
                     break;
                 }
                 case RenderDebuggerWatchKind::BufferRows:
                 {
-                    outValue = static_cast<float64>( pPanel->getBufferRowCount() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getBufferRowCount() ) );
                     break;
                 }
             }
@@ -83,43 +83,43 @@ namespace sw::editor
             return RenderPresentCounter::read();
         }
 
-        [[nodiscard]] bool readRenderDebuggerTab( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerTab( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::Tab, outValue );
         }
 
-        [[nodiscard]] bool readRenderDebuggerEvents( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerEvents( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::EventCount, outValue );
         }
 
-        [[nodiscard]] bool readRenderDebuggerStopEvent( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerStopEvent( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::StopEvent, outValue );
         }
 
-        [[nodiscard]] bool readRenderDebuggerGraphPasses( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerGraphPasses( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::GraphPasses, outValue );
         }
 
-        [[nodiscard]] bool readRenderDebuggerGraphNodes( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerGraphNodes( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::GraphNodes, outValue );
         }
 
-        [[nodiscard]] bool readRenderDebuggerBuffers( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerBuffers( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::BufferCount, outValue );
         }
 
-        [[nodiscard]] bool readRenderDebuggerBufferRows( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderDebuggerBufferRows( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderDebuggerValue( RenderDebuggerWatchKind::BufferRows, outValue );
         }
     } // namespace
 
-    SW_AUTOMATION_WATCH( editorRenderDebuggerTab, "Editor.RenderDebuggerTab", "Tab the Render Debugger panel shows: 0 frame debugger, 1 render graph, 2 buffers, 3 occlusion and streaming",
+    SW_AUTOMATION_WATCH( editorRenderDebuggerTab, "Editor.RenderDebuggerTab", "RenderDebuggerTab name of the tab the Render Debugger panel shows",
                          &readRenderDebuggerTab );
     SW_AUTOMATION_WALL_WATCH( editorRenderDebuggerEvents, "Editor.RenderDebuggerEvents", "Main-view scene draws the frame debugger recorded in the last published frame",
                               &readRenderDebuggerEvents, &readRenderDebuggerActivity );

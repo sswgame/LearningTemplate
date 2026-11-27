@@ -13,10 +13,13 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 // 패키징 진입점(`Scripts/package/package.py`)의 출력 줄을 읽어 진행과 결과로 바꿉니다(ImGui 없음).
 namespace sw::editor
 {
     /** @brief 패키징 한 번의 상태입니다. 감시 값 `Editor.PackagingState` 의 값이기도 하다. */
+    ENUM()
     enum class PackagingState : uint8
     {
         Idle = 0,

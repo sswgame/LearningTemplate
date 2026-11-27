@@ -10,7 +10,7 @@
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<!-- ① -->
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>

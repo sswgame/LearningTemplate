@@ -8,7 +8,7 @@
 <Scenario name="game.playground.netpair.match_respawn_second" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.login 2"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>

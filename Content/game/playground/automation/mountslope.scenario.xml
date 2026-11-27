@@ -13,8 +13,8 @@
 	<Intent pawn="HorseFlat" move="0,1" frames="420"/>
 	<Intent pawn="HorseHill" move="0,1" frames="420"/>
 	<AdvanceSimulation frames="360"/> <!-- 6 초 달린다(속도 · 오른 높이가 시간의 결과 — 시간이 내용) -->
-	<Expect watch="Mount.Gait" target="HorseFlat" equals="3"/>
-	<Expect watch="Mount.Gait" target="HorseHill" equals="3"/>
+	<Expect watch="Mount.Gait" target="HorseFlat" is="Canter"/>
+	<Expect watch="Mount.Gait" target="HorseHill" is="Canter"/>
 	<Expect watch="Mount.Speed" target="HorseFlat" near="8" tolerance="0.05"/>
 	<Expect watch="Mount.Speed" target="HorseHill" atLeast="3.6"/>
 	<Expect watch="Mount.Speed" target="HorseHill" atMost="4.6"/>

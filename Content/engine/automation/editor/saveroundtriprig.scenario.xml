@@ -24,7 +24,7 @@
 	<EditorClick mark="toolbar.play"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.RigDebugNodeCount" equals="2" timeoutFrames="120"/>
 	<Expect watch="Editor.RigDebugWeightSum" near="1.5" tolerance="0.001"/>
@@ -40,7 +40,7 @@
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtriprig/knight.rig.xml"/>
 	<ExpectLog id="RigDebugPanel.RigSettingsSaved" count="2"/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

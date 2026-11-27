@@ -10,7 +10,7 @@
 <Scenario name="game.playground.online_people" fixedDelta="0.0166667" timeoutFrames="20000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive" requiresModule="GF_Server_Social,GF_Server_Trade,GF_Client_Social">
 	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
 	<DevCommand line="online.local.start Config/Server/Online/Playground.json"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
 	<!-- ① -->

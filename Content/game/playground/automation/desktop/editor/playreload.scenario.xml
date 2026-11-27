@@ -21,7 +21,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<WaitUntil watch="Demo.Gold" target="Director" equals="75" timeoutFrames="120"/>
 	<EditorWaitStable/>
 	<Expect watch="HotReload.TestVersion" equals="100"/>
@@ -35,7 +35,7 @@
 	<EditorWaitStable/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<ExpectStateHash key="playing"/>
 
 	<!-- 프리팹 창에 게임 모듈의 컴포넌트와 덮어쓸 머티리얼을 든 프리팹을 연다 — ① 은 그 미리보기의 상태를 맡겼다 되돌리고, ③ 은 그 미리보기에도 알린다 -->
@@ -53,7 +53,7 @@
 	<EditorWaitStable/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<Expect watch="HotReload.TestVersion" equals="101"/>
 	<Expect watch="HotReload.TestKept" equals="42"/>
 	<Expect watch="Demo.Gold" target="Director" equals="75"/>
@@ -82,7 +82,7 @@
 	<EditorWaitStable/>
 	<Expect watch="Reload.StaleCount" equals="0"/>
 	<Expect watch="Reload.LastMs.Asset" atLeast="0.001"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<Expect watch="Demo.Gold" target="Director" equals="75"/>
 
 	<DevCommand line="panel.close prefab_window"/>
@@ -109,7 +109,7 @@
 	<WaitUntil watch="Reload.FailedCount" increaseFrom="failedBefore" increaseBy="1" timeoutWallSeconds="30"/>
 	<Store watch="Reload.FailedCount" as="failedAfterModule"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<Expect watch="HotReload.TestVersion" equals="101"/>
 	<ExpectStateHash key="playing"/>
 	<ExpectLog id="ModuleCompiler.CompilationFailedExitCode" contains="SWGame" count="1"/>
@@ -155,6 +155,6 @@
 	<ExpectLog id="ModuleCompiler.CompilationSucceededTarget" contains="SWGame" count="2"/> <!-- probe-next 와 바로 위 되돌린 다시 짓기 — 그 자리에서 세므로 둘 다 끝난 뒤에 둔다 -->
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<Pass/>
 </Scenario>

@@ -16,7 +16,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="panel.focus volumetric_fog"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Render.FogVolumeState" equals="6" timeoutFrames="300"/>
+	<WaitUntil watch="Render.FogVolumeState" is="Active" timeoutFrames="300"/>
 	<CaptureEditorUI file="volumetricfog/state.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Compare"/>

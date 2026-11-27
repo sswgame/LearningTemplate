@@ -15,6 +15,7 @@
 
 #include "DevTools/Client/Render/OcclusionTileStats.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Graph/RenderGraphSnapshot.h"
 
@@ -116,6 +117,7 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 창의 탭입니다. */
+    ENUM()
     enum class RenderDebuggerTab : uint8
     {
         FrameDebugger,

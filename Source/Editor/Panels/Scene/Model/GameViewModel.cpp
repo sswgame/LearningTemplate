@@ -142,7 +142,7 @@ namespace sw::editor
         return true;
     }
 
-    bool GameViewModel::findViewMode( uint32& outMode )
+    bool GameViewModel::findViewMode( RenderViewMode& outMode )
     {
         const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
         if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
@@ -150,7 +150,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "GameViewModel.ViewModeFrameRenderer", "[Scenario] view mode watch: FrameRenderer is missing" );
             return false;
         }
-        outMode = static_cast<uint32>( pRenderer->getViewMode() );
+        outMode = pRenderer->getViewMode();
         return true;
     }
 } // namespace sw::editor

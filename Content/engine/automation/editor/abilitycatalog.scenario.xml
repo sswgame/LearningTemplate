@@ -42,7 +42,7 @@
 	<CaptureEditorUI file="abilitycatalog/usedby.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="abilityCatalog.save"/>
-	<WaitUntil watch="Editor.AbilityCatalogValidation" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.AbilityCatalogValidation" is="Passed" timeoutFrames="90"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>

@@ -13,7 +13,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<!-- 같은 경로를 쥔 둘은 같은 정의 객체를 읽는다(사본이면 주소가 다르다) -->
 	<Expect watch="Interaction.HeldMaxDistance" target="Left" equals="3"/>
@@ -30,6 +30,6 @@
 	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftAfter"/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<Pass/>
 </Scenario>

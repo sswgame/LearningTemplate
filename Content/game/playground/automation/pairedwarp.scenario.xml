@@ -9,14 +9,14 @@
 -->
 <Scenario name="game.playground.pairedwarp" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/pairedwarp.scene.xml"/>
-	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" is="Playing" timeoutFrames="120"/>
 	<Expect watch="MotionWarping.OpenWindows" equals="1"/>
 	<Expect watch="LocomotionWarping.PlayRateHeld" equals="1"/>
 	<WaitUntil watch="MotionWarping.OpenWindows" equals="0" timeoutFrames="60"/> <!-- 워핑 창이 닫혔다 -->
 	<Expect watch="MotionWarping.OpenWindows" equals="0"/>
 	<Expect watch="Object.DistanceTo" target="Partner" key="LeadFront" atMost="0.1"/>
 	<WaitUntil watch="PoseRetarget.Retargeting" equals="1" timeoutFrames="60"/>
-	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" equals="2" timeoutSeconds="3"/>
+	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" is="Finished" timeoutSeconds="3"/>
 	<Expect watch="LocomotionWarping.PlayRateHeld" equals="0"/>
 	<Pass/>
 </Scenario>

@@ -19,10 +19,10 @@
 	<EditorClick mark="toolbar.play"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>
 	<EditorExpectObject name="GameObject"/>
@@ -45,14 +45,14 @@
 	<EditorClick mark="toolbar.play"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<!-- 플레이 중 문서 편집 -->
 	<EditorClick mark="sequencer.addCut"/>
 	<WaitUntil watch="Editor.SequencerCutCount" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<Expect watch="Editor.SequencerCutCount" equals="1"/>
 	<!-- 그 창에서 되돌리면 컷이 빠진다 — 예전에는 메인 스택에 쌓여 Stop 의 내역 복원이 버렸다 -->
 	<DevCommand line="panel.focus sequencer"/>
@@ -69,10 +69,10 @@
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<EditorClick mark="unsaved.discard"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<EditorWaitStable/>
 	<EditorExpectObject name="GameObject" count="0"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>

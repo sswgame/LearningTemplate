@@ -9,7 +9,7 @@
 <Scenario name="game.playground.netpair.online_run" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.servicestatus"/>
 	<WaitUntil watch="Log.Count" key="Playground.OnlineServiceStatus" atLeast="1" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.login"/>

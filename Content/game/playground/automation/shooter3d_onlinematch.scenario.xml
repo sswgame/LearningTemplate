@@ -17,8 +17,8 @@
 	<Expect watch="Online.SessionClientCount" atLeast="6"/>
 	<Expect watch="Playground.OnlineMatchFound" equals="0"/>
 	<DevCommand line="online.local.start Config/Server/Online/Playground.json"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
-	<Expect watch="Online.SessionState" equals="3"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutSeconds="20"/>
+	<Expect watch="Online.SessionState" is="Ready"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
 	<!-- ① 줄 → 배정 → 붙지 못함 → 허브 -->
@@ -33,6 +33,6 @@
 	<WaitUntil watch="Playground.OnlineRefusedScoreCount" equals="1" timeoutSeconds="10"/>
 	<Expect watch="Playground.OnlineSubmittedScoreCount" equals="0"/>
 	<DevCommand line="online.disconnect"/>
-	<Expect watch="Online.SessionState" equals="0"/>
+	<Expect watch="Online.SessionState" is="Disconnected"/>
 	<Pass/>
 </Scenario>

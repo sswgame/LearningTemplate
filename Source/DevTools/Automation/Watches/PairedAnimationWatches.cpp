@@ -19,12 +19,12 @@ namespace sw
             const PairedAnimationComponent* pComponent = query.findTargetComponent<PairedAnimationComponent>( "PairedAnimationComponent", outValue );
             if ( pComponent == nullptr )
                 return false;
-            outValue.setNumber( static_cast<float64>( static_cast<uint32>( pComponent->getSessionState() ) ) );
+            outValue.setEnum( pComponent->getSessionState() );
             return true;
         }
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( pairedSessionState, "PairedAnimation.SessionState",
-                               "State of the last session the target's PairedAnimationComponent started (0 idle, 1 playing, 2 finished, 3 aborted)",
+                               "PairedAnimationSessionState name of the last session the target's PairedAnimationComponent started",
                                &readPairedSessionState, true, false );
 } // namespace sw

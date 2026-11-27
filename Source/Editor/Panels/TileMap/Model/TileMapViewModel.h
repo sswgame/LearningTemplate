@@ -14,6 +14,7 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -32,6 +33,17 @@ namespace sw::editor
         bool _bClicked{ false };    ///< 캔버스 위에서 이번 프레임에 눌렀다
         bool _bPainting{ false };   ///< 캔버스를 누른 채 끌고 있다(Brush 도구)
         bool _bButtonDown{ false }; ///< 왼쪽 버튼이 눌려 있다(Rect 도구가 놓은 때를 본다)
+    };
+
+    /** @brief 캔버스를 눌렀을 때 하는 일입니다. 유니티의 Tile Palette 도구에 해당합니다. */
+    ENUM()
+    enum class TileMapPaintTool : uint8
+    {
+        Brush = 0, ///< 누르고 드래그한 셀마다 칠한다
+        Rect,      ///< 드래그한 사각형을 놓을 때 칠한다
+        Fill,      ///< 누른 셀과 같은 값으로 연결된 셀을 모두 칠한다
+        Picker,    ///< 누른 셀의 값을 칠할 값으로 가져오고 Brush 로 돌아간다
+        Line       ///< 끌어 그은 선분을 놓을 때 칠한다(Godot 타일맵의 Line)
     };
 
     /**
@@ -60,15 +72,8 @@ namespace sw::editor
         /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수입니다. Visual, Warp, Tile 이 해당합니다. */
         static constexpr int32 kFixedPaintLayerCount = 3;
 
-        /** @brief 캔버스를 눌렀을 때 하는 일입니다. 유니티의 Tile Palette 도구에 해당합니다. */
-        enum class PaintTool : uint8
-        {
-            Brush = 0, ///< 누르고 드래그한 셀마다 칠한다
-            Rect,      ///< 드래그한 사각형을 놓을 때 칠한다
-            Fill,      ///< 누른 셀과 같은 값으로 연결된 셀을 모두 칠한다
-            Picker,    ///< 누른 셀의 값을 칠할 값으로 가져오고 Brush 로 돌아간다
-            Line       ///< 끌어 그은 선분을 놓을 때 칠한다(Godot 타일맵의 Line). 번호는 감시 값 `Editor.TileMapTool` 이 읽으므로 끝에 더한다
-        };
+        /** @brief 캔버스를 눌렀을 때 하는 일입니다(`TileMapPaintTool`). */
+        using PaintTool = TileMapPaintTool;
 
         /** @brief 엣지 워프 프리셋 하나(N · E · S · W)의 대상 맵과 대상 셀 입력칸입니다. */
         struct EdgeWarpPreset

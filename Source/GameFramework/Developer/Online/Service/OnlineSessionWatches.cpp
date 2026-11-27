@@ -30,13 +30,13 @@ namespace sw
         struct OnlineSessionWatchesInternal
         {
             // 개발 명령 - 게임 코드 없이 세션을 시나리오와 스크립트가 움직인다.
-            [[nodiscard]] static bool readState( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readState( const GameObjectManager* pManager, AutomationWatchValue& outValue )
             {
                 (void)pManager;
                 const OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
                 if ( pSession == nullptr )
                     return false;
-                outValue = static_cast<float64>( pSession->getState() );
+                outValue.setEnum( pSession->getState() );
                 return true;
             }
 
@@ -52,6 +52,6 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( onlineSessionState, "Online.SessionState", "Online session state: 0 disconnected, 1 connecting, 2 negotiating, 3 ready, 4 version mismatch, 5 handshake failed", &OnlineSessionWatchesInternal::readState );
+    SW_AUTOMATION_WATCH( onlineSessionState, "Online.SessionState", "OnlineClientState name of the online session", &OnlineSessionWatchesInternal::readState );
     SW_AUTOMATION_WATCH( onlineSessionClientCount, "Online.SessionClientCount", "Kit clients the online session built from the loaded kits", &OnlineSessionWatchesInternal::readClientCount );
 } // namespace sw

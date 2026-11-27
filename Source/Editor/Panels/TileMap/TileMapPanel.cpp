@@ -70,8 +70,8 @@ namespace sw::editor
         uint32 getDataLayerCount() const { return static_cast<uint32>( _document.getMap()._listDataLayer.size() ); }
         /** @brief 모든 데이터 레이어에서 기본값과 다른 칸 수의 합을 반환합니다. 고른 레이어와 상관없습니다. 감시 값 `Editor.TileMapDataCells` 가 읽습니다. */
         uint32 countDataCells() const { return _document.countDataCells(); }
-        /** @brief 현재 도구 번호를 반환합니다. 0 은 Brush, 1 은 Rect, 2 는 Fill, 3 은 Picker, 4 는 Line 입니다. 감시 값 `Editor.TileMapTool` 이 읽습니다. */
-        uint32 getPaintToolIndex() const { return static_cast<uint32>( _document.getTool() ); }
+        /** @brief 현재 칠 도구입니다. 감시 값 `Editor.TileMapTool` 이 그 이름을 읽습니다. */
+        TileMapPaintTool getPaintTool() const { return _document.getTool(); }
 
     protected:
         /** @brief 왼쪽 도구 영역과 오른쪽 캔버스가 나란히 들어갈 크기로 엽니다. */
@@ -149,12 +149,12 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readPaintTool( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readPaintTool( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
             {
                 const TileMapPanel* pPanel = EditorPanelManager::findPanelInEditorContext<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
-                outValue = static_cast<float64>( pPanel->getPaintToolIndex() );
+                outValue.setEnum( pPanel->getPaintTool() );
                 return true;
             }
         };
@@ -169,7 +169,7 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorTileMapDataLayers, "Editor.TileMapDataLayers", "Data layers of the Tile Map Tool's map", &TileMapPanelInternal::readDataLayerCount );
     SW_AUTOMATION_WATCH( editorTileMapDataCells, "Editor.TileMapDataCells", "Cells that differ from the layer default, summed over all data layers of the Tile Map Tool's map",
                          &TileMapPanelInternal::readDataCells );
-    SW_AUTOMATION_WATCH( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker, 4 Line", &TileMapPanelInternal::readPaintTool );
+    SW_AUTOMATION_WATCH( editorTileMapTool, "Editor.TileMapTool", "TileMapPaintTool name of the Tile Map Tool paint tool", &TileMapPanelInternal::readPaintTool );
 
     TileMapPanel::TileMapPanel()
         : EditorDocumentPanel{ EditorAssetType{ TileMapXMLData::kAssetType }, false }

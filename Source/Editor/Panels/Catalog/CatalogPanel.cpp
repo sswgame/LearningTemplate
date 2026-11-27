@@ -66,12 +66,12 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readValidation( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readValidation( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
             {
                 const CatalogPanel* pPanel = findOpenPanel();
                 if ( pPanel == nullptr )
                     return false;
-                outValue = static_cast<float64>( static_cast<uint8>( pPanel->getValidationState() ) );
+                outValue.setEnum( pPanel->getValidationState() );
                 return true;
             }
 
@@ -473,6 +473,6 @@ namespace sw
     SW_AUTOMATION_WATCH( catalogRowCount, "Editor.CatalogRowCount", "Rows (elements under the root) of the catalog file open in the Catalog Editor",
                          &editor::CatalogPanelInternal::readRowCount );
     SW_AUTOMATION_WATCH( catalogTextBytes, "Editor.CatalogTextBytes", "Size in bytes of the text of the catalog file open in the Catalog Editor", &editor::CatalogPanelInternal::readTextBytes );
-    SW_AUTOMATION_WATCH( catalogValidation, "Editor.CatalogValidation", "Last validation of the open catalog file: 0 not run, 1 passed, 2 failed",
+    SW_AUTOMATION_WATCH( catalogValidation, "Editor.CatalogValidation", "CatalogValidationState name of the last validation of the open catalog file",
                          &editor::CatalogPanelInternal::readValidation );
 } // namespace sw

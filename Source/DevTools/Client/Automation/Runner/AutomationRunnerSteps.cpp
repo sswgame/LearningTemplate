@@ -177,18 +177,19 @@ namespace sw
                 const expected<void> reference = validateWatchReference( step );
                 if ( reference.has_value() == false )
                     return reference;
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom", "oppositeOf", "increaseBy" } ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom · oppositeOf · increaseBy" } );
+                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "isOneOf", "sameAs", "differsFrom", "oppositeOf", "increaseBy" } ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · isOneOf · sameAs · differsFrom · oppositeOf · increaseBy" } );
                 // `increaseFrom` 은 `increaseBy` 의 짝이다 — 한쪽만 있으면 무엇에서 늘었는지 모른다.
                 if ( ( step.findAttribute( "increaseBy" ) != nullptr ) != ( step.findAttribute( "increaseFrom" ) != nullptr ) )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "increaseBy=\"N\" and increaseFrom=\"<stored name>\" go together" } );
-                const bool bTextRule = step.findAttribute( "is" ) != nullptr || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
+                const bool bIsRule   = step.findAttribute( "is" ) != nullptr || step.findAttribute( "isOneOf" ) != nullptr;
+                const bool bTextRule = bIsRule || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
                 if ( bTextRule )
                 {
                     if ( step.findAttribute( "tolerance" ) == nullptr )
                         return {};
-                    if ( step.findAttribute( "is" ) != nullptr )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "tolerance goes with near · oppositeOf · sameAs · differsFrom (is compares text)" } );
+                    if ( bIsRule )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "tolerance goes with near · oppositeOf · sameAs · differsFrom (is · isOneOf compare text)" } );
                     float32 tolerance = AutomationStepArgsUtil::kWatchNearTolerance;
                     return AutomationStepArgsUtil::readFloat( step, "tolerance", tolerance ); // sameAs · differsFrom 을 수로 견준다
                 }
