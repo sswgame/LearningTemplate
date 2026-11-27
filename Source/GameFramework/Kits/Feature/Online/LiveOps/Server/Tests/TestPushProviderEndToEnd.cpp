@@ -504,7 +504,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
 
     {
         test::OnlineRuntimeFixture noTrust;
-        const auto                 failed1 = noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), nowMs );
+        const auto                 failed1 = noTrust.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( kServerJSON ), makeOnlineJSON( "" ), nowMs );
         SW_REQUIRE_FALSE( failed1.has_value() );
         StringBuilder<constant::buffer::kMax512> error1Builder;
         error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
@@ -516,7 +516,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     StringBuilder<constant::buffer::kMax256> textBuilder;
     textBuilder.appendFormat( R"(, "_pushTrustFile": "%#")", apns.getTrustFile() );
     {
-        const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( string( textBuilder.view() ) ), nowMs );
+        const expected<void> started = rig.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( kServerJSON ), makeOnlineJSON( string( textBuilder.view() ) ), nowMs );
         SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
     }
     SW_EXPECT_TRUE( rig._runtime.getKitScope().find<IOfflinePushSender>() != nullptr );

@@ -324,7 +324,7 @@ namespace
 /** @brief [OnlineServerRuntimeTest] 설정에 거꾸로 적고 이름 순으로도 소비자가 앞이지만 필수 의존이 내놓는 키트를 먼저 세우고, 내릴 때는 반대 순서다 */
 SW_TEST_CASE_F( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInReverse )
 {
-    ServiceHealthRegistry     health;
+    ServiceHealthRegistry     health{ 10000 };
     OnlineServerRuntimeConfig settings = makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
     settings._pHealthRegistry          = &health;
     settings._listenAddress            = NetAddress::makeLoopback( 7451 );

@@ -32,7 +32,8 @@ namespace sw
     class SW_API ServiceHealthRegistry
     {
     public:
-        ServiceHealthRegistry();
+        /** @brief 생존 시한(@p livenessTimeoutMs — 틱이 이만큼 멈추면 살아 있지 않음)을 받습니다. 기본값을 두지 않는다 — 서버는 설정(`ServerOpsPolicy::_livenessTimeoutMs`)에서 넘긴다. */
+        explicit ServiceHealthRegistry( int64 livenessTimeoutMs );
 
         /** @brief 검사를 등록하고 번호를 돌려줍니다. 처음 상태는 Failing(아직 확인하지 않음)입니다. 같은 이름이 있으면 그 검사를 Failing 으로 되돌리고 같은 번호를 돌려줍니다. */
         int32 registerCheck( string_view name, bool bRequiredForReady );

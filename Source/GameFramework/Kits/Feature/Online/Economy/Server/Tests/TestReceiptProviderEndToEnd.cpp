@@ -397,7 +397,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
 
     {
         test::OnlineRuntimeFixture noTrust;
-        const auto                 failed1 = noTrust.fromConfig( kServerJSON, makeOnlineJSON( "" ), ReceiptEndpointTestUtil::getNowMs() );
+        const auto                 failed1 = noTrust.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( kServerJSON ), makeOnlineJSON( "" ), ReceiptEndpointTestUtil::getNowMs() );
         SW_REQUIRE_FALSE( failed1.has_value() );
         StringBuilder<constant::buffer::kMax512> error1Builder;
         error1Builder.appendFormat( "%# %#", failed1.error().message(), failed1.error().detail() );
@@ -410,7 +410,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
     const string               trustOption{ trustOptionBuilder.view() };
     test::OnlineRuntimeFixture rig;
     {
-        const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs() );
+        const expected<void> started = rig.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( kServerJSON ), makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs() );
         SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
     }
     SW_REQUIRE_TRUE( test::pollUntil( [&rig, &endpoint]()

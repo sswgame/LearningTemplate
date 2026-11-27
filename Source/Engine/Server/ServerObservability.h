@@ -68,6 +68,8 @@ namespace sw
         void updateEverySecond( int64 monotonicMs, int32 connectionCount );
 
     private:
+        /** @brief 크래시 핸들러가 부르는 글쓰기(`CrashHandler::bindExtraTextWriter`, @p pUser 는 이 객체)입니다. 이력과 설정의 꼬리 틱 수를 함께 읽어야 해 멤버다. */
+        static uint32 writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity );
         /** @brief 초마다 부릅니다 — 틱 사용률 지표 · 경고(O5)를 갱신합니다. */
         void updateLoad( int64 monotonicMs );
         /** @brief 프레임 이력과 메시지 종류별 누적 셈을 `Saved/ServerReports/frames_<세션>_<틱>_<까닭>.txt` 로 씁니다. 이력이 비었거나 폴더를 만들 수 없으면 경고만 남깁니다. */

@@ -26,26 +26,8 @@ namespace sw
     {
         struct ServerObservabilityInternal
         {
-            /** @brief 운영 HTTP 에는 스크레이퍼와 감시자 몇 개만 붙으므로 연결 상한과 유휴 시한을 작게 잡습니다. */
-            static constexpr int32   kOpsMaxConnections     = 64;
-            static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
-            /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
-            static constexpr int64 kProcessSampleIntervalMs = 1000;
             /** @brief 프레임 이력 덤프(`dumpFrameHistory`)가 놓이는 폴더 이름입니다. 로그 폴더(`Saved/Logs`) 옆에 둔다(`CrashReports` 묶음 폴더와 같은 자리). */
             static constexpr const utf8* kServerReportsFolderName = "ServerReports";
-            /** @brief 느린 틱 덤프의 최소 간격입니다. 과부하 서버가 덤프 때문에 더 느려지지 않게 한다. */
-            static constexpr int64 kMinFrameDumpIntervalMs = 10000;
-            /** @brief 틱 사용률 경고의 최소 간격입니다(1 분에 한 번). */
-            static constexpr int64 kLoadWarningIntervalMs = 60000;
-            /** @brief 크래시 문맥 파일 끝에 싣는 최근 틱 수입니다(문맥 파일 버퍼 8KB 안에서 — 한 줄 70 바이트쯤). */
-            static constexpr uint32 kCrashTailTicks = 40;
-
-            /** @brief 크래시 핸들러가 부르는 글쓰기(`CrashHandler::bindExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
-            static uint32 writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity )
-            {
-                const ServerFrameHistory* pHistory = static_cast<const ServerFrameHistory*>( pUser );
-                return pHistory != nullptr ? pHistory->writeCrashTail( pOutText, capacity, kCrashTailTicks ) : 0u;
-            }
         };
     } // namespace
 
@@ -72,11 +54,20 @@ namespace sw
 
     ServerObservability::~ServerObservability() = default;
 
+    uint32 ServerObservability::writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity )
+    {
+        // 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. 실을 틱 수는 설정이 정한다(문맥 파일 버퍼 8KB 안).
+        const ServerObservability* pSelf = static_cast<const ServerObservability*>( pUser );
+        if ( pSelf == nullptr || pSelf->_frameHistory == nullptr || pSelf->_pServerConfig == nullptr )
+            return 0u;
+        return pSelf->_frameHistory->writeCrashTail( pOutText, capacity, static_cast<uint32>( pSelf->_pServerConfig->_ops._crashTailTicks ) );
+    }
+
     bool ServerObservability::initialize( const ServerConfig& config, int64 processStartNanoseconds )
     {
         _pServerConfig       = &config;
         _metricRegistry      = make_unique<MetricRegistry>();
-        _healthRegistry      = make_unique<ServiceHealthRegistry>();
+        _healthRegistry      = make_unique<ServiceHealthRegistry>( static_cast<int64>( config._ops._livenessTimeoutMs ) );
         _pTickHistogram      = _metricRegistry->registerHistogram( "server_tick_seconds", "Dedicated server tick body duration", MetricRegistry::makeLatencyBounds() );
         _pDroppedTickCounter = _metricRegistry->registerCounter( "server_dropped_ticks_total", "Ticks dropped because the server fell too far behind" );
         _pServiceConnectionGauge =
@@ -86,7 +77,7 @@ namespace sw
         _frameHistory->initialize( static_cast<uint32>( config._frameHistoryTicks ) );
         // 크래시 때 이력을 새 파일로 쓰지 않고, 크래시 핸들러가 문맥 파일을 쓰며 이 링 버퍼를 읽어 끝에 싣는다(풀기는 `shutdown`).
         if ( _frameHistory->getCapacity() > 0 )
-            _crashExtraTextSubscription = engine::getSubsystem<CrashHandler>().bindExtraTextWriter( &ServerObservabilityInternal::writeFrameCrashTail, _frameHistory.get() );
+            _crashExtraTextSubscription = engine::getSubsystem<CrashHandler>().bindExtraTextWriter( &ServerObservability::writeFrameCrashTail, this );
         _processMetrics = make_unique<ProcessMetrics>();
         _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - processStartNanoseconds ) / constant::time::kNanosecondsPerMillisecond );
         if ( config._opsPort == 0 )
@@ -108,8 +99,8 @@ namespace sw
         }
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount      = 1;
-        transportSettings._maxConnections     = ServerObservabilityInternal::kOpsMaxConnections;
-        transportSettings._idleTimeoutSeconds = ServerObservabilityInternal::kOpsIdleTimeoutSeconds;
+        transportSettings._maxConnections     = config._ops._maxConnections;
+        transportSettings._idleTimeoutSeconds = static_cast<float64>( config._ops._idleTimeoutSeconds );
         _opsEndpoint                          = make_unique<OpsHTTPEndpoint>();
         if ( _opsEndpoint->initialize( _opsTransport.get(), transportSettings, opsSettings, _metricRegistry.get(), _healthRegistry.get() ) == false )
         {
@@ -159,7 +150,7 @@ namespace sw
         _frameHistory->record( sample );
         const int64 slowNanoseconds = static_cast<int64>( _pServerConfig->_slowTickDumpMs ) * constant::time::kNanosecondsPerMillisecond;
         const bool  bSlowTick       = slowNanoseconds > 0 && tickNanoseconds >= slowNanoseconds;
-        const bool  bDumpDue        = monotonicMs - _lastFrameDumpMs >= ServerObservabilityInternal::kMinFrameDumpIntervalMs;
+        const bool  bDumpDue        = monotonicMs - _lastFrameDumpMs >= static_cast<int64>( _pServerConfig->_ops._minFrameDumpIntervalMs );
         if ( bSlowTick && bDumpDue )
         {
             _lastFrameDumpMs = monotonicMs;
@@ -214,7 +205,7 @@ namespace sw
             _pTickUtilizationGauge->set( utilization );
         const float64 warnRatio   = static_cast<float64>( _pServerConfig->_tickLoadWarnPercent ) * 0.01;
         const bool    bOverloaded = warnRatio > 0.0 && utilization > warnRatio;
-        const bool    bWarnDue    = monotonicMs - _lastLoadWarningMs >= ServerObservabilityInternal::kLoadWarningIntervalMs;
+        const bool    bWarnDue    = monotonicMs - _lastLoadWarningMs >= static_cast<int64>( _pServerConfig->_ops._loadWarningIntervalMs );
         if ( bOverloaded && bWarnDue )
         {
             _lastLoadWarningMs = monotonicMs;
@@ -227,7 +218,7 @@ namespace sw
     {
         if ( monotonicMs < _nextProcessSampleMs )
             return;
-        _nextProcessSampleMs = monotonicMs + ServerObservabilityInternal::kProcessSampleIntervalMs;
+        _nextProcessSampleMs = monotonicMs + static_cast<int64>( _pServerConfig->_ops._processSampleIntervalMs );
         updateLoad( monotonicMs );
         if ( _processMetrics != nullptr )
             _processMetrics->update();

@@ -114,6 +114,10 @@ def write_server(out_dir: Path, name: str, game_port: int, service_port: int, on
         "_bConsoleInput": True,  # 표준 입력 `quit` 로 드레인 없이 정상 종료한다
         "_listStore": [{"_name": "local", **store}],  # 드라이버는 필수다 - 메모리도 적는다
         "_listCache": [{"_name": "local", **cache}],
+        # 운영 정책 칸은 필수다(ServerConfig 의 _ops · _admin) - 저장소의 서버 설정과 같은 값
+        "_ops": {"_maxConnections": 64, "_idleTimeoutSeconds": 10, "_processSampleIntervalMs": 1000, "_minFrameDumpIntervalMs": 10000,
+                 "_loadWarningIntervalMs": 60000, "_crashTailTicks": 40, "_livenessTimeoutMs": 10000},
+        "_admin": {"_idleTimeoutSeconds": 300},
     }
     server_path = out_dir / f"{name}.json"
     server_path.write_text(json.dumps(server_config, indent=4), encoding="utf-8")

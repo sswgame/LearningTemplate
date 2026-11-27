@@ -4,17 +4,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ServiceHealthRegistryInternal
-        {
-            static constexpr int64 kDefaultLivenessTimeoutMs = 10000;
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     const utf8* toString( HealthState state )
     {
         switch ( state )
@@ -29,11 +18,11 @@ namespace sw
         return "unknown";
     }
 
-    ServiceHealthRegistry::ServiceHealthRegistry()
+    ServiceHealthRegistry::ServiceHealthRegistry( const int64 livenessTimeoutMs )
         : _listCheck{}
         , _mutex{}
         , _lastTickMs{ 0 }
-        , _livenessTimeoutMs{ ServiceHealthRegistryInternal::kDefaultLivenessTimeoutMs }
+        , _livenessTimeoutMs{ livenessTimeoutMs }
         , _bTicked{ SW_FALSE }
         , _bDraining{ SW_FALSE }
     {

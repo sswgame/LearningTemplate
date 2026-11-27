@@ -64,6 +64,50 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 운영 HTTP 엔드포인트와 관측(지표 · 프레임 이력 · 생존 검사)의 시한 · 간격입니다(서버 운영 O1 · O5).
+     * @details 운영자가 조정하는 정책 값이라 코드 상수가 아니라 설정의 필수 칸이다 — 빠지면 서버가 기동하지 않는다(초기값 0 은 형식이지 기본값이 아니다).
+     *          언리얼 `DefaultEngine.ini` 의 `[HTTPServer.Listeners]` 시한 · Godot `ProjectSettings` 의 네트워크 시한과 같은 자리다.
+     */
+    REFLECT()
+    struct SW_API ServerOpsPolicy
+    {
+        REFLECT_BODY();
+
+        /** @brief 운영 HTTP 연결 상한입니다. 스크레이퍼와 감시자 몇 개만 붙으므로 작게 잡는다(예 64). */
+        PROPERTY( Required, Min = 1, Max = 4096 )
+        int32 _maxConnections{ 0 };
+        /** @brief 운영 HTTP 연결이 이만큼(초) 말이 없으면 닫습니다(예 10). */
+        PROPERTY( Required, Min = 1, Max = 3600 )
+        int32 _idleTimeoutSeconds{ 0 };
+        /** @brief 프로세스 지표를 다시 읽는 간격(밀리초)입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽는다(예 1000). */
+        PROPERTY( Required, Min = 100, Max = 60000 )
+        int32 _processSampleIntervalMs{ 0 };
+        /** @brief 느린 틱 덤프(`_slowTickDumpMs`)의 최소 간격(밀리초)입니다. 과부하 서버가 덤프 때문에 더 느려지지 않게 한다(예 10000). */
+        PROPERTY( Required, Min = 0, Max = 3600000 )
+        int32 _minFrameDumpIntervalMs{ 0 };
+        /** @brief 틱 사용률 경고(`_tickLoadWarnPercent`)의 최소 간격(밀리초)입니다(예 60000 — 1 분에 한 번). */
+        PROPERTY( Required, Min = 1000, Max = 3600000 )
+        int32 _loadWarningIntervalMs{ 0 };
+        /** @brief 크래시 문맥 파일 끝에 싣는 최근 틱 수입니다. 문맥 파일 버퍼 8KB 안이어야 한다(한 줄 70 바이트쯤 — 예 40). */
+        PROPERTY( Required, Min = 0, Max = 100 )
+        int32 _crashTailTicks{ 0 };
+        /** @brief 서버 루프가 이만큼(밀리초) 틱을 돌지 못하면 `/healthz` 가 살아 있지 않음으로 답합니다(예 10000). */
+        PROPERTY( Required, Min = 100, Max = 600000 )
+        int32 _livenessTimeoutMs{ 0 };
+    };
+
+    /** @brief 관리 채널(`_adminChannelPort`)의 시한입니다. 정책 값이라 설정의 필수 칸이다(`ServerOpsPolicy` 와 같은 까닭). */
+    REFLECT()
+    struct SW_API ServerAdminPolicy
+    {
+        REFLECT_BODY();
+
+        /** @brief 관리 채널 연결이 이만큼(초) 말이 없으면 닫습니다 — 열어 두고 잊은 연결이 쌓이지 않게 한다(예 300). */
+        PROPERTY( Required, Min = 1, Max = 86400 )
+        int32 _idleTimeoutSeconds{ 0 };
+    };
+
     /** @brief 전용 서버의 운영 설정 전체입니다(파일 하나). */
     REFLECT()
     struct SW_API ServerConfig : IConfig
@@ -202,6 +246,12 @@ namespace sw
          */
         PROPERTY( Min = 0, Max = 100 )
         int32 _tickLoadWarnPercent{ 0 };
+        /** @brief 운영 HTTP · 관측의 시한과 간격입니다(필수). */
+        PROPERTY( Required )
+        ServerOpsPolicy _ops{};
+        /** @brief 관리 채널의 시한입니다(필수 — 채널을 끈 서버도 적는다. 켜고 끌 때마다 칸이 생겼다 없어지지 않게). */
+        PROPERTY( Required )
+        ServerAdminPolicy _admin{};
         /**
          * @brief 서비스 TLS 1.3 인증서(PEM, 체인 포함) 경로입니다 — 네트워크 보안 제공자의 서버 TLS 문맥에 그대로 넘깁니다.
          * @details 둘 다 비면 Dev 에서만 `Saved/Certificates/` 의 개발용 자체 서명 인증서, Shipping 은 서비스 포트를 열 때 오류입니다.

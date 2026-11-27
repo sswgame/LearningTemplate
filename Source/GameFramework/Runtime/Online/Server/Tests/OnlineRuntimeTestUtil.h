@@ -46,6 +46,19 @@ namespace sw::test
             return string( text.view() );
         }
 
+        /**
+         * @brief 서버 설정 글 @p serverJSON(`{` 로 시작) 맨 앞에 운영 정책 칸(`_ops` · `_admin` — 저장소 서버 설정과 같은 값)을 넣은 글입니다.
+         * @details 그 칸들은 필수라(코드 기본값 없음) 관측을 띄우지 않는 끝단 테스트도 적어야 한다. 조립이 채워 주지 않는다 — `withBaseSettings` 와 같은 까닭이다.
+         */
+        static string withServerBaseSettings( string_view serverJSON )
+        {
+            constexpr string_view                     kBaseJSON = R"( "_ops": { "_maxConnections": 64, "_idleTimeoutSeconds": 10, "_processSampleIntervalMs": 1000, "_minFrameDumpIntervalMs": 10000, "_loadWarningIntervalMs": 60000, "_crashTailTicks": 40, "_livenessTimeoutMs": 10000 },
+"_admin": { "_idleTimeoutSeconds": 300 },)";
+            StringBuilder<constant::buffer::kMax1024> text;
+            text.appendFormat( "%#%#%#", serverJSON.substr( 0, 1 ), kBaseJSON, serverJSON.substr( 1 ) );
+            return string( text.view() );
+        }
+
         /** @brief @p serverJSON(`ServerConfig`)과 @p onlineJSON(`OnlineServerConfig`)으로 조립을 세웁니다. 실패하면 그 까닭입니다. */
         [[nodiscard]] SW_GF_API expected<void> fromConfig( string_view serverJSON, string_view onlineJSON, int64 nowMs );
 

@@ -15,15 +15,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ServerAdminChannelInternal
-        {
-            /** @brief 관리 채널 연결이 이만큼(초) 말이 없으면 닫는다 - 열어 두고 잊은 연결이 쌓이지 않게. */
-            static constexpr float64 kAdminIdleTimeoutSeconds = 300.0;
-        };
-    } // namespace
-
     ServerAdminChannel::ServerAdminChannel()
         : _transport{ nullptr }
         , _channel{ nullptr }
@@ -55,7 +46,7 @@ namespace sw
         settings._bindAddress = NetAddress::makeLoopback( static_cast<uint16>( config._adminChannelPort ) );
         settings._token       = std::move( token );
         StreamTransportConfig transportSettings;
-        transportSettings._idleTimeoutSeconds = ServerAdminChannelInternal::kAdminIdleTimeoutSeconds; // 열어 두고 잊은 연결을 닫는다
+        transportSettings._idleTimeoutSeconds = static_cast<float64>( config._admin._idleTimeoutSeconds ); // 열어 두고 잊은 연결을 닫는다
         const bool bStarted                   = _channel->initialize( _transport.get(), transportSettings, settings,
                                                                       SW_DELEGATE_LAMBDA( DebugChannelExecuteDelegate, [this]( string_view line, string& outReply )
                           { return executeCommand( line, outReply ); } ) );
