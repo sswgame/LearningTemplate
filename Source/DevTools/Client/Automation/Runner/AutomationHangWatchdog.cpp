@@ -17,6 +17,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
 
 #include "Engine/Automation/AutomationResult.h"
+#include "Engine/Automation/Scenario/AutomationTimeLimits.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -61,9 +62,10 @@ namespace sw
         {
             /**
              * @brief 한 번에 멈출 수 있는 가장 긴 시간(초)입니다. 행 감시가 먼저 프로세스를 끝내므로 정상 실행에서는 닿지 않는다 — 감시 없이 손으로 부른 실행이
-             *        영영 멈추지 않게 하는 상한이고, 정지 시한(`AutomationTimeLimits::kProcessStallSeconds` 180)보다 짧다.
+             *        영영 멈추지 않게 하는 상한이고, 정지 시한(`AutomationTimeLimits::kProcessStallSeconds`)보다 짧다(값은 `Config/Dev/TimeLimits.json`).
              */
-            static constexpr int32 kMaxHangSeconds = 60;
+            static constexpr int32 kMaxHangSeconds = static_cast<int32>( TimeLimitConfig::kMaxHangCommandSeconds );
+            static_assert( static_cast<uint32>( kMaxHangSeconds ) < AutomationTimeLimits::kProcessStallSeconds, "the hang command must end before the stall kill" );
 
             /** @brief `automation.hang <seconds>`: 호출한 게임 스레드를 그만큼 붙잡습니다(프레임 경계를 지나지 않는다). */
             static bool runHang( const vector<string>& listArgument, string& outReply )

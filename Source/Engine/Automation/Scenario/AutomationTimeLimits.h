@@ -1,10 +1,14 @@
 /**
  * @file AutomationTimeLimits.h
  * @brief 시나리오 실행의 벽시계 시한들과 그 대소 관계입니다 — 서로 겹치지 않게 한 곳에서 못 박습니다.
+ * @details 값은 `Config/Dev/TimeLimits.json` 의 `_scenario` 가 정본이고 configure 가 상수 헤더로 옮긴다(`Scripts/generate/time_limits.py`). 파이썬도 같은 파일을 읽는다.
+ *          여기는 형식과 대소 관계(static_assert)만 둔다.
  */
 #pragma once
 #include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/Foundation/Types.h"
+
+#include "sw/config/TimeLimits.gen.h"
 
 namespace sw
 {
@@ -21,45 +25,45 @@ namespace sw
      */
     struct AutomationTimeLimits
     {
-        static constexpr float32 kDefaultWallTimeoutSeconds = 150.0f;
-        static constexpr float32 kHangGraceSeconds          = 5.0f;
-        static constexpr float64 kClockHoldTimeoutSeconds   = 170.0;
-        static constexpr uint32  kProcessStallSeconds       = 180;
+        static constexpr float32 kDefaultWallTimeoutSeconds = static_cast<float32>( TimeLimitConfig::kDefaultWallTimeoutSeconds );
+        static constexpr float32 kHangGraceSeconds          = static_cast<float32>( TimeLimitConfig::kHangGraceSeconds );
+        static constexpr float64 kClockHoldTimeoutSeconds   = static_cast<float64>( TimeLimitConfig::kClockHoldTimeoutSeconds );
+        static constexpr uint32  kProcessStallSeconds       = TimeLimitConfig::kProcessStallSeconds;
         // 한 호출이 정지 시한보다 긴 일(캐시 미스 셰이더 컴파일 · 드라이버 프로그램 링크)은 `ScopedProgressReport` 가 간격마다 줄을 남겨 로그를 자라게 한다.
         static_assert( ScopedProgressReport::kIntervalSeconds * 2 <= kProcessStallSeconds, "progress lines must arrive well inside the stall limit" );
-        static constexpr uint32 kProcessKillSeconds = 540;
+        static constexpr uint32 kProcessKillSeconds = TimeLimitConfig::kProcessKillSeconds;
         /**
          * @brief 단계 · 시계 잡기 조건이 이만큼(초) 넘게 기다리면 무엇을 기다리는지 로그에 찍고, 그 뒤로 `kWaitReportIntervalSeconds` 마다 다시 찍습니다.
          * @details 끝날 때만 까닭을 찍으면 끝나지 않는 대기는 창이 멈춘 듯 아무것도 남기지 않는다(사용자 지적 2026-11-08). 짧은 대기(에셋 한 프레임)는 찍지 않는다.
          */
-        static constexpr float64 kWaitReportFirstSeconds    = 2.0;
-        static constexpr float64 kWaitReportIntervalSeconds = 5.0;
+        static constexpr float64 kWaitReportFirstSeconds    = static_cast<float64>( TimeLimitConfig::kWaitReportFirstSeconds );
+        static constexpr float64 kWaitReportIntervalSeconds = static_cast<float64>( TimeLimitConfig::kWaitReportIntervalSeconds );
 
         /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
-        static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
+        static constexpr float32 kDefaultExitWithinSeconds = static_cast<float32>( TimeLimitConfig::kDefaultExitWithinSeconds );
         /** @brief 부하 시나리오(`<Load>`)의 벽시계 상한에 더하는 여유(초)입니다 — 상한에 측정 창 길이의 두 배와 이것을 더한다. 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다. */
-        static constexpr float64 kLoadDeadlineSlackSeconds = 120.0;
+        static constexpr float64 kLoadDeadlineSlackSeconds = static_cast<float64>( TimeLimitConfig::kLoadDeadlineSlackSeconds );
         /**
          * @brief 시나리오 실행이 끝난 뒤 프로세스 종료(엔진 · 모듈 내리기)에 주는 벽시계 시한(초, `gv_scenarioWallScale` 배)입니다. 넘으면 종료 감시가 종료 코드 12 로 끝낸다.
          * @details 종료 대기(`TaskManager::waitAll` · `waitStage`)는 기한 없이 기다린다 — 교착이면 ctest 시한(`kProcessKillSeconds`)까지 아무 판정 없이 갔다. Debug 종료는 몇 초다.
          */
-        static constexpr float32 kShutdownWallSeconds = 60.0f;
+        static constexpr float32 kShutdownWallSeconds = static_cast<float32>( TimeLimitConfig::kShutdownWallSeconds );
         /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
-        static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
+        static constexpr uint32 kDefaultWaitTimeoutFrames = TimeLimitConfig::kDefaultWaitTimeoutFrames;
         /**
          * @brief 스크린샷이 에셋 일(읽는 중 · 나타나는 중인 메시, 올리기를 기다리는 텍스처)을 기다리는 최대 프레임 수입니다. 넘기면 실패로 적고 그대로 찍는다.
          * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.
          */
-        static constexpr uint32 kMaxAssetStabilityFrames = 600;
+        static constexpr uint32 kMaxAssetStabilityFrames = TimeLimitConfig::kMaxAssetStabilityFrames;
         /**
          * @brief 사진 앞 렌더 정착(`<Screenshot stability="Render">` · `<WaitRenderStable/>` — 에셋 일 + 정착 조건)을 기다리는 벽시계 상한(초, `gv_scenarioWallScale` 배)입니다.
          * @details 나아가고 있는 일의 상한일 뿐이다 — 진척이 멈춘 조건은 정지 시한(`ScenarioRun.json` 의 `_stallFrames`)이 먼저 끝낸다. 옛 사진 앞 정착 대기(`<WaitUntil … timeoutWallSeconds="30">`)의 값이다.
          */
-        static constexpr float32 kMaxRenderStableWallSeconds = 30.0f;
+        static constexpr float32 kMaxRenderStableWallSeconds = static_cast<float32>( TimeLimitConfig::kMaxRenderStableWallSeconds );
         /** @brief `<Pass/>` 가 뒤의 일(`SW_AUTOMATION_FINISH_BLOCKER`)을 기다리는 최대 프레임 수입니다. 60 Hz 에서 10 초 - 캡처 수십 장의 파일 쓰기가 워커에 줄을 서도 넉넉하다. */
-        static constexpr uint32 kMaxFinishWaitFrames = 600;
+        static constexpr uint32 kMaxFinishWaitFrames = TimeLimitConfig::kMaxFinishWaitFrames;
         /** @brief 체인(`-scenario=a,b,c`)의 단계 하나가 프로세스 시한에 더하는 몫(초)입니다. 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이다. */
-        static constexpr uint32 kChainStageSeconds = 5;
+        static constexpr uint32 kChainStageSeconds = TimeLimitConfig::kChainStageSeconds;
 
         /**
          * @brief 단계가 @p stageCount 개인 체인의 프로세스 시한(초)입니다 — 단일 시나리오 시한에 단계 몫을 더한다.

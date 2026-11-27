@@ -1,0 +1,39 @@
+{
+    "_comment": "자동화 · 검증의 시한(정본 한 곳). `_scenario` · `_devTools` 는 configure 가 C++ 상수 헤더(sw/config/TimeLimits.gen.h, Scripts/generate/time_limits.py)로 옮기고 C++ 이 그 값을 쓴다(`AutomationTimeLimits` 의 static_assert 가 대소 관계를 지킨다). `_scripts` 는 파이썬이 읽는다(Scripts/common/time_limits.py). 칸이 없으면 멈춘다(기본값 없음). 실행마다 바꾸는 대기 정책(`_stallFrames` · `_stallWallSeconds`)은 다시 짓지 않고 바꾸게 Config/Dev/ScenarioRun.json 에 둔다. 언리얼 Gauntlet 이 시한을 테스트 설정에 두는 자리다.",
+    "_scenario": {
+        "_defaultWallTimeoutSeconds": 150,
+        "_hangGraceSeconds": 5,
+        "_clockHoldTimeoutSeconds": 170,
+        "_processStallSeconds": 180,
+        "_processKillSeconds": 540,
+        "_chainStageSeconds": 5,
+        "_waitReportFirstSeconds": 2,
+        "_waitReportIntervalSeconds": 5,
+        "_defaultExitWithinSeconds": 10,
+        "_loadDeadlineSlackSeconds": 120,
+        "_shutdownWallSeconds": 60,
+        "_defaultWaitTimeoutFrames": 1200,
+        "_maxAssetStabilityFrames": 600,
+        "_maxRenderStableWallSeconds": 30,
+        "_maxFinishWaitFrames": 600
+    },
+    "_devTools": {
+        "_maxHangCommandSeconds": 60,
+        "_startupCaptureStabilitySeconds": 120,
+        "_bugReportSceneLoadMilliseconds": 30000,
+        "_maxDeviceLossDriverWaitMilliseconds": 60000,
+        "_swapBackendWallSeconds": 15
+    },
+    "_scripts": {
+        "_singleScenarioCtestSeconds": 900,
+        "_sequenceCtestSeconds": 1200,
+        "_sessionEventWaitSeconds": 60,
+        "_sessionScenarioSeconds": 400,
+        "_destructionSessionSeconds": 180,
+        "_lockstepSessionSeconds": 900,
+        "_webLoadAllowanceSeconds": 60,
+        "_webStopSeconds": 10,
+        "_webScenarioSeconds": 180,
+        "_shippingExitSeconds": 60
+    }
+}

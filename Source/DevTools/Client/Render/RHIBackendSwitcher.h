@@ -14,6 +14,8 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "sw/config/TimeLimits.gen.h"
+
 namespace sw
 {
     class IRHIDevice;
@@ -74,8 +76,8 @@ namespace sw
 #endif
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
-        /** @brief `removeDeviceAfterDriverWaitForTest` 가 받는 가장 긴 대기(밀리초)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
-        static constexpr uint32 kMaxDeviceLossDriverWaitMilliseconds = 60000;
+        /** @brief `removeDeviceAfterDriverWaitForTest` 가 받는 가장 긴 대기(밀리초, `Config/Dev/TimeLimits.json`)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
+        static constexpr uint32 kMaxDeviceLossDriverWaitMilliseconds = TimeLimitConfig::kMaxDeviceLossDriverWaitMilliseconds;
         /**
          * @brief 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 @p waitMilliseconds 동안 잠든 뒤 디바이스를 제거하게 합니다(개발 명령 `rhi.removeDevice <ms>`).
          * @details 실제 TDR 은 GPU 가 멈춘 동안 펜스 대기가 드라이버 안에서 막힌 뒤에야 첫 손실 결과를 돌려준다. `debugRemoveDevice` 만으로는 그 대기가 없어

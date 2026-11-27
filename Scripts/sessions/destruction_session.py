@@ -21,6 +21,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.log_lines import payloads, read_log
 from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
@@ -31,7 +32,7 @@ _HASH_LOG_ID = "DestructionNetSession.HashLine"
 _SCENE = "game/playground/maps/destructionnet.scene.xml"
 _GAME = "Playground"
 _SERVER_TICKS = 1800  # 서버가 이 틱 수를 돈 뒤 끝난다(30 틱/초 기준 60 초)
-_TIMEOUT_SECONDS = 180.0  # 서버가 서기를 · 끝나기를 기다리는 최대 초
+_TIMEOUT_SECONDS = read_script_time_limit("_destructionSessionSeconds")  # 서버가 서기를 · 끝나기를 기다리는 최대 초
 
 
 @dataclass

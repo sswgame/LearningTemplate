@@ -28,6 +28,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.log_lines import problem_lines
 from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, USER_DATA_ROOT_ENVIRONMENT, ChildProcess, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
@@ -36,8 +37,8 @@ _GAME = "Playground"
 _TICKET_KEY_ENVIRONMENT = "SW_NETPAIR_TICKET_KEY"
 _TICKET_KEY = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"  # 시나리오 전용 임시 키(32 B) — 개발용 키 경고를 피한다
 _FOLDER = "game/playground/automation/netpair"
-_TIMEOUT_SECONDS = 60.0  # 서버 기동 · 사건을 기다리는 최대 초
-_SCENARIO_TIMEOUT_SECONDS = 400.0  # 시나리오 하나가 끝나기를 기다리는 최대 초
+_TIMEOUT_SECONDS = read_script_time_limit("_sessionEventWaitSeconds")  # 서버 기동 · 사건을 기다리는 최대 초
+_SCENARIO_TIMEOUT_SECONDS = read_script_time_limit("_sessionScenarioSeconds")  # 시나리오 하나가 끝나기를 기다리는 최대 초
 _FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
 # 서버 사건의 로그 id
 _CONNECTED_ID = "Net.ClientConnected"

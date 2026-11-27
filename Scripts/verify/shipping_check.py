@@ -42,6 +42,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.host_platform import executable_name, is_windows_host
 from common.paths import get_bin_dir, get_build_dir
 from common.run_process import run_process
@@ -52,7 +53,7 @@ from package.pack_index import PackIndexError, read_pack_paths
 #: 배포 App 을 살려 두는 시간(초) — 기동 · 첫 씬 · 몇 프레임이 지나기에 넉넉하다.
 APP_RUN_SECONDS = 8.0
 #: 창을 닫은 뒤 · 서버 · 기동 오류 실행이 끝나기를 기다리는 시간(초).
-EXIT_TIMEOUT_SECONDS = 60.0
+EXIT_TIMEOUT_SECONDS = read_script_time_limit("_shippingExitSeconds")
 #: 배포 서버를 살려 두는 시간(초) — 기동 · 몇 틱이 지나기에 넉넉하다. 그 뒤 종료 신호를 보낸다.
 SERVER_RUN_SECONDS = 6.0
 #: 등록되지 않은 철자를 받았을 때 명령줄이 남기는 오류(`CommandLine::parseArgumentLine` — 뒤에 받은 키 `-name` 이 붙는다).

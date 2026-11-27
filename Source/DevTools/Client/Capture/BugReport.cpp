@@ -36,6 +36,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "sw/config/ConfigConstants.h"
+#include "sw/config/TimeLimits.gen.h"
 
 #include <cstdio>
 
@@ -45,8 +46,8 @@ namespace sw
     {
         struct BugReportInternal
         {
-            /** @brief 다른 씬을 열 때 기다리는 한도입니다. */
-            static constexpr uint32 kSceneLoadTimeoutMilliseconds = 30000;
+            /** @brief 다른 씬을 열 때 기다리는 한도입니다(`Config/Dev/TimeLimits.json`). */
+            static constexpr uint32 kSceneLoadTimeoutMilliseconds = TimeLimitConfig::kBugReportSceneLoadMilliseconds;
             /** @brief 같은 초에 만든 폴더에 붙이는 번호의 상한입니다. */
             static constexpr uint32 kMaxSameSecondSuffix = 1000;
 

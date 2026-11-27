@@ -26,6 +26,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.log_lines import count_id, payloads, problem_lines, read_log
 from common.process_session import DEFAULT_PRESET, USER_DATA_ROOT_ENVIRONMENT, MultiProcessSession, report
 from sessions.ctest_items import CtestItem
@@ -36,7 +37,7 @@ _TELEMETRY_LINKED_ID = "TelemetryUploadAdapter.TelemetryLinked"
 _CRASH_SENT_ID = "TelemetryUploadAdapter.CrashReportsSent"  # 본문 JSON: sent · folder
 _FAKE_SESSION = "telemetrylocalrun"
 _CLIENT_DELAY_SECONDS = 8.0  # 기동 줄을 본 뒤 명령을 보낼 때까지
-_TIMEOUT_SECONDS = 60.0  # 기동 줄을 기다리는 최대 초
+_TIMEOUT_SECONDS = read_script_time_limit("_sessionEventWaitSeconds")  # 기동 줄을 기다리는 최대 초
 
 
 @dataclass

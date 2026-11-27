@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Callable, Sequence
 
 from common.exit_code import ExitCode
+from common.time_limits import read_script_time_limit
 from common.git import run_git, run_git_or_raise
 from common.paths import get_build_dir
 from common.run_process import ProcessResult, run_process
@@ -46,11 +47,11 @@ PAIR_SUFFIX = re.compile(r"\.[12]\.scenario\.xml$")   # 두 번 기동 쌍(`sequ
 MERGE_SUBJECT = re.compile(r"^Merge (?:remote-tracking )?branch '(?:origin/)?([^']+)'")
 SOURCE_PATH = re.compile(r"(?:^|/)(Source/.+)$")
 # 시한은 ctest 항목의 TIMEOUT 속성이다(없으면 ctest 의 기본 1500 초). 단계가 여럿인 체인에서 꺼낸 시나리오 하나만 체인 시한(단계 초 × 단계 수 × 물결)을 나눠 쓸 수 없어
-# 단계 몫에는 기동 · 종료가 없다. App 의 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )` 545 초) 위에 기동 · 셰이더 여유를 둔 값을 쓴다.
+# 단계 몫에는 기동 · 종료가 없다. App 의 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )`) 위에 기동 · 셰이더 여유를 둔 값을 쓴다(그보다 긴지는 생성기 time_limits 가 본다).
 CTEST_DEFAULT_TIMEOUT_SECONDS = 1500
 # 새 시나리오의 결정성 검사를 도는 백엔드 — 앞 단계에 달린 값은 게임 쪽에서 생겨 하나면 드러난다.
 DETERMINISM_BACKEND = "dx12"
-SINGLE_SCENARIO_TIMEOUT_SECONDS = 900
+SINGLE_SCENARIO_TIMEOUT_SECONDS = int(read_script_time_limit("_singleScenarioCtestSeconds"))
 # 단위 실행의 기준 파일 없음(`SnapshotMissing`)은 시나리오와 같은 이름으로 적는다 — 표의 한 칸이 "기록했으니 보고 커밋할 것" 을 뜻한다.
 UNIT_KIND_ALIAS = {"SnapshotMissing": "MissingBaseline"}
 
