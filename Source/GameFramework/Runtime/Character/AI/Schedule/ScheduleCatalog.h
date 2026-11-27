@@ -35,6 +35,8 @@ namespace sw
 
     /** @brief 하루의 분 수입니다. 일정 시각은 0..1440 분(정수)입니다. */
     inline constexpr int32 kScheduleMinutesPerDay = 1440;
+    /** @brief 한 시간의 분 수입니다. */
+    inline constexpr int32 kScheduleMinutesPerHour = 60;
 
     /** @brief 일정이 가는 장소 하나입니다. */
     REFLECT()

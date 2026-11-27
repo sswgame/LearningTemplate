@@ -317,9 +317,12 @@ namespace sw
         /** @brief 상태 해시입니다. 같은 데이터, 씨앗, 입력이면 같은 값이 나오므로 결정성 확인과 동기 어긋남 감지에 씁니다. */
         uint64 computeStateHash() const;
 
-        /** @brief "왜 여기 있나"에 답하는 추적 문자열입니다. 지금 구간과 그 출처, 후보 루틴/행사/약속의 조건 결과, 끼어들기 스택을 담습니다. */
+        /**
+         * @brief "왜 여기 있나"에 답하는 추적 문자열입니다. 지금 구간과 그 출처, 후보 루틴/행사/약속의 조건 결과, 끼어들기 스택을 담습니다.
+         * @details 개발 전용이다. 본문은 `Dev/ScheduleSystemDebug.cpp` 에 있어 배포 구성에는 정의가 없다(배포 코드가 부르면 링크에서 멈춘다).
+         */
         void explainNPC( int32 npcIndex, string& outText ) const;
-        /** @brief 오늘 계획의 시간표(출발, 도착, 구간, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. */
+        /** @brief 오늘 계획의 시간표(출발, 도착, 구간, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. 개발 전용이다(`explainNPC` 와 같다). */
         void dumpTimeline( int32 npcIndex, string& outText ) const;
         /**
          * @brief 지금 살아 있는 일정 시스템을 모두 모읍니다. 생성자가 목록에 등록하고 소멸자가 해제합니다. 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다.

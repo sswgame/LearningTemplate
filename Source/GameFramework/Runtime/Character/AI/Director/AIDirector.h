@@ -12,9 +12,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -59,7 +61,7 @@ namespace sw
         Reward            ///< `_id` 는 보상, `_source` 는 풀, `_count` 와 `_scale` 은 데이터의 값
     };
 
-    /** @brief 감독이 낸 이벤트 하나입니다. 추적(`dumpTrace`)도 이것을 쌓습니다. */
+    /** @brief 감독이 낸 이벤트 하나입니다. 개발 구성의 추적(`dumpTrace`)도 이것을 쌓습니다. */
     struct AIDirectorEvent
     {
         hashed_string       _id{};
@@ -153,6 +155,8 @@ namespace sw
         static constexpr int32  kMaxTransitionsPerUpdate = 4;   ///< 한 프레임에 넘길 단계 수 상한. 머무는 시간이 0 인 단계끼리 끝없이 돌지 않게 한다
         static constexpr int32  kMaxPicksPerUpdate       = 8;   ///< 풀 하나가 한 프레임에 고르는 수 상한. dt 가 길 때 한꺼번에 쏟아지지 않게 한다
         static constexpr uint32 kMaxTraceEvent           = 256; ///< 추적이 보관하는 최근 사건 수
+        /** @brief 추적을 쌓는 구성인가. 배포는 추적을 만들지도 쌓지도 않는다(언리얼 Visual Logger 가 `ENABLE_VISUAL_LOG` 로 빠지는 것과 같다). */
+        static constexpr bool kTraceEnabled = build::kShipping == false;
 
         AIDirector();
 
@@ -189,9 +193,12 @@ namespace sw
 
         /** @brief 풀 @p poolIndex 의 항목 @p encounterIndex 를 지금 막는 까닭(`AIDirectorBlock` 비트)입니다. 0 이면 고를 수 있다는 뜻입니다. */
         uint32 computeBlockMask( int32 poolIndex, int32 encounterIndex ) const;
-        /** @brief "왜 지금 이 단계와 이 항목인가"에 답하는 문자열입니다. 단계, 긴장도, 나가는 전환마다 막은 절, 풀마다 항목의 `+`/`-` 와 까닭을 담습니다. */
+        /**
+         * @brief "왜 지금 이 단계와 이 항목인가"에 답하는 문자열입니다. 단계, 긴장도, 나가는 전환마다 막은 절, 풀마다 항목의 `+`/`-` 와 까닭을 담습니다.
+         * @details 개발 전용이다. 본문은 `Dev/AIDirectorDebug.cpp` 에 있어 배포 구성에는 정의가 없다(배포 코드가 부르면 링크에서 멈춘다).
+         */
         void explain( string& outText ) const;
-        /** @brief 최근 이벤트(최대 `kMaxTraceEvent`)를 시간 순으로 한 줄씩 씁니다. */
+        /** @brief 최근 이벤트(최대 `kMaxTraceEvent`)를 시간 순으로 한 줄씩 씁니다. 개발 전용이다(`explain` 과 같다). */
         void dumpTrace( string& outText ) const;
         /** @brief 결정성 확인용 상태 해시입니다. 시간, 단계, 긴장도, 난수, 풀, 항목, 스폰 상태를 담습니다. */
         uint64 computeStateHash() const;
@@ -238,7 +245,7 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<PoolState> _listPoolState;
         SW_TRANSIENT NotificationBuffer<AIDirectorEvent> _eventBuffer;
-        SW_TRANSIENT RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
+        SW_TRANSIENT unique_ptr<RingBuffer<AIDirectorEvent, kMaxTraceEvent>> _pTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다. 배포는 비어 있다(`kTraceEnabled`) — 모든 구성에서 배치는 같고 저장소만 개발 구성에 있다
         SW_TRANSIENT vector<float32> _listScratchWeight;
         const AIDirectorProfile*     _pProfile;
         const SpawnTable*            _pSpawnTable;
