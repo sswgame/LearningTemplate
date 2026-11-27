@@ -176,9 +176,9 @@ namespace sw
                 return hub.getClient().isActive();
             }
 
-            [[nodiscard]] static bool readLastResult( const HubSimulationComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readLastResult( const HubSimulationComponent& hub, AutomationWatchValue& outValue )
             {
-                outValue = static_cast<float64>( static_cast<int32>( hub.getClient().getAgent()._lastResult ) );
+                outValue.setEnum( hub.getClient().getAgent()._lastResult );
                 return hub.getClient().isActive() && hub.getClient().getAgent()._resultCount > 0;
             }
 
@@ -263,7 +263,7 @@ namespace sw
     SW_DEV_COMMAND( HubStatus, "hub.status", "hub.status", "Show the progress the hub server last sent", &HubSimulationComponentDevInternal::runStatus );
 
     SW_AUTOMATION_GETTER_WATCH( hubRulesValid, "Hub.RulesValid", "1 when the scene's hub rules build a valid hub", HubSimulationComponent, &HubSimulationComponent::getRulesValid );
-    SW_AUTOMATION_GETTER_WATCH( hubNetRole, "Hub.NetRole", "0 alone, 1 hub server, 2 hub client", HubSimulationComponent, &HubSimulationComponent::getNetRoleValue );
+    SW_AUTOMATION_GETTER_WATCH( hubNetRole, "Hub.NetRole", "HubNetRole name of this process", HubSimulationComponent, &HubSimulationComponent::getNetRole );
     SW_AUTOMATION_COMPONENT_WATCH( hubAvatarID, "Hub.AvatarID", "Avatar id the server gave this client", HubSimulationComponent, &HubSimulationComponentDevInternal::readAvatarID );
     SW_AUTOMATION_COMPONENT_WATCH( hubLevel, "Hub.Level", "Level the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readLevel );
     SW_AUTOMATION_COMPONENT_WATCH( hubExperience, "Hub.Experience", "Experience the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readExperience );
@@ -272,7 +272,7 @@ namespace sw
     SW_AUTOMATION_COMPONENT_WATCH( hubDefeats, "Hub.Defeats", "Creatures felled, as the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readDefeats );
     SW_AUTOMATION_COMPONENT_WATCH( hubPartySize, "Hub.PartySize", "Party size the server last sent (1 alone)", HubSimulationComponent, &HubSimulationComponentDevInternal::readPartySize );
     SW_AUTOMATION_COMPONENT_WATCH( hubResultCount, "Hub.ResultCount", "Action results the server sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readResultCount );
-    SW_AUTOMATION_COMPONENT_WATCH( hubLastResult, "Hub.LastResult", "Last HubActionResult the server sent (0 Ok)", HubSimulationComponent, &HubSimulationComponentDevInternal::readLastResult );
+    SW_AUTOMATION_COMPONENT_WATCH( hubLastResult, "Hub.LastResult", "HubActionResult name of the last action result the server sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readLastResult );
     SW_AUTOMATION_COMPONENT_WATCH( hubVisibleEntities, "Hub.VisibleEntities", "Creatures, herbs and avatars the MMO replication shows this client", HubSimulationComponent,
                                    &HubSimulationComponentDevInternal::readVisibleEntities );
     SW_AUTOMATION_COMPONENT_WATCH( hubFirstCreatureHealth, "Hub.FirstCreatureHealth", "Replicated health of creature 100000 (no value while felled or unseen)", HubSimulationComponent,

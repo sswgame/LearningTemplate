@@ -13,7 +13,7 @@
 	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.enter shooter3d_floormatch"/>
-	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Playground.MatchState" is="Playing" timeoutWallSeconds="120"/>
 	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="60"/>
 	<!-- 바닥이 지나는 길로 걸어 들어가 서 있으면 바닥이 실어 간다(윗면이 올라설 높이 안이다) -->
 	<Press slot="Key.W"/>
@@ -33,7 +33,7 @@
 	<Release slot="Mouse.Left"/>
 	<DevCommand line="minigame.quit"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" is="None" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
 	<DevCommand line="online.disconnect"/>
 	<Pass/>

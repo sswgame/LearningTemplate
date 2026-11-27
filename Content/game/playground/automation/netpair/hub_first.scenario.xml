@@ -8,10 +8,10 @@
 -->
 <Scenario name="game.playground.netpair.hub_first" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="Hub.RulesValid" equals="1"/>
-	<Expect watch="Hub.NetRole" equals="0"/>
+	<Expect watch="Hub.NetRole" is="Alone"/>
 	<DevCommand line="net.ticketconnect {gv_onlineServerAddress} hub_netpair hub_netpair_pw_1 playground_hub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
-	<Expect watch="Hub.NetRole" equals="2"/>
+	<Expect watch="Hub.NetRole" is="Client"/>
 	<Expect watch="Hub.Level" equals="1"/>
 	<Expect watch="Hub.Experience" equals="0"/>
 	<Expect watch="Hub.PartySize" equals="1"/>
@@ -22,16 +22,16 @@
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100000"/>
 	<WaitUntil watch="Hub.ResultCount" equals="1" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.FirstCreatureHealth" equals="20" timeoutSeconds="10"/>
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100000"/>
 	<WaitUntil watch="Hub.ResultCount" equals="2" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100000"/>
 	<WaitUntil watch="Hub.ResultCount" equals="3" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.Defeats" equals="1" timeoutSeconds="10"/>
 	<Expect watch="Hub.Experience" equals="60"/>
 	<Expect watch="Hub.Coins" equals="5"/>
@@ -40,15 +40,15 @@
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100001"/>
 	<WaitUntil watch="Hub.ResultCount" equals="4" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100001"/>
 	<WaitUntil watch="Hub.ResultCount" equals="5" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100001"/>
 	<WaitUntil watch="Hub.ResultCount" equals="6" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.Defeats" equals="2" timeoutSeconds="10"/>
 	<Expect watch="Hub.Level" equals="2"/>
 	<Expect watch="Hub.Experience" equals="120"/>
@@ -56,24 +56,24 @@
 	<!-- 생활: 버섯(100002) -->
 	<DevCommand line="hub.gather 100002"/>
 	<WaitUntil watch="Hub.ResultCount" equals="7" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="0"/>
+	<Expect watch="Hub.LastResult" is="Ok"/>
 	<WaitUntil watch="Hub.Herbs" equals="1" timeoutSeconds="10"/>
 	<Expect watch="Hub.Experience" equals="135"/>
 	<!-- 서버 권위 거절: 멀리 있는 짐승(100003)은 사거리 밖 -->
 	<WaitUntil watch="Hub.AttackReady" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="hub.attack 100003"/>
 	<WaitUntil watch="Hub.ResultCount" equals="8" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="2"/>
+	<Expect watch="Hub.LastResult" is="OutOfRange"/>
 	<!-- 파티 행동도 서버가 판정한다: 없는 아바타 99999 의 초대 · 수락은 UnknownTarget(1), 파티 없이 떠나기는 NotInParty(9) — 두 클라이언트 파티는 HubNetSessionTest.PartyIsServerAuthoritative -->
 	<DevCommand line="hub.invite 99999"/>
 	<WaitUntil watch="Hub.ResultCount" equals="9" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="1"/>
+	<Expect watch="Hub.LastResult" is="UnknownTarget"/>
 	<DevCommand line="hub.accept 99999"/>
 	<WaitUntil watch="Hub.ResultCount" equals="10" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="1"/>
+	<Expect watch="Hub.LastResult" is="UnknownTarget"/>
 	<DevCommand line="hub.leave"/>
 	<WaitUntil watch="Hub.ResultCount" equals="11" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="9"/>
+	<Expect watch="Hub.LastResult" is="NotInParty"/>
 	<Expect watch="Hub.PartySize" equals="1"/>
 	<!-- 하위 레벨 미니게임(카드 탁자 — 허브가 그대로다)은 서버가 들어가고 나온다: 실행기가 아래 첫 상태 줄(로그 id `Hub.Status`)을 보고 서버 콘솔에 `minigame.enter`, 둘째 줄을 보고 `minigame.leave` 를 넣는다.
 	     이 클라이언트는 알림만 받아 같은 하위 레벨을 세우고 내린다. 진행 · 복제가 그대로이고 행동이 계속 판정된다 -->
@@ -81,13 +81,13 @@
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutWallSeconds="60"/>
 	<DevCommand line="hub.status"/>
 	<WaitUntil watch="Scene.SubLevelCount" equals="0" timeoutWallSeconds="60"/>
-	<Expect watch="Hub.NetRole" equals="2"/>
+	<Expect watch="Hub.NetRole" is="Client"/>
 	<Expect watch="Hub.Level" equals="2"/>
 	<Expect watch="Hub.Experience" equals="135"/>
 	<Expect watch="Hub.VisibleEntities" atLeast="4"/>
 	<DevCommand line="hub.leave"/>
 	<WaitUntil watch="Hub.ResultCount" equals="12" timeoutSeconds="10"/>
-	<Expect watch="Hub.LastResult" equals="9"/>
+	<Expect watch="Hub.LastResult" is="NotInParty"/>
 	<DevCommand line="hub.status"/>
 	<Pass/>
 </Scenario>

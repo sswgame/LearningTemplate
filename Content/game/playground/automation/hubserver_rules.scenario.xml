@@ -8,6 +8,6 @@
 <Scenario name="game.playground.hubserver_rules" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Hub.RulesValid" equals="1" timeoutFrames="30"/> <!-- 규칙 표를 읽었다 -->
-	<Expect watch="Hub.NetRole" equals="0"/>
+	<Expect watch="Hub.NetRole" is="Alone"/>
 	<Pass/>
 </Scenario>

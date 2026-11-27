@@ -50,7 +50,7 @@ namespace
     };
 
     /** @brief 서버 링크를 올린 월드에서 허브 오브젝트를 시작하고, 시작한 뒤의 역할 값(`Hub.NetRole`)을 돌려줍니다. @p bCloseSession 이면 시작한 뒤 세션을 닫고 한 프레임 더 돈 값입니다. */
-    int32 startHubAndReadRole( bool bTicketRequired, CountingHubServerFactory& factory, bool bCloseSession = false )
+    HubNetRole startHubAndReadRole( bool bTicketRequired, CountingHubServerFactory& factory, bool bCloseSession = false )
     {
         HubRules rules;
         rules._listLevelExperience = { 100 };
@@ -76,7 +76,7 @@ namespace
             link.closeSession();
             manager.update( 1.0f / 60.0f );
         }
-        return pHub->getNetRoleValue();
+        return pHub->getNetRole();
     }
 } // namespace
 
@@ -84,7 +84,7 @@ namespace
 SW_TEST_CASE( HubSimulationComponentTest, TicketSessionStartsTheHubServer )
 {
     CountingHubServerFactory factory;
-    SW_EXPECT_EQUAL( 1, startHubAndReadRole( true, factory ) );
+    SW_EXPECT_EQUAL( HubNetRole::Server, startHubAndReadRole( true, factory ) );
     SW_EXPECT_EQUAL( 1, factory._createCount );
 }
 
@@ -92,7 +92,7 @@ SW_TEST_CASE( HubSimulationComponentTest, TicketSessionStartsTheHubServer )
 SW_TEST_CASE( HubSimulationComponentTest, ClosedSessionShutsDownTheHubServer )
 {
     CountingHubServerFactory factory;
-    SW_EXPECT_EQUAL( 0, startHubAndReadRole( true, factory, true ) );
+    SW_EXPECT_EQUAL( HubNetRole::Alone, startHubAndReadRole( true, factory, true ) );
     SW_EXPECT_EQUAL( 1, factory._createCount );
     SW_EXPECT_EQUAL( 1, factory._shutdownCount );
 }
@@ -101,6 +101,6 @@ SW_TEST_CASE( HubSimulationComponentTest, ClosedSessionShutsDownTheHubServer )
 SW_TEST_CASE( HubSimulationComponentTest, SessionWithoutTicketsHasNoHubServer )
 {
     CountingHubServerFactory factory;
-    SW_EXPECT_EQUAL( 0, startHubAndReadRole( false, factory ) );
+    SW_EXPECT_EQUAL( HubNetRole::Alone, startHubAndReadRole( false, factory ) );
     SW_EXPECT_EQUAL( 0, factory._createCount );
 }

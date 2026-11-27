@@ -24,7 +24,7 @@
 	<!-- ① 줄 → 배정 → 붙지 못함 → 허브 -->
 	<DevCommand line="minigame.enter shooter3d_match"/>
 	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutSeconds="20"/>
-	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/> <!-- 접속 시한은 벽시계다 -->
+	<WaitUntil watch="Playground.MatchState" is="None" timeoutWallSeconds="60"/> <!-- 접속 시한은 벽시계다 -->
 	<ExpectLog id="Playground.MatchNotConnected" count="1"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.RestoreCount" equals="0"/>

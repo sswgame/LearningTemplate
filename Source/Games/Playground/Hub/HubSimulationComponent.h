@@ -24,6 +24,15 @@
 
 namespace sw
 {
+    /** @brief 이 프로세스에서 허브가 선 역할입니다(감시 값 `Hub.NetRole` 이 이름을 읽는다). */
+    ENUM()
+    enum class HubNetRole : uint8
+    {
+        Alone = 0, ///< 망 없이 혼자 돈다
+        Server,    ///< 허브 서버로 섰다
+        Client     ///< 허브 서버에 붙은 클라이언트다
+    };
+
     /**
      * @class HubSimulationComponent
      * @brief 허브 하나의 규칙 데이터와 망 잇기를 듭니다.
@@ -43,9 +52,8 @@ namespace sw
         void onTick( TickContext& context ) override;
 
         /** @brief 규칙 데이터가 허브를 세울 수 있으면 1 입니다(세션과 상관없이 시작할 때 본다). */
-        int32 getRulesValid() const { return _bRulesValid != SW_FALSE ? 1 : 0; }
-        /** @brief 0 혼자 · 1 서버 · 2 클라이언트입니다. */
-        int32 getNetRoleValue() const;
+        int32      getRulesValid() const { return _bRulesValid != SW_FALSE ? 1 : 0; }
+        HubNetRole getNetRole() const;
 
         const HubRules& getRules() const { return _rules; }
         /** @brief 서버 역할로 선 서버 링크입니다. 서지 않았으면 nullptr 입니다(폰 복제가 읽는다 — `HubPawnReplicationComponent`). */

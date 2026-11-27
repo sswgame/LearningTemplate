@@ -9,7 +9,6 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
@@ -178,7 +177,10 @@ namespace sw
                 if ( pSession == nullptr )
                     return false;
                 const TradeSnapshot& snapshot = pSession->get<TradeClient>().getSnapshot();
-                outValue.setText( snapshot._tradeID != 0 ? getEnumName( snapshot._state ) : "none" );
+                if ( snapshot._tradeID == 0 )
+                    outValue.setText( "none" );
+                else
+                    outValue.setEnum( snapshot._state );
                 return true;
             }
 
@@ -187,7 +189,7 @@ namespace sw
                 const PlaygroundOnlineFlow* const pFlow = game::findSubsystem<PlaygroundOnlineFlow>();
                 if ( pFlow == nullptr )
                     return false;
-                outValue.setText( getEnumName( pFlow->getLastTradeRefusal() ) );
+                outValue.setEnum( pFlow->getLastTradeRefusal() );
                 return true;
             }
         };

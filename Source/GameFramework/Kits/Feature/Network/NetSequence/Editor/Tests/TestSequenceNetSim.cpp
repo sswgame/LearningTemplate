@@ -4,6 +4,7 @@
 #include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/SceneManager.h"
@@ -82,11 +83,11 @@ namespace
         /** @brief 서버 월드의 감시 값(`INetSimSession::readValue`)입니다. 없으면 −1 입니다. */
         static float64 readServerValue( NetSimHarness& harness, string_view key )
         {
-            float64               value    = -1.0;
+            AutomationWatchValue  value{};
             const INetSimSession* pSession = harness.getServer().getSession();
-            if ( pSession == nullptr || pSession->readValue( key, value ) == false )
+            if ( pSession == nullptr || pSession->readValue( key, value ) == false || value._bText )
                 return -1.0;
-            return value;
+            return value._number;
         }
     };
 

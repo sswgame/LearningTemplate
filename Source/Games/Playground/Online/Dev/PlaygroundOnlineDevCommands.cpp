@@ -212,13 +212,13 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readMatchState( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readMatchState( const GameObjectManager* pManager, AutomationWatchValue& outValue )
             {
                 (void)pManager;
                 const PlaygroundOnlineFlow* const pFlow = game::findSubsystem<PlaygroundOnlineFlow>();
                 if ( pFlow == nullptr )
                     return false;
-                outValue = static_cast<float64>( pFlow->getMatchState() );
+                outValue.setEnum( pFlow->getMatchState() );
                 return true;
             }
 
@@ -299,7 +299,7 @@ namespace sw
     SW_AUTOMATION_WATCH( playgroundOnlineGold, "Playground.OnlineGold", "Gold balance in the economy kit client's cache", &PlaygroundOnlineDevCommandsInternal::readGold );
     SW_AUTOMATION_WATCH( playgroundOnlineGem, "Playground.OnlineGem", "Gem balance in the economy kit client's cache", &PlaygroundOnlineDevCommandsInternal::readGem );
     SW_AUTOMATION_WATCH( playgroundOnlineMatchFound, "Playground.OnlineMatchFound", "1 once the matchmaking kit assigned this player a match", &PlaygroundOnlineDevCommandsInternal::readMatchFound );
-    SW_AUTOMATION_WATCH( playgroundMatchState, "Playground.MatchState", "Match session step: 0 none, 1 queued, 2 match ticket, 3 match connect, 4 playing, 5 leaving, 6 hub ticket", &PlaygroundOnlineDevCommandsInternal::readMatchState );
+    SW_AUTOMATION_WATCH( playgroundMatchState, "Playground.MatchState", "PlaygroundMatchState name of the match session step", &PlaygroundOnlineDevCommandsInternal::readMatchState );
     SW_AUTOMATION_WATCH( playgroundOnlineTopKillsScore, "Playground.OnlineTopKillsScore", "Best score in the last arena_kills top list", &PlaygroundOnlineDevCommandsInternal::readTopKillsScore );
     SW_AUTOMATION_WATCH( playgroundOnlineSubmittedScoreCount, "Playground.OnlineSubmittedScoreCount", "Leaderboard score submits the server has applied", &PlaygroundOnlineDevCommandsInternal::readSubmittedCount );
     SW_AUTOMATION_WATCH( playgroundOnlineRefusedScoreCount, "Playground.OnlineRefusedScoreCount", "Client score submits the board refused (server submits only)", &PlaygroundOnlineDevCommandsInternal::readRefusedCount );
