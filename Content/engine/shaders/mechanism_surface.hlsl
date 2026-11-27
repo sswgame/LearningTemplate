@@ -159,10 +159,10 @@ MaterialSurface computeMaterialSurface( PixelContext context )
 {
     const MechanismSurfaceResult mechanism = evaluateMechanismSurface( context );
     MaterialSurface              surface;
-    surface._albedo    = float4( logicCircuit._albedo, logicCircuit._alpha );
-    surface._normal    = logicCircuit._normal;
-    surface._roughness = saturate( logicCircuit._roughness );
-    surface._metallic  = saturate( logicCircuit._metallic );
+    surface._albedo    = float4( mechanism._albedo, mechanism._alpha );
+    surface._normal    = mechanism._normal;
+    surface._roughness = saturate( mechanism._roughness );
+    surface._metallic  = saturate( mechanism._metallic );
     surface.setAlphaCutoff( context._material._alphaCutoff ); // 녹아 사라짐 부모(알파 컷오프)만 싣는다 — 깊이 · 그림자 패스가 같은 값으로 오린다
     return surface;
 }
