@@ -7,10 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
@@ -126,23 +124,16 @@ namespace sw
 {
     bool LiveLinkFaceLayout::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
+        return ReflectedXMLFile::loadAssetFromText( xml, sourceLabel, *this );
     }
 
-    bool LiveLinkFaceLayout::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
+    bool LiveLinkFaceLayout::validate( string_view sourceLabel ) const
     {
-        *this = LiveLinkFaceLayout{};
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) == false )
-        {
-            *this = LiveLinkFaceLayout{};
-            return false;
-        }
         for ( size_t channelIndex = 0; channelIndex < _listChannel.size(); ++channelIndex )
         {
             if ( _listChannel[channelIndex].empty() || findChannelIndex( _listChannel[channelIndex] ) != static_cast<uint32>( channelIndex ) )
             {
                 SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceLayout", "Live Link Face layout '%#': channel %# needs a unique, non-empty name", sourceLabel, channelIndex );
-                *this = LiveLinkFaceLayout{};
                 return false;
             }
         }
@@ -156,15 +147,7 @@ namespace sw
 
     bool LiveLinkFaceLayout::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceLayout3", "Live Link Face layout '%#' could not be read", path );
-            *this = LiveLinkFaceLayout{};
-            return false;
-        }
-        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     optional<uint32> LiveLinkFaceLayout::findChannelIndex( const hashed_string& channel ) const
@@ -174,14 +157,14 @@ namespace sw
 
     bool LiveLinkFaceMapping::loadFromXMLText( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout )
     {
-        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ), outLayout );
+        *this = LiveLinkFaceMapping{};
+        return bindLayout( ReflectedXMLFile::loadDescFromText( xml, sourceLabel, *this ), sourceLabel, outLayout );
     }
 
-    bool LiveLinkFaceMapping::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context, LiveLinkFaceLayout& outLayout )
+    bool LiveLinkFaceMapping::bindLayout( const bool bRead, string_view sourceLabel, LiveLinkFaceLayout& outLayout )
     {
-        *this     = LiveLinkFaceMapping{};
         outLayout = LiveLinkFaceLayout{};
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) == false )
+        if ( bRead == false )
         {
             *this = LiveLinkFaceMapping{};
             return false;
@@ -226,16 +209,8 @@ namespace sw
 
     bool LiveLinkFaceMapping::loadFromAsset( const AssetID& assetID, LiveLinkFaceLayout& outLayout )
     {
-        const string_view path = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFaceMapping4", "Live Link Face mapping '%#' could not be read", path );
-            *this     = LiveLinkFaceMapping{};
-            outLayout = LiveLinkFaceLayout{};
-            return false;
-        }
-        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ), outLayout );
+        *this = LiveLinkFaceMapping{};
+        return bindLayout( ReflectedXMLFile::loadDesc( assetID, *this ), assetID.view(), outLayout );
     }
 
     expected<LiveLinkFaceFrame> LiveLinkFaceFrame::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout )

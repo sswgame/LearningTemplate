@@ -135,7 +135,7 @@ namespace sw
 
     bool MaterialParameterCollectionCache::readDesc( const AssetID& assetID, MaterialParameterCollectionDef& outDesc )
     {
-        return ReflectedXMLFile::loadDesc( assetID, outDesc ) && outDesc.validate( assetID.view() );
+        return ReflectedXMLFile::loadAsset( assetID, outDesc );
     }
 
     shared_ptr<MaterialParameterCollection> MaterialParameterCollectionCache::acquire( const AssetID& assetID )

@@ -26,7 +26,6 @@ namespace sw
 
     class XMLNode;
 
-    struct AssetComposeContext;
 } // namespace sw
 
 namespace sw
@@ -118,8 +117,6 @@ namespace sw
     private:
         /** @brief 에셋 경로의 표를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<LipSyncSettings>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 에셋 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
-        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
     };
 
     /**

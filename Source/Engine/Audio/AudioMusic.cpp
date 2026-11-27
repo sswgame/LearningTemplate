@@ -8,45 +8,20 @@
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
-#include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
     bool AudioMusicDef::loadFromAsset( const AssetID& assetID )
     {
-        const string_view assetPath = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "AudioMusic.MusicNotFound", "Music not found: %#", assetPath );
-            return false;
-        }
-        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     bool AudioMusicDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
-    }
-
-    bool AudioMusicDef::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
-    {
-        *this = AudioMusicDef{};
-        // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 구간은 이름이 열쇠이고 전환 규칙 · 레이어 목록은 통째로 바뀐다(규칙은 문서 표 `<Document>`).
-        string flatText;
-        bool   bComposed = false;
-        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
-            return false;
-        if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
-        {
-            SW_LOG_ERROR_ID( "AudioMusic.MusicCouldNotRead", "%#: music could not be read or holds unknown keys / values", sourceName );
-            return false;
-        }
-        return validate( sourceName );
+        return ReflectedXMLFile::loadAssetFromText( xmlText, sourceName, *this );
     }
 
     bool AudioMusicDef::validate( string_view sourceName ) const

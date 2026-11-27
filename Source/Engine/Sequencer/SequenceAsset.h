@@ -24,7 +24,6 @@
 
 namespace sw
 {
-    struct AssetComposeContext;
     struct SequenceSpanHandler;
 } // namespace sw
 
@@ -397,6 +396,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
+        /** @brief 프레임 번호의 범위 · 순서와 종류 · 채널 수를 봅니다. 칸 · 바인딩도 본다. 어긋난 곳마다 오류를 남깁니다(로더의 검사). */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 종류의 특성 항목을 반환합니다. 표에 없는 값이면 nullptr 입니다. */
         static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
         /** @brief 종류 표의 줄 수입니다(`SequenceItemKind::Count` 와 같다). 표를 도는 쪽(에디터 메뉴 · 테스트)이 `findItemKindInfo` 와 함께 쓴다. */
@@ -416,10 +417,8 @@ namespace sw
         [[nodiscard]] const SequenceTrackItem* findSpawnItem( uint32 bindingID ) const;
 
     private:
-        /** @brief 읽은 본문(@p xml)을 이 에셋에 채우고 의미를 봅니다. 파일 경로와 문자열 경로가 모이는 지점이며, 틀리면 빈 에셋이 남습니다. */
-        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
-        /** @brief 프레임 번호의 범위 · 순서와 종류 · 채널 수를 봅니다. 칸 · 바인딩도 본다. 어긋난 곳마다 오류를 남깁니다. */
-        [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
+        /** @brief 읽고 검사한 에셋의 커브를 시각 순으로 맞춥니다. 세 읽기 입구가 로더(`ReflectedXMLFile::loadAsset`) 뒤에 부릅니다. */
+        [[nodiscard]] bool finishLoad();
         /** @brief 바인딩 표(유일 · 0 아님 · `_nextBindingID` 아래)를 봅니다. */
         [[nodiscard]] bool validateBindings( string_view sourceLabel ) const;
 

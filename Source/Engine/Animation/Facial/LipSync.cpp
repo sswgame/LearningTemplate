@@ -9,11 +9,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -216,30 +216,12 @@ namespace sw
 {
     bool LipSyncSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
-    }
-
-    bool LipSyncSettings::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
-    {
-        *this = LipSyncSettings{};
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validate( sourceLabel ) )
-            return true;
-        *this = LipSyncSettings{};
-        return false;
+        return ReflectedXMLFile::loadAssetFromText( xml, sourceLabel, *this );
     }
 
     bool LipSyncSettings::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsCould", "Lip sync settings '%#' could not be read", path );
-            *this = LipSyncSettings{};
-            return false;
-        }
-        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     bool LipSyncSettings::validate( string_view sourceLabel ) const

@@ -15,7 +15,6 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
@@ -168,16 +167,6 @@ namespace sw
     bool ConfigManager::readConfigXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, const utf8* pSourceLabel )
     {
         return XMLSerializer::readStrict( pInstance, typeInfo, documentXML, SerializeContext::deriveFromDefault( SerializePurpose::Authoring ) ).report( pSourceLabel );
-    }
-
-    bool ConfigManager::readComposedXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, string_view sourceLabel, const AssetComposeContext& context )
-    {
-        string flatText;
-        bool   bComposed = false; // 펼칠 것이 없으면 flatText 는 빈 채로 남고 글을 그대로 읽는다
-        if ( AssetComposer::compose( documentXML, sourceLabel, context, flatText, bComposed ) == false )
-            return false;
-        const string label{ sourceLabel };
-        return readConfigXMLDocument( pInstance, typeInfo, bComposed ? string_view{ flatText } : documentXML, label.c_str() );
     }
 
     bool ConfigManager::readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const utf8* pSourceLabel )

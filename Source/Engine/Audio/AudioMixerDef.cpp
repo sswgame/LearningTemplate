@@ -8,44 +8,20 @@
 
 #include "Engine/Audio/DSP/AudioEffect.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
     bool AudioMixerDef::loadFromAsset( const AssetID& assetID )
     {
-        const string_view assetPath = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "AudioMixerDef.AudioMixerNotFound", "Audio mixer not found: %#", assetPath );
-            return false;
-        }
-        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     bool AudioMixerDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
-    }
-
-    bool AudioMixerDef::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
-    {
-        *this = AudioMixerDef{};
-        string flatText;
-        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
-            return false;
-        if ( XMLSerializer::deserialize( this, *StaticType(), flatText.empty() ? xmlText : string_view( flatText ) ) == false )
-        {
-            SW_LOG_ERROR_ID( "AudioMixerDef.AudioMixerCouldNot", "%#: audio mixer could not be read or holds unknown keys / values", sourceName );
-            return false;
-        }
-        return validate( sourceName );
+        return ReflectedXMLFile::loadAssetFromText( xmlText, sourceName, *this );
     }
 
     namespace

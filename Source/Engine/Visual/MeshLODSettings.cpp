@@ -4,43 +4,31 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
     bool MeshLODSettings::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
-    }
-
-    bool MeshLODSettings::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
-    {
-        *this = MeshLODSettings{};
-        // 키는 대소문자까지 맞아야 하고 모르는 속성 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 알린다). 두 값 모두 필수다(0 은 읽지 못한 값).
-        const bool bRead = ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context );
-        if ( bRead && _refineHysteresis > 0.0f && _skinnedBoundsScale >= 1.0f )
-            return true;
-        SW_LOG_ERROR_ID( "MeshLODSettings.Invalid", "Mesh LOD settings '%#' need _refineHysteresis > 0 and _skinnedBoundsScale >= 1", sourceLabel );
-        *this = MeshLODSettings{};
-        return false;
+        return ReflectedXMLFile::loadAssetFromText( xml, sourceLabel, *this );
     }
 
     bool MeshLODSettings::loadFromAsset( const AssetID& assetID )
     {
-        string text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "MeshLODSettings.CouldNotRead", "Mesh LOD settings '%#' could not be read", assetID.view() );
-            *this = MeshLODSettings{};
-            return false;
-        }
-        return loadComposed( text, assetID.view(), AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
+    }
+
+    bool MeshLODSettings::validate( string_view sourceLabel ) const
+    {
+        // 두 값 모두 필수다(0 은 읽지 못한 값).
+        if ( _refineHysteresis > 0.0f && _skinnedBoundsScale >= 1.0f )
+            return true;
+        SW_LOG_ERROR_ID( "MeshLODSettings.Invalid", "Mesh LOD settings '%#' need _refineHysteresis > 0 and _skinnedBoundsScale >= 1", sourceLabel );
+        return false;
     }
 
     const MeshLODSettings& MeshLODSettings::getDefault()

@@ -5,43 +5,18 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
-#include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
     bool HapticEffectDef::loadFromAsset( const AssetID& assetID )
     {
-        const string_view assetPath = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "HapticEffect.NotFound", "Haptic effect not found: %#", assetPath );
-            return false;
-        }
-        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     bool HapticEffectDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
-    }
-
-    bool HapticEffectDef::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
-    {
-        *this = HapticEffectDef{};
-        // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 키 목록은 통째로 바뀐다.
-        string flatText;
-        bool   bComposed = false;
-        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
-            return false;
-        if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
-        {
-            SW_LOG_ERROR_ID( "HapticEffect.CouldNotRead", "%#: haptic effect could not be read or holds unknown keys / values", sourceName );
-            return false;
-        }
-        return validate( sourceName );
+        return ReflectedXMLFile::loadAssetFromText( xmlText, sourceName, *this );
     }
 
     bool HapticEffectDef::validate( string_view sourceName ) const

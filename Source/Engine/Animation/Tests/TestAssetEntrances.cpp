@@ -139,7 +139,7 @@ SW_TEST_CASE( AssetEntranceTest, ReadingByIDRecordsTheComposition )
 }
 
 /**
- * @brief [AssetEntranceTest] 설정 문서 길(`ConfigManager::readComposedXMLDocument`)과 루트 찾기 길(`XMLReadUtil::parseAssetRoot`)로 읽는 형식도 id 로 읽으면 기록된다
+ * @brief [AssetEntranceTest] 데이터 에셋 로더(`ReflectedXMLFile::loadAsset`)와 루트 찾기 길(`XMLReadUtil::parseAssetRoot`)로 읽는 형식도 id 로 읽으면 기록된다
  * @details 예전에는 이 형식들의 `loadFromAsset` 이 글을 읽은 뒤 id 없이 글 입구로 넘겨 층 · 다시 읽기 · 접속 대조를 조용히 받지 못했다(린트 `hand-written-patterns` 의 assetEntrance 가 그 모양을 막는다).
  */
 SW_TEST_CASE( AssetEntranceTest, SettingsAndRootFormatsRecordTheComposition )

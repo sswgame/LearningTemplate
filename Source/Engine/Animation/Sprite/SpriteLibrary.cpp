@@ -8,35 +8,27 @@
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
     bool SpriteLibrary::loadFromAsset( const AssetID& assetID )
     {
         clear();
-        string text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "SpriteLibrary.CouldNotRead", "Sprite library '%#' could not be read", assetID.view() );
-            return false;
-        }
-        return loadComposed( text, assetID.view(), AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return finishLoad( ReflectedXMLFile::loadDesc( assetID, *this ), assetID.view() );
     }
 
     bool SpriteLibrary::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
+        clear();
+        return finishLoad( ReflectedXMLFile::loadDescFromText( xml, sourceLabel, *this ), sourceLabel );
     }
 
-    bool SpriteLibrary::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
+    bool SpriteLibrary::finishLoad( const bool bRead, string_view sourceLabel )
     {
-        clear();
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && resolveLoadedValues( sourceLabel ) )
+        if ( bRead && resolveLoadedValues( sourceLabel ) )
             return true;
         clear();
         return false;

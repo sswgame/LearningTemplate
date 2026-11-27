@@ -8,10 +8,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 #include <algorithm>
 
@@ -115,33 +114,23 @@ namespace sw
 {
     bool SequenceAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
-        *this                  = SequenceAsset{};
-        if ( path.empty() )
-            return false;
-
-        string text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
+        // 빈 id 는 "시퀀스 없음" 이다 — 읽기 오류로 알리지 않는다.
+        if ( assetID.view().empty() )
         {
-            SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence", "Could not read sequence '%#'", path );
+            *this = SequenceAsset{};
             return false;
         }
-        return readText( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this ) && finishLoad();
     }
 
     bool SequenceAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
-        *this = SequenceAsset{};
         if ( diskPath.empty() )
-            return false;
-
-        string text;
-        if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence2", "Could not read sequence file '%#'", diskPath.str() );
+            *this = SequenceAsset{};
             return false;
         }
-        return readText( text, diskPath.str(), AssetComposeContext::forType( *StaticType() ) );
+        return ReflectedXMLFile::loadAssetFromDiskFile( diskPath, *this ) && finishLoad();
     }
 
     bool SequenceAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -151,21 +140,13 @@ namespace sw
         return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
-    bool SequenceAsset::loadFromXMLText( string_view xmlView )
+    bool SequenceAsset::loadFromXMLText( string_view xml )
     {
-        return readText( xmlView, "<sequence text>", AssetComposeContext::forType( *StaticType() ) );
+        return ReflectedXMLFile::loadAssetFromText( xml, "<sequence text>", *this ) && finishLoad();
     }
 
-    bool SequenceAsset::readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
+    bool SequenceAsset::finishLoad()
     {
-        // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
-        *this = SequenceAsset{};
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) == false || validateFile( sourceLabel ) == false )
-        {
-            *this = SequenceAsset{};
-            return false;
-        }
         // 커브는 시각 순이어야 한다(`FloatCurve`). 손으로 고친 파일도 같은 순서 · 자동 접선이 되게 다시 센다.
         for ( SequenceKeyTrack& track : _listTrack )
         {
@@ -197,7 +178,7 @@ namespace sw
         return bValid;
     }
 
-    bool SequenceAsset::validateFile( string_view sourceLabel ) const
+    bool SequenceAsset::validate( string_view sourceLabel ) const
     {
         // 프레임 번호는 `kSequenceFrameLimit` 안이어야 아래의 `+ 1` 과 재생 · 타임라인 쪽의 뺄셈들이 넘치지 않는다.
         bool bValid = isFrameWithinLimit( _frameMin, sourceLabel, "_frameMin" );

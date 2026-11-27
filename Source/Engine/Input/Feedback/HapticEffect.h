@@ -19,11 +19,6 @@
 
 namespace sw
 {
-    struct AssetComposeContext;
-} // namespace sw
-
-namespace sw
-{
     /** @brief 진동 곡선의 키 하나입니다(그 시각의 두 모터 세기). */
     REFLECT()
     struct SW_API HapticKeyDef
@@ -84,10 +79,6 @@ namespace sw
 
         /** @brief @p durationSeconds 동안 같은 세기인 효과를 만듭니다(`GamepadDevice::playVibration`). */
         static shared_ptr<const HapticEffectDef> makeConstant( float32 lowFrequency, float32 highFrequency, float32 durationSeconds );
-
-    private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다(`AudioMusicDef::loadComposed` 와 같은 모양). */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
     };
 
     /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `HapticEffect.cpp` 의 정의 줄이 한다. */

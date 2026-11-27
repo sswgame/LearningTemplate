@@ -23,7 +23,7 @@ namespace sw
         return parseDesc( assetID.view(), assetID, text, pDesc, pTypeInfo );
     }
 
-    bool ReflectedXMLFile::loadDescFromDiskFileInternal( const AbsolutePath& diskPath, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::loadDescFromDiskFileInternal( const DiskPath& diskPath, void* pDesc, const TypeInfo* pTypeInfo )
     {
         // 디스크 파일은 부르는 쪽이 이름(`loadDescFromDiskFile`)으로 고른 것이다 — 에셋 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         string text;

@@ -5,17 +5,22 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
     bool PackStorageSettings::loadFromAsset( const AssetID& assetID )
     {
-        bool bValid = XMLSerializer::loadFromAsset( assetID, this, *StaticType() ) && _listStoredExtension.empty() == false;
+        return ReflectedXMLFile::loadAsset( assetID, *this );
+    }
+
+    bool PackStorageSettings::validate( string_view sourceLabel ) const
+    {
+        bool bValid = _listStoredExtension.empty() == false;
         for ( const string& extension : _listStoredExtension )
             bValid = bValid && extension.size() > 1 && extension[0] == '.';
         if ( bValid == false )
-            SW_LOG_ERROR_ID( "PackStorageSettings.Invalid", "Pack storage settings '%#' could not be read, name no stored extension, or name one that does not start with '.'", assetID.view() );
+            SW_LOG_ERROR_ID( "PackStorageSettings.Invalid", "Pack storage settings '%#' name no stored extension, or name one that does not start with '.'", sourceLabel );
         return bValid;
     }
 
