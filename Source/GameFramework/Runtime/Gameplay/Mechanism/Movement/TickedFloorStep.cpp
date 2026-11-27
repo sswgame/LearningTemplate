@@ -73,20 +73,22 @@ namespace sw
             _pScene->setBodyTransform( floor._body, position, rotation );
     }
 
-    void TickedFloorStep::beginTick( int64 tick )
+    void TickedFloorStep::beginTick( int64 fromTick, int64 tick )
     {
+        // 두 틱이 멀어도 걸음 하나(_stepSeconds) 안에 그 사이를 가는 속도다 — 디딘 몸이 바닥 위의 같은 자리에 남는다.
+        const float32 tickSpan = static_cast<float32>( tick - fromTick );
         for ( const Floor& floor : _listFloor )
         {
-            place( floor, tick - 1 );
+            place( floor, fromTick );
             float3     fromPosition;
             float3     toPosition;
             quaternion rotation;
-            const bool bPosed = floor._pFloor->computePose( static_cast<float64>( tick - 1 ) * _stepSeconds, fromPosition, rotation ) &&
+            const bool bPosed = floor._pFloor->computePose( static_cast<float64>( fromTick ) * _stepSeconds, fromPosition, rotation ) &&
                                 floor._pFloor->computePose( static_cast<float64>( tick ) * _stepSeconds, toPosition, rotation );
             if ( bPosed == false || _stepSeconds <= 0.0 )
                 continue;
             _pScene->setLinearVelocity( floor._body, ( toPosition - fromPosition ) * static_cast<float32>( 1.0 / _stepSeconds ) );
-            _pScene->setAngularVelocity( floor._body, float3{ 0.0f, floor._pFloor->getTurnRate().radians(), 0.0f } );
+            _pScene->setAngularVelocity( floor._body, float3{ 0.0f, floor._pFloor->getTurnRate().radians() * tickSpan, 0.0f } );
         }
     }
 

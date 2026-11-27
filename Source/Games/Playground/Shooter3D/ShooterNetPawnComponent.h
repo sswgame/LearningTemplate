@@ -293,8 +293,8 @@ namespace sw
             uint8            _bSeen{ SW_FALSE };  ///< 이번 프레임의 보이는 목록에 있다
         };
 
-        /** @brief 의도 하나로 몸을 한 걸음 옮깁니다(서버). */
-        void stepMovement( ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode, int64 floorTick, const ControlIntent& intent );
+        /** @brief 의도 하나로 몸을 한 걸음 옮깁니다(서버). 디딘 바닥은 @p fromFloorTick(앞 명령의 바닥 틱) 자세에서 @p floorTick 자세로 싣습니다. */
+        void stepMovement( ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode, int64 fromFloorTick, int64 floorTick, const ControlIntent& intent );
         /** @brief 클라이언트의 이번 프레임 걸음들과 남의 몸 · 화면 시각입니다(틱 뒤 · 게임 스레드) — 서버와 같은 자리에서 같은 순서로 돈다. */
         void runClientFrame( GameObjectManager& manager );
         void stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode );

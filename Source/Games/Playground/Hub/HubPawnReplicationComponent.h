@@ -18,6 +18,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -238,9 +239,12 @@ namespace sw
         void         updateRemotePawnList( GameObjectManager& manager );
 
         // 공용
-        /** @brief 한 틱의 다음 상태입니다(절대 → 절대) — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다). */
+        /**
+         * @brief 한 틱의 다음 상태입니다(절대 → 절대) — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다).
+         * @param fromFloorTick 바닥을 실어 오는 앞 명령의 바닥 틱입니다(서버). 없으면 이 명령의 바닥 틱 − 1 입니다.
+         */
         HubPawnState simulateTick( GameObjectManager& manager, const HubSimulationComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input, uint32 avatarID,
-                                   CharacterMotionPass pass ) const;
+                                   CharacterMotionPass pass, optional<int64> fromFloorTick = nullopt ) const;
         HubPawnState captureState( GameObjectManager& manager, const GameObject& pawnObject ) const;
         /** @brief 상태를 몸(걷는 몸 또는 탄 말)에 옮깁니다. */
         void        applyState( GameObjectManager& manager, GameObject& pawnObject, const HubPawnState& state ) const;

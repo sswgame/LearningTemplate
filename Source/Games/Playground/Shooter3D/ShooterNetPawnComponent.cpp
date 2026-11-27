@@ -422,11 +422,12 @@ namespace sw
             {
                 // 나감 처리(점수 · 빈 자리)는 이 프레임의 걸음 뒤다 — 끊긴 연결의 주체는 이미 0 이라 앉을 때 적어 둔 계정을 쓴다
                 _interest.removeObserver( pawn._connectionID );
-                pawn._leftAccountID = pawn._accountID;
-                pawn._accountID     = 0;
-                pawn._connectionID  = constant::invalid_index::kInt32;
-                pawn._nextInputTick = kInputTickUnknown;
-                pawn._bLeft         = SW_TRUE;
+                pawn._leftAccountID   = pawn._accountID;
+                pawn._accountID       = 0;
+                pawn._connectionID    = constant::invalid_index::kInt32;
+                pawn._nextInputTick   = kInputTickUnknown;
+                pawn._bFloorTickKnown = SW_FALSE; // 다음 사람의 입력 시계는 다르다 — 앞사람의 바닥 틱에서 싣지 않는다
+                pawn._bLeft           = SW_TRUE;
                 if ( RemoteControllerComponent* pRemote = findRemoteController( *getOwner()->getManager(), pawn ) )
                     pRemote->clearReceived(); // 나간 사람의 마지막 의도를 되풀이하지 않는다
             }
@@ -499,10 +500,12 @@ namespace sw
                 else
                     ++_rejectedClaimCount; // 아직 오지 않은 걸음을 지어냈거나 줄이 찼다
             }
-            const bool bDown = pPlayer != nullptr && pPlayer->isAlive() == false;                         // 쓰러진 몸은 걷지 않는다 — 같은 프레임의 앞 걸음에서 쓰러졌을 수 있다
+            const bool bDown = pPlayer != nullptr && pPlayer->isAlive() == false; // 쓰러진 몸은 걷지 않는다 — 같은 프레임의 앞 걸음에서 쓰러졌을 수 있다
+            // 바닥은 앞 명령이 선 틱에서 싣는다. 멈춤 뒤 차이를 다시 맞추면(`TickedFloorOffset::kMaxDrift` 초과) 두 명령의 바닥 틱이 한 틱보다 멀어, 한 틱만 실으면 몸이 바닥 위에서 그만큼 미끄러진다.
+            const optional<int64> previousFloorTick = pawn._bFloorTickKnown == SW_TRUE ? optional<int64>{ pawn._floorTick } : nullopt;
             TickedFloorOffset::update( _tick, *inputTick, pawn._floorTickOffset, pawn._bFloorTickKnown ); // 명령마다 바닥은 그 명령의 틱이다
             pawn._floorTick = TickedFloorOffset::findTick( pawn._floorTickOffset, pawn._bFloorTickKnown, *inputTick ).value_or( static_cast<int64>( _tick ) );
-            stepMovement( *pMovement, gameMode, pawn._floorTick, bDown ? Internal::makeStillIntent( intent ) : intent );
+            stepMovement( *pMovement, gameMode, previousFloorTick.value_or( pawn._floorTick - 1 ), pawn._floorTick, bDown ? Internal::makeStillIntent( intent ) : intent );
             if ( pPlayer != nullptr )
                 pPlayer->stepNetCommand( manager, intent, StepSeconds{ _tickInterval }, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
             inputTick = _server.popNextIntent( pawn._connectionID, intent, pawnEntityID, _listClaim );
@@ -511,7 +514,7 @@ namespace sw
         if ( pawn._connectionID < 0 )
         {
             pawn._floorTick = static_cast<int64>( _tick );
-            stepMovement( *pMovement, gameMode, pawn._floorTick, ControlIntent{} );
+            stepMovement( *pMovement, gameMode, pawn._floorTick - 1, pawn._floorTick, ControlIntent{} );
         }
     }
 
@@ -743,9 +746,10 @@ namespace sw
         return TickedFloorOffset::findTick( _floorTickOffset, _bFloorTickKnown, _tick );
     }
 
-    void ShooterNetPawnComponent::stepMovement( ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode, int64 floorTick, const ControlIntent& intent )
+    void ShooterNetPawnComponent::stepMovement( ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode, int64 fromFloorTick, int64 floorTick, const ControlIntent& intent )
     {
-        computeFloorSteps( gameMode, floorTick, _listFloorScratch );
+        const float64 interval = static_cast<float64>( _tickInterval );
+        gameMode.computeFloorSteps( static_cast<float64>( fromFloorTick ) * interval, static_cast<float64>( floorTick ) * interval, _listFloorScratch );
         const ShooterMoveState before = movement.getState();
         const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, gameMode.getBoxes(), _listFloorScratch, before, intent, _tickInterval );
         movement.setState( next, float3{ next._position._x - before._position._x, 0.0f, next._position._z - before._position._z } * ( 1.0f / _tickInterval ) );

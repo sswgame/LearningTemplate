@@ -428,6 +428,8 @@ namespace sw
         {
             lastTick         = inputTick;
             input._inputTick = *inputTick;
+            // 바닥은 앞 명령이 선 틱에서 싣는다 — 멈춤 뒤 차이를 다시 맞추면 두 명령의 바닥 틱이 한 틱보다 멀다(`TickedFloorStep::beginTick`).
+            const optional<int64> previousFloorTick = pawn._bFloorTickKnown == SW_TRUE ? optional<int64>{ pawn._floorTick } : nullopt;
             TickedFloorOffset::update( _tick, *inputTick, state._floorTickOffset, state._bFloorTickKnown );
             pawn._floorTickOffset = state._floorTickOffset;
             pawn._bFloorTickKnown = state._bFloorTickKnown;
@@ -435,7 +437,7 @@ namespace sw
             const bool bOwnPawn   = input._pawnEntityID == makePawnEntityID( pawn._avatarID, state._mountNumber );
             if ( pRemote != nullptr )
                 pRemote->receiveIntent( *inputTick, bOwnPawn ? input._intent : Internal::makeNeutralIntent( input._intent ) ); // 상호작용(타기 · 내리기)은 이 의도로 서버의 폰이 한다
-            state = simulateTick( manager, hub, *pObject, state, input, pawn._avatarID, CharacterMotionPass::Live );
+            state = simulateTick( manager, hub, *pObject, state, input, pawn._avatarID, CharacterMotionPass::Live, previousFloorTick );
             if ( hub.findServer()->moveAvatar( pawn._avatarID, Internal::getPosition( state ), StepSeconds{ _tickInterval }, state._mountNumber != 0 ) == HubActionResult::Ok )
                 pawn._acceptedPosition = Internal::getPosition( state );
             else
@@ -805,12 +807,12 @@ namespace sw
     // 공용
     // ------------------------------------------------------------------------------
     HubPawnState HubPawnReplicationComponent::simulateTick( GameObjectManager& manager, const HubSimulationComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input,
-                                                            uint32 avatarID, CharacterMotionPass pass ) const
+                                                            uint32 avatarID, CharacterMotionPass pass, optional<int64> fromFloorTick ) const
     {
         const WorldOrigin&    origin    = manager.getWorldOrigin();
         const optional<int64> floorTick = TickedFloorOffset::findTick( state._floorTickOffset, state._bFloorTickKnown, input._inputTick );
         if ( floorTick.has_value() && _pFloorStep != nullptr )
-            _pFloorStep->beginTick( *floorTick );
+            _pFloorStep->beginTick( fromFloorTick.value_or( *floorTick - 1 ), *floorTick );
         const HubPawnState  local    = toLocalState( origin, state );
         HubPawnState        next     = local;
         const bool          bOwnPawn = input._pawnEntityID == makePawnEntityID( avatarID, state._mountNumber );

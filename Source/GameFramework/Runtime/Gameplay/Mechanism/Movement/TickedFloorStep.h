@@ -53,8 +53,11 @@ namespace sw
         TickedFloorStep( const TickedFloorStep& )            = delete;
         TickedFloorStep& operator=( const TickedFloorStep& ) = delete;
 
-        /** @brief 틱 @p tick 의 명령을 풀기 전입니다 — 바디를 (틱 − 1) 자세에 두고 이 틱까지의 속도를 줍니다. */
-        void beginTick( int64 tick );
+        /**
+         * @brief 틱 @p tick 의 명령을 풀기 전입니다 — 바디를 @p fromTick(앞 명령의 바닥 틱, 보통 tick − 1) 자세에 두고 이 틱까지의 속도를 줍니다.
+         * @details 서버가 차이를 다시 맞추면(`TickedFloorOffset::kMaxDrift` 초과) 두 명령의 바닥 틱이 한 틱보다 멀다. 그때도 앞 자세에서 실어야 디딘 몸이 바닥 위에서 미끄러지지 않는다.
+         */
+        void beginTick( int64 fromTick, int64 tick );
         /** @brief 틱 @p tick 의 명령을 푼 뒤입니다 — 바디를 이 틱의 자세에 둡니다. */
         void endTick( int64 tick );
 

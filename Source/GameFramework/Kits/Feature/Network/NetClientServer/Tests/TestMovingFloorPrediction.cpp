@@ -96,7 +96,7 @@ namespace
         {
             TickedFloorStep floorStep{ _manager, kTick };
             const int64     floorTick = static_cast<int64>( input._tick ) + kFloorTickOffset;
-            floorStep.beginTick( floorTick );
+            floorStep.beginTick( floorTick - 1, floorTick );
             const CharacterMoveState next = _pMovement->simulate( state, input._intent, kTick, pass );
             floorStep.endTick( floorTick );
             _pMovement->setState( next ); // 접촉은 새 자세의 바닥에서 찾는다
@@ -230,9 +230,28 @@ SW_TEST_CASE( MovingFloorPredictionTest, BodiesReturnAfterTheNetStep )
     SW_EXPECT_TRUE( float3::getDistance( before, pBody->getWorldPosition() ) < 1.0e-4f );
     {
         TickedFloorStep floorStep{ world._manager, FloorTestWorld::kTick };
-        floorStep.beginTick( 5 );
+        floorStep.beginTick( 4, 5 );
         floorStep.endTick( 5 );
     }
     world._manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( float3::getDistance( before, pBody->getWorldPosition() ) < 0.1f );
+}
+
+/** @brief [MovingFloorPredictionTest] 서버가 차이를 다시 맞춰 바닥 틱이 여러 틱 뛰어도 선 몸은 바닥 위의 같은 자리에 남는다 */
+SW_TEST_CASE( MovingFloorPredictionTest, RiderStaysPutAcrossAFloorTickJump )
+{
+    FloorTestWorld world;
+    world.build( FloorTestKind::PingPong );
+    world.step( makeInput( 1, 1000 ) );
+    const float3    before   = world.computeFloorLocal( 1 );
+    constexpr int64 kJump    = TickedFloorOffset::kMaxDrift + 1; // 다시 맞추는 가장 작은 어긋남
+    const int64     fromTick = 1 + FloorTestWorld::kFloorTickOffset;
+    {
+        TickedFloorStep floorStep{ world._manager, FloorTestWorld::kTick };
+        floorStep.beginTick( fromTick, fromTick + kJump );
+        world._state = world._pMovement->simulate( world._state, makeInput( 2, 1000 )._intent, FloorTestWorld::kTick, CharacterMotionPass::Live );
+        floorStep.endTick( fromTick + kJump );
+        world._pMovement->setState( world._state );
+    }
+    SW_EXPECT_TRUE( float3::getDistance( before, world.computeFloorLocal( static_cast<uint32>( 1 + kJump ) ) ) <= 0.05f ); // 한 틱만 실으면 0.27 m 밀린다
 }
