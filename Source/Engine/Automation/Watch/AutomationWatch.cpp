@@ -4,12 +4,15 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -116,12 +119,21 @@ namespace sw
     {
         if ( registration._pQueryFunction != nullptr )
             return registration._pQueryFunction( query, outValue );
-        float64    number = 0.0;
-        const bool bRead  = registration._pSceneFunction != nullptr ? registration._pSceneFunction( SceneIterationKey{}, query._pManager, number ) : registration._pFunction( query._pManager, number );
-        if ( bRead == false )
-            return false;
-        outValue.setNumber( number );
-        return true;
+        if ( registration._pSceneFunction != nullptr )
+            return registration._pSceneFunction( SceneIterationKey{}, query._pManager, outValue );
+        return registration._pFunction( query._pManager, outValue );
+    }
+
+    void AutomationWatchValue::setEnumValue( const hashed_string& enumTypeFqn, int64 value )
+    {
+        if ( const utf8* pName = findEnumName( enumTypeFqn, value ); pName != nullptr )
+        {
+            setText( pName );
+            return;
+        }
+        StringBuilder<constant::buffer::kMax256> text;
+        text.appendFormat( "%# value %# has no ENUM() name", enumTypeFqn.view(), value );
+        setText( text.view() );
     }
 
     template <typename TObject, typename TManager>

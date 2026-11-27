@@ -32,6 +32,13 @@ namespace sw
                 return AutomationReadiness::waiting( pendingCount, "memory exports are writing CSV files" );
             }
 
+            /** @brief 감시 값 `Memory.TagCount` 입니다. 등록 매크로가 함수를 템플릿 인자로 받으므로 람다가 아닌 이름 붙은 함수다(C++17). */
+            [[nodiscard]] static bool readTagCountWatch( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( kMemoryTagCount );
+                return true;
+            }
+
             /** @brief 감시 값 `Memory.ExportPendingWrites` — 워커에서 쓰는 중인 메모리 내보내기 수입니다. */
             [[nodiscard]] static bool readPendingWriteWatch( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -47,12 +54,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( memoryTagCount, "Memory.TagCount", "Memory tags this build counts (the rows of a Tags sheet)", []( const GameObjectManager* pManager, float64& outValue )
-    {
-        (void)pManager;
-        outValue = static_cast<float64>( kMemoryTagCount );
-        return true;
-    } );
+    SW_AUTOMATION_WATCH( memoryTagCount, "Memory.TagCount", "Memory tags this build counts (the rows of a Tags sheet)", &MemoryExportSubsystemInternal::readTagCountWatch );
     SW_AUTOMATION_FINISH_BLOCKER( memoryExportWrites, "MemoryExportWrites", &MemoryExportSubsystemInternal::readPendingWrites );
     SW_AUTOMATION_WATCH( memoryExportPendingWrites, "Memory.ExportPendingWrites", "Memory snapshot CSV exports still being written on a worker",
                          &MemoryExportSubsystemInternal::readPendingWriteWatch );
