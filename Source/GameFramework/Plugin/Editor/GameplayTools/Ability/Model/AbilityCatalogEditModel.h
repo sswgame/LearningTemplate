@@ -18,6 +18,15 @@
 
 namespace sw::editor
 {
+    /** @brief 마지막 런타임 검증 결과입니다(감시 값 `Editor.AbilityCatalogValidation`). */
+    ENUM()
+    enum class AbilityCatalogValidation : uint8
+    {
+        NotRun = 0,
+        Passed,
+        Failed,
+    };
+
     /** @brief 카탈로그 항목의 종류입니다(루트 아래 원소 이름). */
     ENUM()
     enum class AbilityEntryKind : uint8

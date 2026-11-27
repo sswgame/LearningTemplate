@@ -21,7 +21,6 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h"
@@ -36,15 +35,6 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 마지막 런타임 검증 결과입니다(감시 값 `Editor.AbilityCatalogValidation`). */
-    ENUM()
-    enum class AbilityCatalogValidation : uint8
-    {
-        NotRun = 0,
-        Passed,
-        Failed,
-    };
-
     /**
      * @class AbilityCatalogPanel
      * @brief 파일 머리말 참고.
@@ -595,5 +585,3 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdAbilityCatalog", "RemoveTip" ) );
     }
 } // namespace sw::editor
-
-#include "AbilityCatalogPanel.cpp.gen.inl"
