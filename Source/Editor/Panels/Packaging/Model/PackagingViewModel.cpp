@@ -150,8 +150,12 @@ namespace sw::editor
             listArgument.insert( listArgument.end(), { "--game", _listGame[_gameIndex] } );
         if ( isDesktopPlatform() && _rhiIndex > 0 )
             listArgument.insert( listArgument.end(), { "--rhi", kArrBackend[_rhiIndex] } );
+        // 더 큰 실행의 일부(백엔드별 체인)면 실행 뿌리 아래에 둔다 — 동시에 도는 형제가 한 산출 폴더의 팩을 함께 쓰다 WinError 32 로 졌다(버그 리포트와 같은 규칙).
+        const ProcessRoots& roots = ProcessRoots::get();
         if ( _outputFolder.empty() == false )
             listArgument.insert( listArgument.end(), { "--output", _outputFolder } );
+        else if ( roots._bRunFromParent )
+            listArgument.insert( listArgument.end(), { "--output", roots._run.join( "Packages" ).str() } );
         if ( _bSkipBuild )
         {
             listArgument.push_back( "--skip-build" );
