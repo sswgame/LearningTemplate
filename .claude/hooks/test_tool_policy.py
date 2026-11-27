@@ -161,6 +161,15 @@ class AgentDispatchTest(unittest.TestCase):
         call = {"model": "opus", "effort": "high", "prompt": "작업 종류: implement\n고친다"}
         self.assertIn("빠진 것", self.check(call, self.rules))
 
+    def test_script_run_kind_needs_its_own_text(self):
+        common = ("C++17 만 쓴다. 빌드 금지. 새 린트 규칙 금지. 한국어. 커밋은 원인/조치/결과. "
+                  "docs 에는 계획 · 할 일 · 규칙만. NEXT: … 끝.")
+        call = {"model": "haiku", "effort": "low", "prompt": "작업 종류: script-run\n" + common}
+        self.assertIn("돌릴 명령", self.check(call, self.rules))
+        own = " 돌릴 명령 목록과 차례는 아래와 같다. 기대와 다르면 멈추고 보고한다. 손 편집 금지."
+        self.assertIsNone(self.check({**call, "prompt": call["prompt"] + own}, self.rules))
+        self.assertIn("model", self.check({**call, "model": "sonnet", "prompt": call["prompt"] + own}, self.rules))
+
     def test_inherited_call_and_refused_isolation(self):
         self.assertIsNone(self.check({"subagent_type": "fork", "prompt": "이어서"}, self.rules))
         self.assertIsNotNone(self.check({"subagent_type": "fork", "isolation": "worktree", "prompt": "x"}, self.rules))

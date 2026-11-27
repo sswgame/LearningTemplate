@@ -17,8 +17,10 @@ RULES_PATH = Path(__file__).with_name("HookRules.json")
 KIND_PATTERN = re.compile(r"작업 종류:\s*([a-z-]+)")
 
 
-def find_missing(prompt: str, rules: dict) -> list[str]:
-    return [item["name"] for item in rules["required"] if not any(re.search(pattern, prompt) for pattern in item["anyOf"])]
+def find_missing(prompt: str, rules: dict, kind: dict) -> list[str]:
+    """공통 필수 문구와 그 종류만의 필수 문구(kind 의 required) 가운데 지시문에 없는 것의 이름입니다."""
+    items = rules["required"] + kind.get("required", [])
+    return [item["name"] for item in items if not any(re.search(pattern, prompt) for pattern in item["anyOf"])]
 
 
 def check(tool_input: dict, rules: dict) -> str | None:
@@ -46,7 +48,7 @@ def check(tool_input: dict, rules: dict) -> str | None:
     if wrong:
         return f"작업 종류 {name} 에 맞지 않는 호출: " + ", ".join(wrong) + " (.claude/hooks/HookRules.json agentPrompt.kinds)."
     if kind["edits"]:
-        missing = find_missing(prompt, rules)
+        missing = find_missing(prompt, rules, kind)
         if missing:
             return "작업자 지시문에 빠진 것: " + " · ".join(missing) + " — 지시문에 적고 다시 맡긴다(.claude/hooks/HookRules.json agentPrompt)."
     return None

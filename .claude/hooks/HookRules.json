@@ -21,6 +21,15 @@
       "web": { "_comment": "공식 문서 · 웹 페이지 읽기", "subagentTypes": ["web-fetch"], "models": ["haiku", "sonnet"], "efforts": ["low"], "edits": false },
       "survey": { "_comment": "전수조사 · 후보 목록을 scratchpad 보고서로(코드를 고치지 않는다)", "subagentTypes": ["general-purpose", "Explore"], "models": ["sonnet"], "efforts": ["medium", "high"], "edits": false },
       "mechanical": { "_comment": "표 · 스크립트로 되는 이전 · 개명 · 주석 다듬기 · 문서 정리", "subagentTypes": ["general-purpose"], "models": ["sonnet"], "efforts": ["medium"], "edits": true },
+      "script-run": {
+        "_comment": "정해진 명령 차례만 돌리고 결과를 옮긴다(쌍 표 --reapply · 치환 스크립트 다시 돌리기 · syntax · --ratchet · 보고 집계). 판단 · 손 편집 · 충돌 풀기는 하지 않는다 — 결과가 기대와 다르면 멈추고 보고한다. 결과 diff 검토는 sonnet 이상 몫(2026-11-27 사용자 \"haiku 등도 사용하는게 나은 부분\").",
+        "subagentTypes": ["general-purpose"], "models": ["haiku"], "efforts": ["low"], "edits": true,
+        "required": [
+          { "name": "돌릴 명령 목록과 차례", "anyOf": ["명령[^\\n]{0,10}(목록|차례|순서)"] },
+          { "name": "기대 결과와, 다르면 멈추고 보고", "anyOf": ["다르면[^\\n]{0,20}(멈추|멈춘)"] },
+          { "name": "스크립트 밖의 손 편집 금지", "anyOf": ["손 편집[^\\n]{0,10}(금지|하지 않)"] }
+        ]
+      },
       "implement": { "_comment": "기능 · 결함 수정, 테스트 고치기", "subagentTypes": ["general-purpose"], "models": ["opus"], "efforts": ["medium", "high"], "edits": true },
       "restructure": { "_comment": "구조 개편, 여러 갈래 통합 · 충돌 풀기, 엔진 비교 설계", "subagentTypes": ["general-purpose"], "models": ["opus"], "efforts": ["high", "xhigh"], "edits": true },
       "review": { "_comment": "통합 전 독립 검토", "subagentTypes": ["code-reviewer"], "models": ["opus"], "efforts": ["high"], "edits": false },
