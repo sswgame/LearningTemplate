@@ -3920,7 +3920,6 @@
 		       sourceHash="c55ac6cff029edfb" />
 		<entry key="GM Tool" text="GM 도구" sourceHash="182c1e31ac2d0a6d" />
 		<entry key="Game" text="게임" sourceHash="b568a67e05a19907" />
-		<entry key="Logic Circuit Graph" text="논리 회로 그래프" sourceHash="8ade24f69ad468e4" />
 		<entry key="Global Variables" text="전역 변수" sourceHash="b27a2fd4b0389bc7" />
 		<entry key="Hierarchy" text="계층" sourceHash="36b7d22c88c2b948" />
 		<entry key="Hierarchy / Skeleton View" text="계층 / 스켈레톤 보기" sourceHash="c48a10a0462f47f9" />
@@ -3942,6 +3941,7 @@
 		       text="플레이 중 플레이어를 두고 씬 뷰로 나가거나 다시 조종합니다"
 		       sourceHash="149e4a20913a6086" />
 		<entry key="Load Component Preset" text="컴포넌트 프리셋 불러오기" sourceHash="12d71a0eee04b169" />
+		<entry key="Logic Circuit Graph" text="논리 회로 그래프" sourceHash="42faa77736386516" />
 		<entry key="Map Check" text="맵 검사" sourceHash="56e1a696a129d005" />
 		<entry key="Material" text="머티리얼" sourceHash="b19c9290038389c0" />
 		<entry key="Material Graph" text="머티리얼 그래프" sourceHash="1bb691816e07ba24" />
@@ -3986,7 +3986,9 @@
 		<entry key="Open the character editor panel"
 		       text="캐릭터 편집 패널을 엽니다"
 		       sourceHash="d69cd45c0ec1732c" />
-		<entry key="Open the logic circuit graph panel" text="논리 회로 그래프 패널을 엽니다" sourceHash="177db3f3b1f9a37b" />
+		<entry key="Open the logic circuit graph panel"
+		       text="논리 회로 그래프 패널을 엽니다"
+		       sourceHash="715c368881b1c209" />
 		<entry key="Open the material graph editor"
 		       text="머티리얼 그래프 편집기를 엽니다"
 		       sourceHash="4d0d53286b4789c0" />
@@ -4018,7 +4020,7 @@
 		       sourceHash="906dceecafb06954" />
 		<entry key="Opens the logic circuit graph window"
 		       text="논리 회로 그래프 창을 엽니다"
-		       sourceHash="596c0e820dae06af" />
+		       sourceHash="ffc48aa3971702e4" />
 		<entry key="Opens the material graph window (node canvas, live preview, save)"
 		       text="머티리얼 그래프 창을 엽니다(노드 캔버스, 실시간 미리 보기, 저장)"
 		       sourceHash="1006811dc4dc8fc0" />

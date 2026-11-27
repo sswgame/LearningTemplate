@@ -4467,8 +4467,8 @@
 		<entry key="EdVerb.Apply" source="Apply">
 			<origins>
 				<item>Source/Editor/Panels/Modules/ModulesPanel.cpp</item>
-				<item>Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Cancel" source="Cancel">
@@ -4487,9 +4487,9 @@
 		<entry key="EdVerb.Clear" source="Clear">
 			<origins>
 				<item>Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp</item>
-				<item>Source/Editor/Panels/OutputLog/OutputLogPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+				<item>Source/Editor/Panels/OutputLog/OutputLogPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>
 		</entry>
@@ -4543,9 +4543,9 @@
 			<origins>
 				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+				<item>Source/Editor/Panels/Modules/ModulesPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
 				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
-				<item>Source/Editor/Panels/Modules/ModulesPanel.cpp</item>
 				<item>Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp</item>
 				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
 			</origins>
@@ -4579,8 +4579,8 @@
 		<entry key="EdVerb.Reset" source="Reset">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
-				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp</item>
+				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>
 				<item>Source/Editor/Panels/Preferences/ShortcutsPanel.cpp</item>
 			</origins>
 		</entry>
@@ -4603,6 +4603,7 @@
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
@@ -4610,7 +4611,6 @@
 				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
-				<item>Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp</item>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 				<item>Source/Editor/Panels/TileSet/TileSetPanel.cpp</item>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
@@ -10622,12 +10622,6 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Logic Circuit Graph" source="Logic Circuit Graph" context="Editor command name">
-			<origins>
-				<item>editor/commands/gameplaytools.commands.xml</item>
-				<item>editor/panels/editor.panels.xml</item>
-			</origins>
-		</entry>
 		<entry key="Global Variables" source="Global Variables" context="EditorPanelTitles._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -10699,6 +10693,12 @@
 		<entry key="Load Component Preset" source="Load Component Preset" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Logic Circuit Graph" source="Logic Circuit Graph" context="Editor command name">
+			<origins>
+				<item>editor/commands/gameplaytools.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Map Check" source="Map Check" context="EditorPanelTitles._label">

@@ -94,7 +94,7 @@
 		       sourceHash="4609bfba81986750" />
 		<entry key="EdPlugin.SelectAnObjectThatHasALogicCircuit"
 		       text="ロジック回路コンポーネントを持つオブジェクトを選びます"
-		       sourceHash="2b3af1b8adec3a10" />
+		       sourceHash="6a53e271e5c42baa" />
 		<entry key="EdPlugin.TargetObject" text="対象オブジェクト" sourceHash="385e62428acaa50f" />
 		<entry key="EdPlugin.Task" text="タスク" sourceHash="03ee3cfb0919c62c" />
 		<entry key="EdPlugin.TheNodeEditorCouldNotBeCreated"
