@@ -29,7 +29,7 @@ from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.time_limits import read_script_time_limit
-from common.log_lines import problem_lines
+from common.log_lines import SERVER_ON_SHARED_HOST_LOG_IDS, problem_lines
 from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, USER_DATA_ROOT_ENVIRONMENT, ChildProcess, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
 
@@ -150,7 +150,7 @@ def _finish(list_server: list[ChildProcess], list_client: list[ChildProcess], pr
         if server.return_code != 0:
             problems.append(f"the {server.name} server exited with code {server.return_code} (log: {server.log})")
     for process in (*list_server, *list_client):
-        problems += problem_lines(process.name, process.text())
+        problems += problem_lines(process.name, process.text(), SERVER_ON_SHARED_HOST_LOG_IDS)
     return report("login-connect-session", problems, [process.log for process in (*list_server, *list_client)], ok_message)
 
 

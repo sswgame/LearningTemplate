@@ -16,6 +16,10 @@ from typing import Iterator
 _LEVEL = re.compile(r"\[(Error|Warning|Info|Trace)\] (.*)$")  # 수준 앞(시각 · 태그)은 보지 않는다 — 로거가 서기 전의 stderr 단언 줄도 `[Error] [id:…] …` 다
 _ID = re.compile(r"\[id:([^\]]+)\] (.*)$")
 
+# 전용 서버를 클라이언트 · 다른 테스트와 같은 기계에서 돌리는 세션이 허용하는 id. 운영에는 남겨야 하는 경고지만 테스트 판정은 OS 스케줄링과 무관해야 한다
+# (에디터 넷 시나리오들의 `<AllowLog id="Server.ServerBehindDroppedTicks">` 와 같은 까닭 — 병렬 ctest 에서 floor · mmo 가 이 경고로만 졌다).
+SERVER_ON_SHARED_HOST_LOG_IDS = frozenset({"Server.ServerBehindDroppedTicks"})
+
 
 @dataclass(frozen=True)
 class LogLine:
