@@ -79,7 +79,7 @@ namespace sw
             return false;
         CharacterAppearanceSpec input = _spec;
         if ( pEquipment != nullptr )
-            AppearanceInputUtil::applyEquipment( *pEquipment, input );
+            input.applyEquipment( *pEquipment );
         ResolvedAppearance resolved;
         ResolvedAppearance::resolve( database, input, resolved );
         if ( _resolveCount > 0 )

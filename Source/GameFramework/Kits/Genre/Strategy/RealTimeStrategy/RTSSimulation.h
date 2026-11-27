@@ -376,7 +376,7 @@ namespace sw
         RTSVisibility getVisibility( int32 player, const int2& cell ) const;
         /** @brief 그 플레이어(팀)가 지금 그 유닛을 볼 수 있는지 반환합니다. */
         bool isVisibleTo( int32 player, RTSUnitID unitID ) const;
-        /** @brief 두 플레이어가 서로 적인지 반환합니다. 팀이 다르면 적이며(`TeamAttitudeUtil::isHostile`), 주인 없음 같은 없는 플레이어는 누구와도 적이 아닙니다. */
+        /** @brief 두 플레이어가 서로 적인지 반환합니다. 팀이 다르면 적이며(`isHostileTeam`), 주인 없음 같은 없는 플레이어는 누구와도 적이 아닙니다. */
         bool areEnemies( int32 playerA, int32 playerB ) const;
         /** @brief 남은 팀이 하나면 그 팀을, 아니면 -1 을 반환합니다. */
         int32 getWinningTeam() const { return _winningTeam; }

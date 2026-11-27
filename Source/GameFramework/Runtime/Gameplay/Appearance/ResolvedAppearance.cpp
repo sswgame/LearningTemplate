@@ -17,7 +17,6 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
@@ -1292,36 +1291,5 @@ namespace sw
             builder.addInt( detached._bFromDamageStage );
         }
         return builder._value;
-    }
-
-    void AppearanceInputUtil::applyEquipment( const Equipment& equipment, CharacterAppearanceSpec& inoutSpec )
-    {
-        const ItemCatalog* pCatalog = equipment.getCatalog();
-        for ( AppearanceSlotRequest& request : inoutSpec._listSlot )
-        {
-            const EquipmentSlot* pEquipSlot = nullptr;
-            for ( const EquipmentSlot& equipSlot : equipment.getSlots() )
-            {
-                if ( equipSlot._name == request._slot )
-                    pEquipSlot = &equipSlot;
-            }
-            const bool bEmpty = pEquipSlot == nullptr || pEquipSlot->_item.isEmpty();
-            request._itemID   = bEmpty ? hashed_string{} : pEquipSlot->_item._itemID;
-            if ( bEmpty )
-            {
-                request._customization.clear();
-                request._listDetachedPart.clear();
-                request._damage      = 0.0f;
-                request._bSuppressed = SW_FALSE;
-                continue;
-            }
-            const InventorySlot& item = pEquipSlot->_item;
-            const ItemDef*       pDef = pCatalog != nullptr ? pCatalog->find( item._itemID ) : nullptr;
-            const float32        worn = pDef != nullptr && pDef->_maxDurability > 0.0f ? 1.0f - MathUtil::saturate( item._durability / pDef->_maxDurability ) : 0.0f;
-            request._customization    = item.getCustomization();
-            request._listDetachedPart = item._listDetachedPart;
-            request._damage           = ResolvedAppearance::snapDamage( MathUtil::max( item._damage, worn ) );
-            request._bSuppressed      = pEquipSlot->_bSuppressed;
-        }
     }
 } // namespace sw

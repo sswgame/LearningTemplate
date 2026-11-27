@@ -23,6 +23,7 @@
 namespace sw
 {
     class CustomizationSchemaCatalog;
+    class Equipment;
     class EquipmentSetCatalog;
     class SlotCatalog;
     class XMLNode;
@@ -110,6 +111,11 @@ namespace sw
 
         AppearanceSlotRequest*       findSlot( const hashed_string& slot );
         const AppearanceSlotRequest* findSlot( const hashed_string& slot ) const;
+        /**
+         * @brief @p equipment 의 슬롯을 이 사양에 덮어씁니다. 아이템, 인스턴스 상태(꾸미기, 피해, 떨어진 부품), 숨김을 반영하고, 형상 변경과 외형 상태는 그대로 둡니다.
+         * @details 피해는 맞은 피해와 닳은 내구도(1 - 내구도 / 최대) 중 큰 쪽이다. 장비에 없는 슬롯은 비운다.
+         */
+        void applyEquipment( const Equipment& equipment );
     };
 } // namespace sw
 

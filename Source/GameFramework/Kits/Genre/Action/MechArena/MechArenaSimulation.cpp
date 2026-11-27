@@ -228,7 +228,7 @@ namespace sw
             const float32 length  = segment.getLength();
             if ( length > MechArenaSimulationInternal::kTiny )
             {
-                const int32 ownerTeam = _world.isValidPilot( projectile._owner ) ? _world._listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
+                const int32 ownerTeam = _world.isValidPilot( projectile._owner ) ? _world._listPilot[static_cast<size_t>( projectile._owner )]._team : kNoTeam;
                 const Ray   ray{ from, segment / length };
                 int32       hitPilot    = constant::invalid_index::kInt32;
                 float32     hitDistance = length;
@@ -751,7 +751,7 @@ namespace sw
 
     bool MechArenaSimulation::isEnemyTarget( int32 team, int32 other ) const
     {
-        return isTargetable( other ) && TeamAttitudeUtil::isHostile( team, _listPilot[static_cast<size_t>( other )]._team );
+        return isTargetable( other ) && isHostileTeam( team, _listPilot[static_cast<size_t>( other )]._team );
     }
 
     float3 MechArenaSimulation::computeCenter( const MechPilot& pilot ) const
@@ -920,7 +920,7 @@ namespace sw
                 remaining.clear();
             }
             ++target._deaths;
-            if ( bAttacker && TeamAttitudeUtil::isHostile( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
+            if ( bAttacker && isHostileTeam( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
                 ++_listPilot[static_cast<size_t>( attacker )]._kills;
             pushEvent( MechArenaEvent::Kind::Destroyed, victim, instigator, 0.0f, pVictimMech->_id );
             _match.reportKill( victimParticipant, attackerParticipant );
