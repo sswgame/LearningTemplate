@@ -6,6 +6,7 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Registry/RegistrationList.h"
@@ -39,17 +40,17 @@ namespace sw
         {
 #if defined( SW_PLATFORM_WINDOWS )
             /**
-             * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 어느 라이브러리에 바인딩했는지 import 테이블에서 읽습니다.
+             * @brief 모듈 @p module 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 어느 라이브러리에 바인딩했는지 import 테이블에서 읽습니다.
              * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 라이브러리다(모듈 라이브러리에는 지연 import 가 없다.
              *          이 매니저가 그런 라이브러리를 거절한다). 리눅스는 import 테이블에서 바인딩을 읽을 수 없어 심볼로 판단한다(`isBoundTo`).
-             * @return 바인딩된 라이브러리의 핸들입니다. 그 DLL 을 import 하지 않으면 nullptr 입니다.
+             * @return 바인딩된 라이브러리의 OS 값입니다. 그 DLL 을 import 하지 않으면 nullptr 입니다.
              */
-            static void* findBoundImportLibrary( void* pHandle, string_view dependencyFileName )
+            static const void* findBoundImportLibrary( DynamicLibraryView module, string_view dependencyFileName )
             {
-                const IMAGE_NT_HEADERS* pNt = static_cast<const IMAGE_NT_HEADERS*>( ModuleLibraryUtil::findImageNtHeaders( pHandle ) );
+                const IMAGE_NT_HEADERS* pNt = static_cast<const IMAGE_NT_HEADERS*>( ModuleLibraryUtil::findImageNtHeaders( module.getOSHandle() ) );
                 if ( pNt == nullptr )
                     return nullptr;
-                const uint8* pBase = static_cast<const uint8*>( pHandle );
+                const uint8* pBase = static_cast<const uint8*>( module.getOSHandle() );
 
                 const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
                 if ( importDir.VirtualAddress == 0 )
@@ -85,38 +86,38 @@ namespace sw
             }
 
             /**
-             * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 라이브러리에 묶었는지 봅니다.
+             * @brief 모듈 @p module 이 의존 @p dependencyName 을 @p expected 라이브러리에 묶었는지 봅니다.
              * @param dependencyFileName (Windows) 모듈의 import 표가 그 의존을 부르는 이름입니다(세대 이름 — `ModuleShadowCopy::writeShadowCopy`).
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 그 의존을 import 하지 않으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
-             * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
+             * @return 아직 묶이지 않았거나 @p expected 에 묶였으면 true 입니다.
              * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 다이제스트 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
-             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 실제로 묶인 의존의 것입니다.
+             *          찾습니다. `dlsym( module, ... )` 이 돌려주는 주소는 그 모듈이 실제로 묶인 의존의 것입니다.
              */
-            static bool isBoundTo( void* pModule, string_view dependencyName, string_view dependencyFileName, void* pExpected, const void*& pOutActual,
+            static bool isBoundTo( DynamicLibraryView module, string_view dependencyName, string_view dependencyFileName, DynamicLibraryView expected, const void*& pOutActual,
                                    const void*& pOutExpected )
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 (void)dependencyName;
-                pOutExpected = pExpected;
-                pOutActual   = findBoundImportLibrary( pModule, dependencyFileName );
+                pOutExpected = expected.getOSHandle();
+                pOutActual   = findBoundImportLibrary( module, dependencyFileName );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 (void)dependencyFileName;
                 fixed_string<constant::buffer::kMax256> digestSymbolName;
                 formatstring( digestSymbolName.data(), digestSymbolName.capacity(), "sw_moduleEngineABIDigest_%#", dependencyName );
-                pOutExpected = ModuleLibraryUtil::getDynamicSymbol( pExpected, digestSymbolName.view() );
+                pOutExpected = expected.findSymbol( digestSymbolName.view() );
                 pOutActual   = nullptr;
                 // 다이제스트가 없는 모듈(정적 링크 · 다이제스트를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
-                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, digestSymbolName.view() );
+                pOutActual = module.findSymbol( digestSymbolName.view() );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #else
-                (void)pModule;
+                (void)module;
                 (void)dependencyName;
                 (void)dependencyFileName;
-                (void)pExpected;
+                (void)expected;
                 pOutActual   = nullptr;
                 pOutExpected = nullptr;
                 return true;
@@ -275,14 +276,14 @@ namespace sw
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
-        void* const pSharedHandle = modulePath.empty() ? nullptr : ModuleLibraryUtil::loadLibraryAt( modulePath );
-        if ( pSharedHandle == nullptr )
+        DynamicLibrary sharedLibrary = modulePath.empty() ? DynamicLibrary{} : DynamicLibrary::loadAt( modulePath );
+        if ( sharedLibrary.isValid() == false )
         {
             SW_LOG_ERROR_ID( "ModuleHotReloadManager.FailedLoadSharedModule", "Failed to load the shared module %#", modulePath.str() );
             return false;
         }
         // 라이브러리는 남긴다(정적 초기화가 이미 돌았다) — 실패는 기동을 멈춘다.
-        _listSharedModule.push_back( SharedLibrary{ string{ moduleName }, pSharedHandle } );
+        _listSharedModule.push_back( SharedLibrary{ string{ moduleName }, std::move( sharedLibrary ) } );
         if ( engine::registerModuleTypes( moduleName ) == false )
             return false;
         SW_LOG_INFO_ID( "ModuleHotReloadManager.SharedModuleLoaded", "Shared module loaded: %#", moduleName );
@@ -334,7 +335,7 @@ namespace sw
 
         // commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfterReload 가 그래프를 막아도 실패를 돌려준다. 그대로 지우면 라이브러리 · 등록한 타입 ·
         // 섀도 파일이 프로세스 끝까지 남으므로, 등록을 거두기 전에 평소처럼 내린다.
-        if ( moduleRecord._pLibraryModule != nullptr )
+        if ( moduleRecord._library.isValid() )
             unloadModule( moduleRecord );
         _mapModule.erase( string( moduleName ) );
         _dependencyGraph.removeModule( moduleName );
@@ -622,21 +623,21 @@ namespace sw
 
     bool ModuleHotReloadManager::verifyBindings( string_view moduleName, const ModuleRecord& moduleRecord ) const
     {
-        if ( moduleRecord._pLibraryModule == nullptr )
+        if ( moduleRecord._library.isValid() == false )
             return true;
         bool bAllBound = true;
         for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
         {
             // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
             const auto dependencyIt = _mapModule.find( dependencyName );
-            if ( dependencyIt == _mapModule.end() || dependencyIt->second->_pLibraryModule == nullptr )
+            if ( dependencyIt == _mapModule.end() || dependencyIt->second->_library.isValid() == false )
                 continue;
 
             const void*                   pActual{ nullptr };
             const void*                   pExpected{ nullptr };
             const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second->_libraryName;
             const string                  dependencyFileName    = dependencyLibraryName._loaded.empty() ? ModuleLibraryUtil::formatSharedLibraryName( dependencyName ) : dependencyLibraryName._loaded;
-            if ( ModuleHotReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second->_pLibraryModule, pActual, pExpected ) )
+            if ( ModuleHotReloadManagerInternal::isBoundTo( moduleRecord._library.getView(), dependencyName, dependencyFileName, dependencyIt->second->_library.getView(), pActual, pExpected ) )
                 continue;
 
             SW_LOG_ERROR_ID( "ModuleHotReloadManager.ModuleBoundStaleImage", "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
@@ -645,10 +646,10 @@ namespace sw
         return bAllBound;
     }
 
-    ModuleLibraryHandle ModuleHotReloadManager::getModuleHandle( string_view moduleName ) const
+    DynamicLibraryView ModuleHotReloadManager::getModuleHandle( string_view moduleName ) const
     {
         auto it = _mapModule.find( string( moduleName ) );
-        return ModuleLibraryHandle{ it != _mapModule.end() ? it->second->_pLibraryModule : nullptr };
+        return it != _mapModule.end() ? it->second->_library.getView() : DynamicLibraryView{};
     }
 
     unique_ptr<IModuleCompiler> ModuleHotReloadManager::createModuleCompiler()
@@ -677,7 +678,7 @@ namespace sw
     {
         outParams._moduleName              = context._moduleName;
         outParams._originalModulePath      = context._originalModulePath;
-        outParams._bReplacingLoadedLibrary = context._pLibraryModule != nullptr;
+        outParams._bReplacingLoadedLibrary = context._library.isValid();
 
         // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 넣지 않는다 — 원래 이름 그대로 이미 올라온 라이브러리에 묶인다.
         for ( const string& dependencyName : _dependencyGraph.getDependsOn( context._moduleName ) )
@@ -753,16 +754,16 @@ namespace sw
 
             // 교체 라이브러리의 정적 등록자는 옛 라이브러리가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
-            if ( context._pLibraryModule != nullptr )
+            if ( context._library.isValid() )
             {
                 RegistrationReloadScope reloadScope;
-                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( libraryPath );
+                outShadow._library = DynamicLibrary::loadAt( libraryPath );
             }
             else
             {
-                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( libraryPath );
+                outShadow._library = DynamicLibrary::loadAt( libraryPath );
             }
-            if ( outShadow._pHandle == nullptr )
+            if ( outShadow._library.isValid() == false )
             {
                 context._libraryName._current = context._libraryName._loaded;
                 SW_LOG_ERROR_ID( "ModuleHotReloadManager.FailedLoadDynamicLibrary", "Failed to load dynamic library (keeping old): %#", libraryPath.c_str() );
@@ -792,18 +793,18 @@ namespace sw
             // 새 라이브러리의 코드가 불리므로 onAfterReload 와 같이 지킨다.
             if ( context._pClient != nullptr )
             {
-                bool        bAccepted{ false };
-                uint32      faultCode{ 0 };
-                void* const pNewHandle = outShadow._pHandle;
-                const bool  bCompleted = ModuleCallGuard::run(
-                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
-                 {
-                    bAccepted = context._pClient->isLibraryUsable( ModuleLibraryHandle{ pNewHandle } );
+                bool                     bAccepted{ false };
+                uint32                   faultCode{ 0 };
+                const DynamicLibraryView newLibrary = outShadow._library.getView();
+                const bool               bCompleted = ModuleCallGuard::run(
+                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, newLibrary]()
+                              {
+                    bAccepted = context._pClient->isLibraryUsable( newLibrary );
                 } ),
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
                 {
-                    const utf8* pResult = ( context._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
+                    const utf8* pResult = context._library.isValid() ? "keeping the old module" : "it is not loaded";
                     if ( bCompleted == false )
                         SW_LOG_ERROR_ID( "ModuleHotReloadManager.ModuleFaultedCodeX", "Module %# faulted (code 0x%#) while the host checked it — %#", context._moduleName,
                                          Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pResult );
@@ -821,34 +822,34 @@ namespace sw
 
     bool ModuleHotReloadManager::commitShadowCopy( ModuleRecord& context, PreparedShadow& prepared )
     {
-        if ( prepared._pHandle == nullptr )
+        if ( prepared._library.isValid() == false )
             return false;
 
         const AbsolutePath previousTempModule = context._tempModulePath;
-        void*              pPreviousHandle    = context._pLibraryModule;
+        const bool         bReplacing         = context._library.isValid();
 
         BLOCK( "Swap Module Handles" )
         {
             // onBeforeReload 가 모듈 자원을 건드리기 전에 워커가 옛 라이브러리에서 빠져나와 있어야 한다.
-            if ( pPreviousHandle != nullptr && flushTasksBeforeUnload() == false )
+            if ( bReplacing && flushTasksBeforeUnload() == false )
                 return false;
 
-            if ( context._pClient != nullptr && pPreviousHandle != nullptr )
+            if ( context._pClient != nullptr && bReplacing )
                 context._pClient->onBeforeReload();
 
-            if ( pPreviousHandle != nullptr )
+            if ( bReplacing )
             {
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 flushTasksBeforeUnload();
                 engine::unregisterModuleTypes( context._moduleName );
             }
 
-            context._pLibraryModule      = prepared._pHandle;
-            context._tempModulePath      = prepared._tempPath;
-            context._loadedSourceStat    = prepared._sourceStat;
-            context._libraryName._loaded = context._libraryName._current;
-            prepared._pHandle            = nullptr;
-            prepared._tempPath           = {};
+            DynamicLibrary previousLibrary = std::move( context._library ); // 아래 미룬 언로드가 넘겨받는다
+            context._library               = std::move( prepared._library );
+            context._tempModulePath        = prepared._tempPath;
+            context._loadedSourceStat      = prepared._sourceStat;
+            context._libraryName._loaded   = context._libraryName._current;
+            prepared._tempPath             = {};
 
             engine::registerModuleTypes( context._moduleName, prepared._heads );
             prepared._heads = engine::ModuleRegistrarHeads{};
@@ -856,8 +857,8 @@ namespace sw
             invokeAfterReload( context );
 
             // 옛 라이브러리는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
-            if ( pPreviousHandle != nullptr )
-                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule );
+            if ( previousLibrary.isValid() )
+                _deferredUnloadQueue.deferUnload( context._moduleName, std::move( previousLibrary ), previousTempModule );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -880,7 +881,7 @@ namespace sw
         const bool bCompleted = ModuleCallGuard::run(
             SW_DELEGATE_LAMBDA( Delegate<void()>, [&context]()
         {
-            context._pClient->onAfterReload( ModuleLibraryHandle{ context._pLibraryModule } );
+            context._pClient->onAfterReload( context._library.getView() );
         } ),
             faultCode );
         if ( bCompleted == false )
@@ -896,7 +897,7 @@ namespace sw
     bool ModuleHotReloadManager::runAfterReload( string_view moduleName )
     {
         const auto it = _mapModule.find( string( moduleName ) );
-        if ( it == _mapModule.end() || it->second->_pLibraryModule == nullptr )
+        if ( it == _mapModule.end() || it->second->_library.isValid() == false )
         {
             SW_LOG_ERROR_ID( "ModuleHotReloadManager.ModuleNotLoadedNothing", "Module %# is not loaded - nothing to start", moduleName );
             return false;
@@ -908,11 +909,10 @@ namespace sw
     void ModuleHotReloadManager::abortShadowCopy( ModuleRecord& context, PreparedShadow& prepared )
     {
         context._libraryName._current = context._libraryName._loaded;
-        if ( prepared._pHandle != nullptr )
+        if ( prepared._library.isValid() )
         {
             engine::setGlobalRegistrarHeads( prepared._previousHeads );
-            ModuleLibraryUtil::unloadDynamicLibrary( prepared._pHandle );
-            prepared._pHandle = nullptr;
+            prepared._library.reset();
         }
 
         prepared._heads         = engine::ModuleRegistrarHeads{};
@@ -924,17 +924,16 @@ namespace sw
 
     void ModuleHotReloadManager::unloadModule( ModuleRecord& context )
     {
-        if ( context._pClient != nullptr && context._pLibraryModule != nullptr )
+        if ( context._pClient != nullptr && context._library.isValid() )
             context._pClient->onBeforeReload();
 
-        if ( context._pLibraryModule != nullptr )
+        if ( context._library.isValid() )
         {
-            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingModuleHandle", "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._pLibraryModule );
+            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingModuleHandle", "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._library.getView().getOSHandle() );
             flushTasksBeforeUnload();
 
             engine::unregisterModuleTypes( context._moduleName );
-            ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
-            context._pLibraryModule = nullptr;
+            context._library.reset();
         }
 
         ModuleShadowCopy::removeArtifacts( context._tempModulePath );
@@ -948,16 +947,19 @@ namespace sw
         // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 라이브러리를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
         if ( engine::areEngineSubsystemsBound() == false )
         {
+            for ( SharedLibrary& shared : _listSharedModule )
+            {
+                (void)shared._library.leakForProcessLifetime();
+            }
             _listSharedModule.clear();
             return;
         }
         flushTasksBeforeUnload();
         for ( auto it = _listSharedModule.rbegin(); it != _listSharedModule.rend(); ++it )
         {
-            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingSharedModuleHandle", "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
+            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingSharedModuleHandle", "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_library.getView().getOSHandle() );
             engine::unregisterModuleTypes( it->_name );
-            ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
-            it->_pHandle = nullptr;
+            it->_library.reset();
         }
         _listSharedModule.clear();
     }
@@ -1144,7 +1146,7 @@ namespace sw
         , _originalModulePath{}
         , _tempModulePath{}
         , _libraryName{}
-        , _pLibraryModule{ nullptr }
+        , _library{}
         , _loadedSourceStat{}
         , _debounceStat{}
         , _debounceTimer{}

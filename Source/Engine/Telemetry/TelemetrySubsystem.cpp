@@ -2,6 +2,7 @@
 
 #include "Engine/Telemetry/TelemetrySubsystem.h"
 
+#include "Core/Algorithm/SampleStatistics.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -155,13 +156,13 @@ namespace sw
         _overflowCount = 0;
     }
 
-    float32 TelemetryFrameHistogram::computePercentileMs( float32 fraction ) const
+    float32 TelemetryFrameHistogram::computePercentileMs( uint32 percent ) const
     {
         if ( _count == 0 )
             return 0.0f;
-        // 넓은 쪽 순위 — 100 프레임의 p99 는 99 번째(위에서 둘째), p50 은 50 번째다.
-        const uint32 rank       = MathUtil::max( 1u, static_cast<uint32>( MathUtil::ceil( MathUtil::clamp( fraction, 0.0f, 1.0f ) * static_cast<float32>( _count ) ) ) );
-        uint32       cumulative = 0;
+        // 최근접 순위 — 100 프레임의 p99 는 99 번째(위에서 둘째), p50 은 50 번째다.
+        const uint64 rank       = SampleStatistics::getNearestRank( _count, percent );
+        uint64       cumulative = 0;
         for ( uint32 bucketIndex = 0; bucketIndex < kBucketCount; ++bucketIndex )
         {
             cumulative += _listBucket[bucketIndex];
@@ -668,8 +669,8 @@ namespace sw
             summary.setInt( "frames", _frames.getCount() );
             summary.setFloat( "seconds", _frames.getTotalMs() / constant::time::kMillisecondsPerSecond );
             summary.setFloat( "avgMs", _frames.getTotalMs() / static_cast<float64>( _frames.getCount() ) );
-            summary.setFloat( "p50Ms", static_cast<float64>( _frames.computePercentileMs( 0.5f ) ) );
-            summary.setFloat( "p99Ms", static_cast<float64>( _frames.computePercentileMs( 0.99f ) ) );
+            summary.setFloat( "p50Ms", static_cast<float64>( _frames.computePercentileMs( SampleStatistics::kPercentMedian ) ) );
+            summary.setFloat( "p99Ms", static_cast<float64>( _frames.computePercentileMs( SampleStatistics::kPercentTail ) ) );
             summary.setFloat( "maxMs", static_cast<float64>( _frames.getMaxMs() ) );
             (void)recordLocked( summary );
         }

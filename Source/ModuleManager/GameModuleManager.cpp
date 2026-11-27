@@ -174,11 +174,11 @@ namespace sw
         suspendModules( ModuleScope::Game, true, FlushReason::Reload );
     }
 
-    void GameModuleManager::onAfterGameReload( ModuleLibraryHandle library )
+    void GameModuleManager::onAfterGameReload( DynamicLibraryView library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         // 핸들을 받지 못했으면(기동 · RHI 교체) 리로드 매니저가 든 것을 쓴다. 배포는 정적 링크라 핸들이 없고 `bindGameAPI` 가 정적 테이블을 읽는다.
-        const ModuleLibraryHandle gameLibrary = library.isValid() ? library : getLoadedModuleHandle( sw::config::kTargetGameModule );
+        const DynamicLibraryView gameLibrary = library.isValid() ? library : getLoadedModuleHandle( sw::config::kTargetGameModule );
         if ( bindGameAPI( gameLibrary ) == false )
         {
             markReloadGraphBroken( "GameAPI bind failed after reload" );
@@ -204,7 +204,7 @@ namespace sw
         onBeforeGameReload();
     }
 
-    void GameModuleManager::onAfterGameplayDLLReload( ModuleLibraryHandle /*library*/ )
+    void GameModuleManager::onAfterGameplayDLLReload( DynamicLibraryView /*library*/ )
     {
         if ( engine::areEngineSubsystemsBound() == false )
             return;
@@ -237,7 +237,7 @@ namespace sw
         return true;
     }
 
-    bool GameModuleManager::isGameLibraryUsable( ModuleLibraryHandle library ) const
+    bool GameModuleManager::isGameLibraryUsable( DynamicLibraryView library ) const
     {
         return ModuleInstanceUtil::isLibraryUsable<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols() );
     }
@@ -249,7 +249,7 @@ namespace sw
                          Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
     }
 
-    bool GameModuleManager::KitReloadClient::isLibraryUsable( ModuleLibraryHandle /*library*/ )
+    bool GameModuleManager::KitReloadClient::isLibraryUsable( DynamicLibraryView /*library*/ )
     {
         return true; // 대조할 API 표가 없다 — 키트의 계약(엔진 ABI 다이제스트 · 정적 등록자)은 리로드 매니저의 prepare 가 이미 본다
     }
@@ -321,7 +321,7 @@ namespace sw
         return kGameSymbols;
     }
 
-    bool GameModuleManager::bindGameAPI( ModuleLibraryHandle library )
+    bool GameModuleManager::bindGameAPI( DynamicLibraryView library )
     {
         _gameAPI = {};
         if ( exportGameAPITable( library ) == false )
@@ -609,7 +609,7 @@ namespace sw
     {
         if ( build::kStaticModules )
         {
-            onAfterGameReload( ModuleLibraryHandle{} ); // 정적 링크 표로 바로 세운다
+            onAfterGameReload( DynamicLibraryView{} ); // 정적 링크 표로 바로 세운다
             return true;
         }
         if ( _pModuleHotReloadManager == nullptr )
@@ -637,22 +637,22 @@ namespace sw
             _pModuleHotReloadManager->markGraphBroken( pReason != nullptr ? pReason : "unspecified" );
     }
 
-    ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
+    DynamicLibraryView GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
     {
         if ( _pModuleHotReloadManager == nullptr )
-            return ModuleLibraryHandle{}; // 정적 링크에는 "로드된 모듈" 이 없다. 부르는 쪽이 빈 핸들을 처리한다
+            return DynamicLibraryView{}; // 정적 링크에는 "로드된 모듈" 이 없다. 부르는 쪽이 빈 핸들을 처리한다
         return _pModuleHotReloadManager->getModuleHandle( moduleName );
     }
 
     // 동적 구성은 라이브러리 심볼(ABI 대조 포함), 정적 구성은 링크된 `exportGameAPI` 다 — 그 함수가 한쪽 구성에만 있어 이 함수만 전처리로 가른다.
 #if SW_WITH_DYNAMIC_MODULES
-    bool GameModuleManager::exportGameAPITable( ModuleLibraryHandle library )
+    bool GameModuleManager::exportGameAPITable( DynamicLibraryView library )
     {
         // 동적 경로라 새 라이브러리가 이 호스트와 다른 테이블로 빌드됐을 수 있다 — ABI 를 대조한다(배포는 정적 링크라 어긋날 수 없다).
         return ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols(), _gameAPI );
     }
 #else
-    bool GameModuleManager::exportGameAPITable( [[maybe_unused]] ModuleLibraryHandle library )
+    bool GameModuleManager::exportGameAPITable( [[maybe_unused]] DynamicLibraryView library )
     {
         if ( exportGameAPI( &_gameAPI ) == false )
         {

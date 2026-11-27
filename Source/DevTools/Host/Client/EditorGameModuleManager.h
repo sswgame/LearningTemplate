@@ -59,12 +59,12 @@ namespace sw
         /** @brief 에디터 모듈을 언로드하기 직전에 불립니다. 인스턴스와 API 테이블을 해제합니다. */
         void onBeforeEditorReload();
         /** @brief 에디터 모듈이 다시 로드된 직후에 불립니다. API 를 다시 바인딩하고 인스턴스를 만듭니다. */
-        void onAfterEditorReload( ModuleLibraryHandle library );
+        void onAfterEditorReload( DynamicLibraryView library );
         /**
          * @brief 새 에디터 이미지가 이 호스트와 같은 API 테이블로 빌드됐는지 확인합니다(ABI 버전, 지문, `exportEditorAPI`). 옛 이미지를 언로드하기 전에 불립니다.
          * @details 여기서 거절하면 옛 에디터가 그대로 돈다. 같은 검사를 옛 이미지를 언로드한 뒤(`onAfterEditorReload`)에야 하면 거절이 곧 에디터를 잃는 일이 된다.
          */
-        bool isEditorLibraryUsable( ModuleLibraryHandle library ) const;
+        bool isEditorLibraryUsable( DynamicLibraryView library ) const;
         /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`ModuleHotReloadManager::addReloadHold`)으로 건다. */
         bool isEditorReloadHeld() const;
         /**
@@ -74,7 +74,7 @@ namespace sw
         void onEditorReloadFault( uint32 faultCode );
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
-        [[nodiscard]] bool bindEditorAPI( ModuleLibraryHandle library );
+        [[nodiscard]] bool bindEditorAPI( DynamicLibraryView library );
 
         // 렌더 스레드 훅은 이 관리자가 사는 동안만 걸린다(`initializeClient` 가 걸고 소멸자가 `shutdown` 뒤에 뗀다. 떼는 세터가 렌더 스레드를 먼저 비운다).
         /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 렌더 스레드가 없는 호스트는 할 일이 없다. */
@@ -159,9 +159,9 @@ namespace sw
             explicit EditorReloadClient( EditorGameModuleManager& owner )
                 : _owner( owner ) {}
             void               onBeforeReload() override { _owner.onBeforeEditorReload(); }
-            void               onAfterReload( ModuleLibraryHandle library ) override { _owner.onAfterEditorReload( library ); }
+            void               onAfterReload( DynamicLibraryView library ) override { _owner.onAfterEditorReload( library ); }
             void               onReloadFault( uint32 faultCode ) override { _owner.onEditorReloadFault( faultCode ); }
-            [[nodiscard]] bool isLibraryUsable( ModuleLibraryHandle library ) override { return _owner.isEditorLibraryUsable( library ); }
+            [[nodiscard]] bool isLibraryUsable( DynamicLibraryView library ) override { return _owner.isEditorLibraryUsable( library ); }
 
         private:
             EditorGameModuleManager& _owner;

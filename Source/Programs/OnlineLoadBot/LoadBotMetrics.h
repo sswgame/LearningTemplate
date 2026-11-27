@@ -91,9 +91,6 @@ namespace sw
         /** @brief 봇이 받은 `kBusy`(저장소 충돌을 서버 재시도 안에 풀지 못함) 수입니다. */
         int64 getBusyCount() const;
 
-        /** @brief 정렬한 표본의 백분위(가장 가까운 순위 — 0 < p ≤ 100)입니다. 비면 0. */
-        static int64 computePercentile( const vector<int64>& listSortedSample, int32 percentile );
-
     private:
         vector<vector<int64>> _listSampleByAction; ///< 동작 번호 → 지연 표본
         vector<int64>         _listErrorCountByAction;

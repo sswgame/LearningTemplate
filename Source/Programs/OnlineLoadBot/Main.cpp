@@ -13,6 +13,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -45,7 +46,7 @@ namespace sw
                 : _launch{}
                 , _listLoadedModule{}
                 , _unloadSubscription{}
-                , _pBotModule{ nullptr }
+                , _botModule{}
             {
             }
 
@@ -95,7 +96,7 @@ namespace sw
             {
                 if ( _launch.getEngine().isHeadless() )
                     return _launch.getEngine().didCommandletFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
-                const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( ModuleLibraryUtil::getDynamicSymbol( _pBotModule, LoadBotModuleEntry::kEntrySymbol ) );
+                const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( _botModule.findSymbol( LoadBotModuleEntry::kEntrySymbol ) );
                 if ( pfnRun == nullptr )
                 {
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotModuleDoesNot", "OnlineLoadBot: module %# does not export %#", LoadBotModuleEntry::kModuleName, LoadBotModuleEntry::kEntrySymbol );
@@ -115,28 +116,29 @@ namespace sw
 
             /**
              * @brief 모듈을 하나씩 올려 정적 등록자가 서게 하고, 올릴 때마다 그 모듈 이름으로 리플렉션 타입을 등록합니다(전역 등록자 머리가 그 모듈 것만 남게).
-             * @details 하나라도 못 올리면 false 입니다(기동 멈춤 — `ModuleLibraryUtil::loadLibraryAt` 이 Win32 오류를 남긴다). 등록은 엔진 종료 때 `unregisterModules` 가 거둔다.
+             * @details 하나라도 못 올리면 false 입니다(기동 멈춤 — `DynamicLibrary::loadAt` 이 OS 오류를 남긴다). 등록은 엔진 종료 때 `unregisterModules` 가 거둔다.
              */
             [[nodiscard]] bool loadModules()
             {
                 for ( const utf8* pModule : kArrModule )
                 {
                     const AbsolutePath libraryPath = ModuleLibraryUtil::findModuleLibraryPath( pModule );
-                    void* const        pHandle     = libraryPath.empty() == false ? ModuleLibraryUtil::loadLibraryAt( libraryPath ) : nullptr;
-                    if ( pHandle == nullptr )
+                    // 정적 소멸자가 그 코드를 부르므로 라이브러리는 프로세스 끝까지 둔다(`unregisterModules` 는 등록만 거둔다).
+                    const DynamicLibraryView library = libraryPath.empty() == false ? DynamicLibrary::loadAt( libraryPath ).leakForProcessLifetime() : DynamicLibraryView{};
+                    if ( library.isValid() == false )
                     {
                         SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotLoadModule", "OnlineLoadBot: cannot load the module %#", pModule );
                         return false;
                     }
                     _listLoadedModule.push_back( pModule ); // 올렸으면 등록이 일부 실패해도 내릴 때 거둔다
-                    if ( engine::isModuleBuiltWithThisEngine( pHandle, pModule ) == false )
+                    if ( engine::isModuleBuiltWithThisEngine( library, pModule ) == false )
                         return false;
                     if ( engine::registerModuleTypes( pModule ) == false )
                         return false;
                     if ( string_view{ pModule } == LoadBotModuleEntry::kModuleName )
-                        _pBotModule = pHandle;
+                        _botModule = library;
                 }
-                if ( _pBotModule == nullptr )
+                if ( _botModule.isValid() == false )
                 {
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotModuleListNo", "OnlineLoadBot: the module list has no %#", LoadBotModuleEntry::kModuleName );
                     return false;
@@ -158,7 +160,7 @@ namespace sw
             HostLaunch          _launch;
             vector<const utf8*> _listLoadedModule;
             Subscription        _unloadSubscription;
-            void*               _pBotModule;
+            DynamicLibraryView  _botModule;
         };
     } // namespace
 } // namespace sw

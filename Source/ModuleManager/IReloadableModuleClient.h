@@ -7,8 +7,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-
-#include "ModuleManager/ModuleLibraryHandle.h"
+#include "Core/Module/DynamicLibrary.h"
 
 namespace sw
 {
@@ -24,13 +23,13 @@ namespace sw
         /** @brief 옛 라이브러리를 언로드하기 직전에 불립니다(옛 라이브러리가 있을 때만). 받은 인스턴스를 놓습니다. */
         virtual void onBeforeReload() = 0;
         /** @brief 새 라이브러리로 바꾼 직후(또는 기동의 `runAfterReload`)에 `ModuleCallGuard` 안에서 불립니다. API 를 묶고 인스턴스를 세웁니다. */
-        virtual void onAfterReload( ModuleLibraryHandle library ) = 0;
+        virtual void onAfterReload( DynamicLibraryView library ) = 0;
         /**
          * @brief `onAfterReload` 가 결함(접근 위반 등)을 냈을 때 불립니다. 인자는 예외 코드(Windows) · 시그널 번호(리눅스)입니다.
          * @details 그 모듈에서 받은 것(인스턴스, API 테이블)을 그 모듈을 부르지 않고 버린다 — 반쯤 만든 인스턴스를 파괴하는 코드도 같은 모듈에 있다.
          */
         virtual void onReloadFault( uint32 faultCode ) = 0;
         /** @brief 옛 라이브러리가 아직 도는 동안(prepare) 새 라이브러리를 받아들일지 정합니다. false 면 옛 라이브러리를 그대로 둡니다. */
-        [[nodiscard]] virtual bool isLibraryUsable( ModuleLibraryHandle library ) = 0;
+        [[nodiscard]] virtual bool isLibraryUsable( DynamicLibraryView library ) = 0;
     };
 } // namespace sw

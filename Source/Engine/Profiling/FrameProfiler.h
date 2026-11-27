@@ -95,8 +95,6 @@ namespace sw
         static constexpr uint32 kSubBucketMask = kSubBucketCount - 1;
         /** @brief 히스토그램 칸 수입니다. 64 옥타브(uint64 전체) × 옥타브당 칸 수. */
         static constexpr uint32 kBucketCount = 64u << kSubBucketBit;
-        /** @brief 백분위의 최댓값입니다. */
-        static constexpr uint32 kPercentMax = 100;
 
         FrameProfiler() = default;
 

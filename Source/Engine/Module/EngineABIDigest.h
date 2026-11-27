@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Module/DynamicLibrary.h"
 
 namespace sw
 {
@@ -20,11 +21,11 @@ namespace sw
          */
         SW_API const utf8* getEngineABIDigest();
         /**
-         * @brief 올린 모듈 라이브러리 @p pLibraryHandle 이 이 엔진과 같은 헤더로 빌드됐는지 봅니다 — 빌드가 모듈마다 박은 `sw_moduleEngineABIDigest_<@p moduleName>` 를 이 엔진의 것과 견준다.
+         * @brief 올린 모듈 라이브러리 @p library 가 이 엔진과 같은 헤더로 빌드됐는지 봅니다 — 빌드가 모듈마다 박은 `sw_moduleEngineABIDigest_<@p moduleName>` 를 이 엔진의 것과 견준다.
          * @details 모든 동적 모듈(게임 · 에디터 · 키트 · RHI 백엔드)을 올리는 길이 이것 하나로 대조한다. 지문은 Core · Engine · ModuleAPI 헤더 내용이라 C-ABI 표(GameAPI · EditorAPI)의
          *          항목 · 순서 · 시그니처와 경계를 넘는 구조체 배치를 함께 덮는다 — 표마다 따로 매기던 다이제스트는 이 지문이 덮는 사본이었다. 언리얼 모듈의 `BuildId` 대조 하나와 같은 자리다.
          * @return 같으면 true, 다이제스트가 없거나 다르면 이유(`Module.EngineABIDigestMismatch`)를 남기고 false 입니다.
          */
-        [[nodiscard]] SW_API bool isModuleBuiltWithThisEngine( void* pLibraryHandle, string_view moduleName );
+        [[nodiscard]] SW_API bool isModuleBuiltWithThisEngine( DynamicLibraryView library, string_view moduleName );
     } // namespace engine
 } // namespace sw

@@ -3,7 +3,7 @@
 #include "Engine/Module/EngineABIDigest.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -20,11 +20,11 @@ namespace sw
             return SW_ENGINE_ABI_DIGEST_MARKER SW_ENGINE_ABI_DIGEST;
         }
 
-        bool isModuleBuiltWithThisEngine( void* pLibraryHandle, string_view moduleName )
+        bool isModuleBuiltWithThisEngine( DynamicLibraryView library, string_view moduleName )
         {
             StringBuilder<constant::buffer::kMax128> symbolName;
             symbolName.appendFormat( "sw_moduleEngineABIDigest_%#", moduleName );
-            const utf8* const pModuleDigest = pLibraryHandle != nullptr ? static_cast<const utf8*>( ModuleLibraryUtil::getDynamicSymbol( pLibraryHandle, symbolName.view() ) ) : nullptr;
+            const utf8* const pModuleDigest = static_cast<const utf8*>( library.findSymbol( symbolName.view() ) ); // 빈 뷰면 nullptr
             if ( pModuleDigest != nullptr && StringUtil::equals( pModuleDigest, getEngineABIDigest() ) )
                 return true;
             SW_LOG_ERROR_ID( "Module.EngineABIDigestMismatch", "Module %# was built against other engine headers (%#: %#; expected %#) - rebuild the engine and the module together", moduleName,

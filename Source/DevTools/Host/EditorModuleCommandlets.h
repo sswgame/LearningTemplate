@@ -10,6 +10,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "Engine/Foundation/Commandlet.h"
 
@@ -44,12 +45,12 @@ namespace sw
         /** @brief 올린 확장 모듈 하나입니다. */
         struct ExtensionLibrary
         {
-            string _name;
-            void*  _pLibrary{ nullptr };
+            string         _name;
+            DynamicLibrary _library{};
         };
 
         vector<ExtensionLibrary> _listExtension;        ///< 올린 순서
-        [[maybe_unused]] void*   _pLibrary;             ///< 올린 에디터 모듈의 OS 핸들(없으면 nullptr)
+        DynamicLibrary           _editorLibrary;        ///< 올린 에디터 모듈(없으면 빈 값)
         uint32                   _loadCount;            ///< 올린 횟수
         [[maybe_unused]] uint32  _entryCallCount;       ///< 진입점을 찾은 작업 수
         [[maybe_unused]] uint8   _bLoadAttempted   : 1; ///< 올리기를 한 번 해 봤다(실패해도 다시 하지 않는다)

@@ -10,7 +10,6 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -77,7 +76,7 @@ namespace sw
     enum class FileWriteResult : uint8
     {
         Written,       ///< 바꿔 끼웠다
-        Refused,       ///< 쓰기 게이트(`isWriteAllowed` — 거절은 그쪽이 오류를 남긴다)나 읽기 전용 대상이 막았다
+        Refused,       ///< 쓰기 게이트(`FileWritePolicy::isWriteAllowed` — 거절은 그쪽이 오류를 남긴다)나 읽기 전용 대상이 막았다
         WriteFailed,   ///< 임시 파일을 열거나 다 쓰지 못했다(디스크 가득 · 권한)
         ReplaceFailed, ///< 임시 파일은 썼는데 대상과 바꿔 끼우지 못했다(다른 프로세스 · 스레드가 쥐고 있거나 막 바꿨다)
     };
@@ -277,71 +276,21 @@ namespace sw
         [[nodiscard]] static bool getFileStat( const DiskPath& fileName, FileStat& outStat );
         /**
          * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
-         * @details "없는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
-         *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(git, 바깥 편집기, 쿠커 자식)가 만든 파일은 보이지 않는다 — 에디터는 파일 감시 사건이 비우고(`FileWatchService`),
-         *          자식 프로세스를 기다린 뒤 그 산출물을 경로로 묻는 코드는 기다린 뒤에 `recordFileCreated` 를 부른다(`Process` 는 `File` 보다 아래 층이라 알리지 못한다).
+         * @details "없는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다. 파일이 생겼는데 옛 "없음" 을 돌려주지 않게 한다. 이 값을 보는 쪽은
+         *          값이 같은 동안만 "없음" 을 믿는다. 이 값은 이 클래스의 입구만 올린다. 다른 프로세스(git, 바깥 편집기, 쿠커 자식)가 만든 파일은 보이지 않으므로
+         *          에디터는 파일 감시 사건이 비우고(`FileWatchService`), 자식 프로세스를 기다린 쪽은 `recordExternalChanges` 를 부른다.
          */
         static uint64 getCreationEpoch();
-        /** @brief 파일 · 폴더를 만들었음을 알립니다(`getCreationEpoch` 을 올립니다). 이 클래스 밖에서 파일을 만드는 코드(플랫폼 계층 · 자식 프로세스를 기다리는 쪽)만 부릅니다. */
-        static void recordFileCreated();
         /**
          * @brief 이 프로세스가 파일 · 폴더를 지운 횟수입니다(`removeFile` · `tryRemoveFile` · `removeDirectory` 가 지웠을 때 오릅니다).
-         * @details "있는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 지운 파일의 옛 경로를 돌려주지 않게. `getCreationEpoch` 의 짝입니다.
+         * @details "있는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다. 지운 파일의 옛 경로를 돌려주지 않게 한다. `getCreationEpoch` 의 짝입니다.
          */
         static uint64 getRemovalEpoch();
-        /** @brief 파일 · 폴더를 지웠음을 알립니다(`getRemovalEpoch` 을 올립니다). 이 클래스 밖에서 지우는 코드만 부릅니다. */
-        static void recordFileRemoved();
         /**
-         * @brief 쓰기 입구 게이트입니다 — 경로를 받아 쓰기를 허락하면 true, 아니면 false 와 이유를 돌려줍니다. 여러 스레드에서 불립니다.
-         * @details 시나리오가 `scratch/` 밖의 추적 파일을 바꾸는 것을 형식으로 막는다. 파일을 바꾸는 입구(`writeFile` · `writeTextFile` · `copyFile` 의 대상 · `removeFile` ·
-         *          `tryRemoveFile` · `removeDirectory` · `appendTextFile` · `moveToRecycleBin`)가 모두 `isWriteAllowed` 하나를 지나므로 호출처마다 검사를 넣지 않는다.
-         *          폴더를 만드는 `ensureDirectoryExists` 는 이미 있는 폴더에도 참을 돌려주는 흔한 호출이라 막지 않는다(폴더 안 파일은 위 입구가 막는다).
-         *          속성 · 시각만 바꾸는 `setWritable` · `setFileWriteTime` 도 내용이 그대로라 막지 않는다.
-         *          이 클래스 밖에서 경로를 스스로 여는 서드파티 저장 함수(DDS 저장 · SQLite)는 쓰기 전에 `isWriteAllowed` 를 직접 부른다 —
-         *          그런 호출과 OS · C 런타임의 직접 쓰기는 이 쓰기 경로를 우회한 것이다.
+         * @brief 바깥 프로세스가 파일을 만들거나 지웠을 수 있음을 알립니다(두 세대를 모두 올립니다). 자식 프로세스를 기다린 뒤 그 산출물을 경로로 묻는 쪽이 부릅니다.
+         * @details `Process` 는 `File` 보다 아래 층이라 스스로 알리지 못한다. 만들기 · 지우기를 따로 알리는 입구는 두지 않는다(이 클래스 입구가 스스로 올린다).
          */
-        using WriteFilterSignature = expected<void>( string_view path );
-        /** @brief 쓰기 게이트 · 이름 규칙 함수 포인터입니다(`WriteFilterSignature`). */
-        using WriteFilter = WriteFilterSignature*;
-        /** @brief 쓰기 게이트 등록 토큰입니다. 토큰이 사라지면 게이트를 걷습니다. */
-        using WriteFilterSubscription = ObserverSlot<WriteFilterSignature>::Subscription;
-        /**
-         * @brief 쓰기 게이트를 겁니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). 게이트는 하나라 이미 걸려 있으면 이중 등록 단언이고 빈 토큰입니다
-         *        (예전 쓰기 게이트 설정 함수는 말없이 덮고 nullptr 로 걷는 짝을 부르는 쪽이 맞춰야 했다 — 앞 주인이 걷으며 뒤 주인의 게이트를 지울 수 있었다).
-         */
-        [[nodiscard]] static WriteFilterSubscription bindWriteFilter( WriteFilter filter );
-        /**
-         * @brief 새로 만드는 자리의 이름 규칙을 겁니다(있는 파일을 덮어쓰거나 지우는 것은 보지 않는다). 자동화 쓰기 게이트와 따로 늘 선다. nullptr 이면 규칙이 없습니다.
-         * @details 콘텐츠 트리(`Content/`)의 새 파일은 소문자다 — 엔진의 `AssetPaths` 가 건다(Core 는 콘텐츠 루트를 모른다). 입구마다 이름을 접는 대신(`toDiskPath` · 임포트 · 새 에셋)
-         *          쓰기 경로 하나가 막으므로, 접지 않고 이은 새 입구도 대문자 파일을 만들지 못한다.
-         */
-        static void setCreateRule( WriteFilter rule );
-        /**
-         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 체크아웃하지 않은 파일이 아닌지(`findNotOpenForEdit`, 폴더면 그 아래), 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
-         *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
-         */
-        [[nodiscard]] static bool isWriteAllowed( const AbsolutePath& path );
-        /**
-         * @brief @p path 가 아직 없으면 이름 규칙(`setCreateRule`)에 맞는지 봅니다(있으면 true). 거절하면 경로와 이유를 오류로 남기고 false 입니다.
-         * @details `isWriteAllowed` 와 폴더를 만드는 `ensureDirectoryExists` 가 부른다 — 파일이든 폴더든 새로 생기는 이름은 같은 규칙을 지난다.
-         */
-        [[nodiscard]] static bool isCreateAllowed( const AbsolutePath& path );
-        /**
-         * @brief 이 자리의 읽기 전용 파일이 "체크아웃하지 않음"(버전 관리 잠금 — git LFS lockable 은 잠그기 전까지 읽기 전용)을 뜻하면 true 를 돌려주는 규칙입니다.
-         * @details 버전 관리 트리(콘텐츠 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
-         *          git 개체 · 작업 폴더)은 잠금이 아니라 정리가 지워야 하는 파일이다 — 그래서 지우기를 모든 읽기 전용에서 막지 않고 규칙 안에서만 막는다.
-         */
-        using CheckoutRule = bool ( * )( string_view path );
-        /** @brief 체크아웃 규칙을 걸고 앞 규칙을 돌려줍니다(테스트가 되돌린다). nullptr 이면 규칙이 없고 지우기 · 옮기기는 읽기 전용을 보지 않습니다. */
-        static CheckoutRule setCheckoutRule( CheckoutRule rule );
-        /**
-         * @brief @p path(파일, 폴더면 그 아래 모든 파일)에서 체크아웃 규칙 안의 읽기 전용 파일을 처음 만난 경로입니다. 규칙이 없거나 그런 파일이 없으면 빈 값입니다.
-         * @details `isWriteAllowed` 가 이 답으로 거절하므로, 그것을 지나는 모든 입구(쓰기 · `removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)와
-         *          경로를 스스로 여는 서드파티 저장(DDS 저장 · SQLite, 쓰기 전에 `isWriteAllowed` 를 직접 부른다)이 같은 확인을 지난다.
-         *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
-         *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
-         */
-        [[nodiscard]] static optional<AbsolutePath> findNotOpenForEdit( const AbsolutePath& path );
+        static void recordExternalChanges();
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( const DiskPath& source, const AbsolutePath& destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */

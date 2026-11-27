@@ -6,7 +6,7 @@
 #include "Core/Diagnostics/CrashHandlerProcessHook.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -72,7 +72,7 @@ namespace sw
          */
         using PfnMiniDumpWriteDump = BOOL( WINAPI* )( HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
                                                       PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION );
-        HMODULE              s_hDumpModule{ nullptr };
+        DynamicLibrary       s_dumpModule{};
         PfnMiniDumpWriteDump s_pfnMiniDumpWriteDump{ nullptr };
 
         /** @brief 덤프 중인 처리기입니다 — 덤프 콜백(사용자 인자가 없는 경로도 있다)이 진척을 이 처리기에 센다. 덤프하는 동안만 칸이 찬다. */
@@ -440,9 +440,9 @@ namespace sw
         CallStackCapture::initialize();
 
         // 덤프 구현을 지금 로드한다(s_pfnMiniDumpWriteDump 설명). dbgcore 가 없는 옛 Windows 는 dbghelp 의 것을 쓴다.
-        s_hDumpModule = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "dbgcore.dll" ) );
-        if ( s_hDumpModule != nullptr )
-            s_pfnMiniDumpWriteDump = reinterpret_cast<PfnMiniDumpWriteDump>( ModuleLibraryUtil::getDynamicSymbol( s_hDumpModule, "MiniDumpWriteDump" ) );
+        s_dumpModule = DynamicLibrary::loadSystem( "dbgcore.dll" );
+        if ( s_dumpModule.isValid() )
+            s_pfnMiniDumpWriteDump = reinterpret_cast<PfnMiniDumpWriteDump>( s_dumpModule.findSymbol( "MiniDumpWriteDump" ) );
 
         // 보고 스레드는 크래시 전에 시작해 둔다. 크래시 순간에 스레드를 만들면 로더 락과 힙을 그 자리에서 쓰게 된다.
         s_bStopReportThread.store( false );
@@ -490,11 +490,7 @@ namespace sw
         }
 
         s_pfnMiniDumpWriteDump = nullptr;
-        if ( s_hDumpModule != nullptr )
-        {
-            FreeLibrary( s_hDumpModule );
-            s_hDumpModule = nullptr;
-        }
+        s_dumpModule.reset();
 
         // install 에서 잡은 심볼 참조를 돌려준다(참조 카운트의 짝을 맞춘다).
         CallStackCapture::shutdown();

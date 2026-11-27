@@ -2,11 +2,11 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationFrameStats.h"
 
+#include "Core/Algorithm/SampleStatistics.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -17,7 +17,6 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include <algorithm>
-#include <cmath>
 
 namespace sw
 {
@@ -66,18 +65,16 @@ namespace sw
         {
             total += milliseconds;
         }
-        const auto percentile = [&listMilliseconds, count]( float64 fraction )
-        {
-            const size_t rank = static_cast<size_t>( std::ceil( fraction * static_cast<float64>( count ) ) );
-            return listMilliseconds[MathUtil::clamp<size_t>( rank, 1, count ) - 1];
-        };
+        // 빈 표본은 위에서 돌아갔다 — 백분위는 늘 있다.
+        const auto percentile = [&listMilliseconds]( uint32 percent )
+        { return *SampleStatistics::findNearestRankPercentile( listMilliseconds, percent ); };
         summary._frameCount             = static_cast<uint32>( count );
         summary._averageMilliseconds    = total / static_cast<float64>( count );
         summary._minMilliseconds        = listMilliseconds.front();
         summary._maxMilliseconds        = listMilliseconds.back();
-        summary._p50Milliseconds        = percentile( 0.50 );
-        summary._p95Milliseconds        = percentile( 0.95 );
-        summary._p99Milliseconds        = percentile( 0.99 );
+        summary._p50Milliseconds        = percentile( SampleStatistics::kPercentMedian );
+        summary._p95Milliseconds        = percentile( SampleStatistics::kPercentHigh );
+        summary._p99Milliseconds        = percentile( SampleStatistics::kPercentTail );
         summary._averageFramesPerSecond = summary._averageMilliseconds > 0.0 ? static_cast<float64>( constant::time::kMillisecondsPerSecond ) / summary._averageMilliseconds : 0.0;
         return summary;
     }

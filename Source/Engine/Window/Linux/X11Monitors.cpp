@@ -3,7 +3,7 @@
 #include "Engine/Window/Linux/X11Monitors.h"
 
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "Engine/Window/WindowMonitor.h"
 
@@ -45,9 +45,9 @@ namespace sw
             static constexpr int64 kMaxWorkAreaLongs = 256;
 
             template <typename TFunction>
-            static bool bind( void* pLibrary, const utf8* pName, TFunction& outFunction )
+            static bool bind( DynamicLibraryView library, const utf8* pName, TFunction& outFunction )
             {
-                outFunction = reinterpret_cast<TFunction>( ModuleLibraryUtil::getDynamicSymbol( pLibrary, pName ) );
+                outFunction = reinterpret_cast<TFunction>( library.findSymbol( pName ) );
                 return outFunction != nullptr;
             }
 
@@ -56,16 +56,16 @@ namespace sw
              */
             static X11RandrAPI loadAPI()
             {
-                X11RandrAPI api;
-                void* const pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libXrandr.so.2" );
-                if ( pLibrary == nullptr )
+                X11RandrAPI              api;
+                const DynamicLibraryView library = DynamicLibrary::loadSystem( "libXrandr.so.2" ).leakForProcessLifetime();
+                if ( library.isValid() == false )
                     return api;
-                api._bLoaded = bind( pLibrary, "XRRQueryExtension", api._pfnQueryExtension ) && bind( pLibrary, "XRRQueryVersion", api._pfnQueryVersion ) &&
-                               bind( pLibrary, "XRRSelectInput", api._pfnSelectInput ) && bind( pLibrary, "XRRUpdateConfiguration", api._pfnUpdateConfiguration ) &&
-                               bind( pLibrary, "XRRGetMonitors", api._pfnGetMonitors ) && bind( pLibrary, "XRRFreeMonitors", api._pfnFreeMonitors ) &&
-                               bind( pLibrary, "XRRGetScreenResourcesCurrent", api._pfnGetScreenResourcesCurrent ) && bind( pLibrary, "XRRFreeScreenResources", api._pfnFreeScreenResources ) &&
-                               bind( pLibrary, "XRRGetOutputInfo", api._pfnGetOutputInfo ) && bind( pLibrary, "XRRFreeOutputInfo", api._pfnFreeOutputInfo ) &&
-                               bind( pLibrary, "XRRGetCrtcInfo", api._pfnGetCrtcInfo ) && bind( pLibrary, "XRRFreeCrtcInfo", api._pfnFreeCrtcInfo );
+                api._bLoaded = bind( library, "XRRQueryExtension", api._pfnQueryExtension ) && bind( library, "XRRQueryVersion", api._pfnQueryVersion ) &&
+                               bind( library, "XRRSelectInput", api._pfnSelectInput ) && bind( library, "XRRUpdateConfiguration", api._pfnUpdateConfiguration ) &&
+                               bind( library, "XRRGetMonitors", api._pfnGetMonitors ) && bind( library, "XRRFreeMonitors", api._pfnFreeMonitors ) &&
+                               bind( library, "XRRGetScreenResourcesCurrent", api._pfnGetScreenResourcesCurrent ) && bind( library, "XRRFreeScreenResources", api._pfnFreeScreenResources ) &&
+                               bind( library, "XRRGetOutputInfo", api._pfnGetOutputInfo ) && bind( library, "XRRFreeOutputInfo", api._pfnFreeOutputInfo ) &&
+                               bind( library, "XRRGetCrtcInfo", api._pfnGetCrtcInfo ) && bind( library, "XRRFreeCrtcInfo", api._pfnFreeCrtcInfo );
                 return api;
             }
 

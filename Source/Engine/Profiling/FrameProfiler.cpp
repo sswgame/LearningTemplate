@@ -2,6 +2,7 @@
 
 #include "Engine/Profiling/FrameProfiler.h"
 
+#include "Core/Algorithm/SampleStatistics.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogOnce.h"
@@ -257,11 +258,9 @@ namespace sw
         const Scope& scope = _arrScope[slot];
         if ( scope._sampledFrames == 0 )
             return 0;
-        if ( percent > kPercentMax )
-            percent = kPercentMax;
 
-        // 순위는 1 부터 세고 올림한다. p99 는 100 프레임 중 99 번째다.
-        const uint64 rank       = ( scope._sampledFrames * percent + ( kPercentMax - 1 ) ) / kPercentMax;
+        // 순위 규칙은 `SampleStatistics` 하나다(1 부터, 올림 — p99 는 100 프레임 중 99 번째). 100 을 넘는 백분위는 100 으로 본다.
+        const uint64 rank       = SampleStatistics::getNearestRank( scope._sampledFrames, percent );
         uint64       cumulative = 0;
         for ( uint32 bucket = 0; bucket < kBucketCount; ++bucket )
         {

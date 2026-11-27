@@ -98,9 +98,8 @@ namespace sw::editor
                 lineBuilder.appendFormat( "[editor] could not wait for the tool: %# %#", waited.error().message(), waited.error().detail() );
                 result._listLine.push_back( string( lineBuilder.view() ) );
             }
-            // 끝난 도구가 파일을 만들거나 지웠을 수 있다 — 이 프로세스의 경로 캐시가 옛 "없음" · "있음" 을 돌려주지 않게 알린다(`Process` 는 `File` 보다 아래 층이라 스스로 알리지 못한다).
-            FileUtil::recordFileCreated();
-            FileUtil::recordFileRemoved();
+            // 끝난 도구가 파일을 만들거나 지웠을 수 있다 — 이 프로세스의 경로 캐시가 옛 "없음" · "있음" 을 돌려주지 않게 알린다(`Process` 는 `File` 보다 아래 층이다).
+            FileUtil::recordExternalChanges();
         }
         publish( pState, generation, std::move( result ) );
     }

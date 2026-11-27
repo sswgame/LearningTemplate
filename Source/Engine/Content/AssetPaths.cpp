@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/FileWritePolicy.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -118,6 +119,10 @@ namespace sw
 
         // --- 쿠킹 세션 ---
         atomic<int32> _cookSessionDepth{ 0 }; ///< 열린 `CookSession` 수(`openCookSession`)
+
+        // --- 쓰기 정책 ---
+        FileWritePolicy::RuleSubscription         _createRuleSubscription{};   ///< 콘텐츠 트리의 새 이름은 소문자(`initialize` 가 건다, 이 객체와 함께 걷힌다)
+        FileWritePolicy::CheckoutRuleSubscription _checkoutRuleSubscription{}; ///< 콘텐츠 트리의 읽기 전용은 체크아웃하지 않은 파일(`initialize` 가 건다)
     };
 
     namespace
@@ -531,10 +536,12 @@ namespace sw
 
     bool AssetPaths::initialize()
     {
-        // 콘텐츠 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
-        FileUtil::setCreateRule( &AssetPaths::validateLowercaseResourceName );
+        // 콘텐츠 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 다시 불려도 한 번만 건다.
+        if ( _pState->_createRuleSubscription.isActive() == false )
+            _pState->_createRuleSubscription = FileWritePolicy::bindCreateRule( &AssetPaths::validateLowercaseResourceName );
         // 콘텐츠 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
-        (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
+        if ( _pState->_checkoutRuleSubscription.isActive() == false )
+            _pState->_checkoutRuleSubscription = FileWritePolicy::bindCheckoutRule( &AssetPaths::isUnderSourceControl );
         // `_bInitialized` 는 "시작했다" 가 아니라 "성공했다" 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )

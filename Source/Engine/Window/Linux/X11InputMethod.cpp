@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -44,8 +44,8 @@ namespace sw
             {
                 static const KeySymToUTF32Fn s_pFunction = []() -> KeySymToUTF32Fn
                 {
-                    void* const pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libxkbcommon.so.0" );
-                    void* const pSymbol  = pLibrary != nullptr ? ModuleLibraryUtil::getDynamicSymbol( pLibrary, "xkb_keysym_to_utf32" ) : nullptr;
+                    const DynamicLibraryView library = DynamicLibrary::loadSystem( "libxkbcommon.so.0" ).leakForProcessLifetime();
+                    void* const              pSymbol = library.findSymbol( "xkb_keysym_to_utf32" ); // 빈 뷰면 nullptr
                     if ( pSymbol == nullptr )
                         SW_LOG_ERROR_ID( "X11InputMethod.NoXkbCommon", "libxkbcommon.so.0 (xkb_keysym_to_utf32) is missing - keys of legacy keysym layouts produce no text without an input method" );
                     return reinterpret_cast<KeySymToUTF32Fn>( pSymbol );

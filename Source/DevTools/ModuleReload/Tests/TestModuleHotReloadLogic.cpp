@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/TestFramework/TestFramework.h"
 
@@ -139,12 +139,12 @@ namespace
     struct DeferredUnloadTestUtil
     {
         /** @brief 언제나 있는 시스템 라이브러리를 한 번 더 엽니다. 참조 수만 오르므로 큐가 내려도 프로세스에는 남습니다. */
-        static void* openSystemLibrary()
+        static DynamicLibrary openSystemLibrary()
         {
 #if defined( SW_PLATFORM_WINDOWS )
-            return ModuleLibraryUtil::loadSystemLibrary( "kernel32.dll" );
+            return DynamicLibrary::loadSystem( "kernel32.dll" );
 #elif defined( SW_PLATFORM_LINUX )
-            return ModuleLibraryUtil::loadSystemLibrary( "libc.so.6" );
+            return DynamicLibrary::loadSystem( "libc.so.6" );
 #else
     #error "Unsupported platform"
 #endif
@@ -165,7 +165,7 @@ SW_TEST_CASE( ModuleHotReloadLogicTest, DeferredUnloadKeepsRecentBatches )
 {
     DeferredLibraryUnloadQueue queue( 2 );
     queue.unloadOldestBatch(); // 비어 있으면 아무 일도 없다
-    queue.deferUnload( "Null", nullptr, test::makeScratchPath( "ignored" ) );
+    queue.deferUnload( "Null", DynamicLibrary{}, test::makeScratchPath( "ignored" ) );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
 
     const AbsolutePath a1 = DeferredUnloadTestUtil::makeShadowFile( "a1" );

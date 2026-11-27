@@ -12,6 +12,7 @@
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
@@ -119,9 +120,8 @@ namespace sw
     private:
         struct LoadedModule
         {
-            RHIBackend _backend{};
-            void*      _pHandle{ nullptr };
-            string     _modulePath; ///< 언로드할 때 로그에 쓰는 이름. 종료 중에는 리플렉션 조회(`RHI::getBackendTypeName`)를 쓸 수 없다
+            RHIBackend     _backend{};
+            DynamicLibrary _library{};
         };
 
     private:

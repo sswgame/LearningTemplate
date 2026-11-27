@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/FileWritePolicy.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringBuilder.h"
@@ -87,7 +88,7 @@ namespace sw
                 }
             }
 
-            /** @brief `FileUtil::WriteFilter` — 콘텐츠 루트 아래 쓰기(사본은 실행 뿌리 아래라 루트 밖이다)와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
+            /** @brief `FileWritePolicy::RuleSignature` — 콘텐츠 루트 아래 쓰기(사본은 실행 뿌리 아래라 루트 밖이다)와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static expected<void> allowWrite( string_view path )
             {
                 // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
@@ -239,9 +240,9 @@ namespace sw
         return result;
     }
 
-    FileUtil::WriteFilterSubscription AutomationScratchWorkspace::acquireWriteFilter()
+    FileWritePolicy::RuleSubscription AutomationScratchWorkspace::acquireWriteFilter()
     {
-        return FileUtil::bindWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
+        return FileWritePolicy::bindWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
     }
 
     uint64 AutomationScratchWorkspace::getPrepareCount()

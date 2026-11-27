@@ -3,7 +3,7 @@
 #include "Engine/Window/Windows/Win32Window.h"
 
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
@@ -27,8 +27,8 @@ namespace sw
             /** @brief Shcore.dll 의 `GetDpiForMonitor` 입니다. Engine 은 Shcore 를 링크하지 않는다(imgui_impl_win32 도 올려 쓴다). 프로세스 끝까지 둔다. */
             static PfnGetDpiForMonitor findGetDpiForMonitor()
             {
-                void* const pModule = ModuleLibraryUtil::loadSystemLibrary( "Shcore.dll" );
-                return pModule != nullptr ? reinterpret_cast<PfnGetDpiForMonitor>( ModuleLibraryUtil::getDynamicSymbol( pModule, "GetDpiForMonitor" ) ) : nullptr;
+                const DynamicLibraryView shellCore = DynamicLibrary::loadSystem( "Shcore.dll" ).leakForProcessLifetime();
+                return reinterpret_cast<PfnGetDpiForMonitor>( shellCore.findSymbol( "GetDpiForMonitor" ) ); // 빈 뷰면 nullptr
             }
 
             static WindowMonitorRect toRect( const RECT& rect )

@@ -3,7 +3,7 @@
 #include "DevTools/ModuleReload/HotReload/DeferredLibraryUnloadQueue.h"
 
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 
 #include "DevTools/ModuleReload/HotReload/ModuleShadowCopy.h"
 
@@ -21,15 +21,15 @@ namespace sw
         ++_batchID;
     }
 
-    void DeferredLibraryUnloadQueue::deferUnload( string_view moduleName, void* pHandle, const AbsolutePath& shadowPath )
+    void DeferredLibraryUnloadQueue::deferUnload( string_view moduleName, DynamicLibrary library, const AbsolutePath& shadowPath )
     {
-        if ( pHandle == nullptr )
+        if ( library.isValid() == false )
             return;
 
         DeferredLibrary deferredLibrary{};
         deferredLibrary._moduleName = string{ moduleName };
         deferredLibrary._shadowPath = shadowPath;
-        deferredLibrary._pHandle    = pHandle;
+        deferredLibrary._library    = std::move( library );
         deferredLibrary._batchID    = _batchID;
         _listLibrary.push_back( std::move( deferredLibrary ) );
 
@@ -54,9 +54,9 @@ namespace sw
 
         for ( size_t libraryIndex = batchEnd; libraryIndex > 0; --libraryIndex )
         {
-            const DeferredLibrary& deferredLibrary = _listLibrary[libraryIndex - 1];
-            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingDeferredModuleImage", "Unloading deferred module image %# (batch %#, handle=%#)", deferredLibrary._moduleName, deferredLibrary._batchID, deferredLibrary._pHandle );
-            ModuleLibraryUtil::unloadDynamicLibrary( deferredLibrary._pHandle );
+            DeferredLibrary& deferredLibrary = _listLibrary[libraryIndex - 1];
+            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingDeferredModuleImage", "Unloading deferred module image %# (batch %#, handle=%#)", deferredLibrary._moduleName, deferredLibrary._batchID, deferredLibrary._library.getView().getOSHandle() );
+            deferredLibrary._library.reset();
             ModuleShadowCopy::removeArtifacts( deferredLibrary._shadowPath );
         }
         _listLibrary.erase( _listLibrary.begin(), _listLibrary.begin() + static_cast<std::ptrdiff_t>( batchEnd ) );

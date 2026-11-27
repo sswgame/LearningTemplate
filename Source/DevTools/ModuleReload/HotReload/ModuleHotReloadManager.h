@@ -187,7 +187,7 @@ namespace sw
         bool verifyModuleBindings() const;
 
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
-        ModuleLibraryHandle getModuleHandle( string_view moduleName ) const override;
+        DynamicLibraryView getModuleHandle( string_view moduleName ) const override;
         /** @brief 이 매니저에 빌드 시작 · 끝을 알리는 모듈 컴파일러(`ModuleCompiler`)를 만듭니다. */
         [[nodiscard]] unique_ptr<IModuleCompiler> createModuleCompiler() override;
 
@@ -218,13 +218,13 @@ namespace sw
         /** @brief `loadSharedModule` 이 올린 공용 모듈 라이브러리입니다. */
         struct SharedLibrary
         {
-            string _name;
-            void*  _pHandle{ nullptr }; ///< 섀도 복사 없이 원본 경로로 올린 라이브러리
+            string         _name;
+            DynamicLibrary _library{}; ///< 섀도 복사 없이 원본 경로로 올린 라이브러리
         };
 
         struct PreparedShadow
         {
-            void*                        _pHandle{ nullptr };
+            DynamicLibrary               _library{};
             AbsolutePath                 _tempPath;
             FileStat                     _sourceStat{};  ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
             engine::ModuleRegistrarHeads _heads;         ///< 로드한 라이브러리의 정적 등록자 머리(커밋 때 올린다)
@@ -246,7 +246,7 @@ namespace sw
             AbsolutePath             _originalModulePath;
             AbsolutePath             _tempModulePath;
             ShadowLibraryNameState   _libraryName;
-            void*                    _pLibraryModule;
+            DynamicLibrary           _library;
             FileStat                 _loadedSourceStat; ///< 로드한 원본의 도장. 이것과 다르면 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
             FileStat                 _debounceStat;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
             Stopwatch                _debounceTimer;

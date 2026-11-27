@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
 
+#include "Core/Algorithm/SampleStatistics.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -26,17 +27,10 @@ namespace sw::editor
             static constexpr const utf8* kCaptureHeader = "SWProfilerCapture 0";
             /** @brief 읽는 캡처의 창 크기 상한(프레임)입니다 — 틀린 파일이 거대한 고리를 만들지 않게. */
             static constexpr uint64 kMaxLoadedWindow = 100000;
-            /** @brief 백분위 최댓값입니다. */
-            static constexpr uint32 kPercentMax = 100;
-
-            /** @brief 정렬된 표본에서 @p percent 백분위를 고릅니다(순위는 1 부터, 올림 — FrameProfiler 와 같은 규칙). */
+            /** @brief 정렬된 표본에서 @p percent 백분위를 고릅니다(`SampleStatistics` 의 최근접 순위). 표본이 없으면 `kNoSample` 입니다. */
             static float64 pickPercentile( const vector<float32>& listSorted, uint32 percent )
             {
-                if ( listSorted.empty() )
-                    return static_cast<float64>( kNoSample );
-                const size_t rank  = ( listSorted.size() * percent + ( kPercentMax - 1 ) ) / kPercentMax;
-                const size_t index = rank == 0 ? 0 : MathUtil::min( rank - 1, listSorted.size() - 1 );
-                return static_cast<float64>( listSorted[index] );
+                return static_cast<float64>( SampleStatistics::findNearestRankPercentile( listSorted, percent ).value_or( kNoSample ) );
             }
 
             /** @brief 열의 값입니다. 이름 열은 따로 비교합니다. */

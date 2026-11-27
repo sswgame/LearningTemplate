@@ -3,6 +3,7 @@
 #include "Core/Log/Output/FileLogOutput.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/FileWritePolicy.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -67,7 +68,7 @@ namespace sw
         SW_ASSERT( fixedAbsPath.empty() == false || FileUtil::isPathAtOrUnderRoot( ProcessRoots::get()._content.str(), logFolderPath.str() ) == false );
         if ( fixedAbsPath.empty() == false )
         {
-            if ( const optional<AbsolutePath> lockedPath = FileUtil::findNotOpenForEdit( fixedAbsPath ); lockedPath.has_value() )
+            if ( const optional<AbsolutePath> lockedPath = FileWritePolicy::findNotOpenForEdit( fixedAbsPath ); lockedPath.has_value() )
             {
                 SW_LOG_ERROR_ID( "FileLogOutput.LogFileNotOpenForEdit", "The log file '%#' is a checked-in read-only file - not written", lockedPath->str() );
                 return false;

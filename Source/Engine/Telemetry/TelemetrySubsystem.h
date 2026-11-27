@@ -115,8 +115,8 @@ namespace sw
         uint32  getCount() const { return _count; }
         float32 getMaxMs() const { return _maxMs; }
         float64 getTotalMs() const { return _totalMs; }
-        /** @brief @p fraction(0..1) 백분위의 프레임 시간(ms)입니다. 표본이 없으면 0 입니다. */
-        float32 computePercentileMs( float32 fraction ) const;
+        /** @brief @p percent 백분위(최근접 순위 — `SampleStatistics`)의 프레임 시간(ms)입니다. 표본이 없으면 0 입니다. */
+        float32 computePercentileMs( uint32 percent ) const;
 
     private:
         vector<uint32> _listBucket;

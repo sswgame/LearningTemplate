@@ -2282,7 +2282,11 @@
     "unregisterLockObserver": "mutex::bindLockObserver 가 돌려준 토큰의 reset(2026-11-21)",
     "setReportFunction": "RaceDetectContext::bindReportFunction — 보고기 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
     "setAssertDialog": "internal::bindAssertDialog(AssertDialogSlot.h) — 대화상자 하나, 둘째 등록은 단언, 토큰이 떼어 낸다(2026-11-21)",
-    "setWriteFilter": "FileUtil::bindWriteFilter — 게이트 하나, 둘째 등록은 단언, 토큰이 걷는다(2026-11-21)",
+    "setWriteFilter": "FileWritePolicy::bindWriteFilter — 게이트 하나, 둘째 등록은 단언, 토큰이 걷는다(2026-11-21)",
+    "setCreateRule": "FileWritePolicy::bindCreateRule — 규칙 하나, 둘째 등록은 단언, 토큰이 걷는다(2026-11-27)",
+    "setCheckoutRule": "FileWritePolicy::bindCheckoutRule — 규칙 하나, 테스트는 suspendCheckoutRule(2026-11-27)",
+    "recordFileCreated": "FileUtil::recordExternalChanges — 세대는 FileUtil 입구만 올리고 바깥은 바깥 프로세스 알림 하나(2026-11-27)",
+    "recordFileRemoved": "FileUtil::recordExternalChanges(2026-11-27)",
     "registerReadObserver": "PlatformFileUtil::bindReadObserver — 관찰자 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
     "unregisterReadObserver": "PlatformFileUtil::bindReadObserver 가 돌려준 토큰의 reset(2026-11-21)",
     "registerWriteObserver": "PlatformFileUtil::bindWriteObserver — 관찰자 하나, 둘째 등록은 단언(ObserverSlot, 2026-11-21)",
@@ -3432,6 +3436,14 @@
     "WindowsToolSearch": "WindowsToolPaths.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
     "FindWindowsTools": "WindowsToolPaths.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
     "fingerprintPose": "computePoseDigest — 포즈 · 모프 가중치의 해시(2026-11-27)",
-    "StageModuleRuntimeDLLs": "ScriptMode/DeployModuleRuntimeDLLs.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)"
+    "StageModuleRuntimeDLLs": "ScriptMode/DeployModuleRuntimeDLLs.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
+    "ModuleLibraryHandle": "DynamicLibraryView — 동적 라이브러리 비소유 뷰를 Core 로 합쳤다(소유는 DynamicLibrary)(2026-11-27)",
+    "loadLibraryAt": "DynamicLibrary::loadAt — 연 쪽이 이동 전용 소유 형식을 쥐고 소멸이 내린다(2026-11-27)",
+    "loadSystemLibrary": "DynamicLibrary::loadSystem(2026-11-27)",
+    "findLoadedLibrary": "DynamicLibraryView::findLoadedAndPin — 고정한 남의 라이브러리는 비소유 뷰다(2026-11-27)",
+    "getDynamicSymbol": "DynamicLibrary · DynamicLibraryView 의 findSymbol(2026-11-27)",
+    "unloadDynamicLibrary": "DynamicLibrary::reset · 소멸자(2026-11-27)",
+    "unloadModuleLibrary": "DynamicLibrary::unloadModule — 의존 라이브러리를 고정한 뒤 내린다(2026-11-27)",
+    "pinDynamicLibraryDependencies": "DynamicLibrary::unloadModule 안으로(2026-11-27)"
   }
 }

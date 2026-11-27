@@ -1,8 +1,7 @@
 /**
  * @file ModuleLibraryUtil.h
- * @brief 동적 라이브러리(모듈 라이브러리)를 다루는 유일한 진입점입니다.
- * @details 이름 만들기, 로드, 심볼 조회, import 바인딩 조회, 의존 라이브러리 고정, 언로드를 제공합니다.
- *          게임과 에디터 모듈(`GameModuleManager`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`ModuleHotReloadManager`), DXC 로더가 모두 이 구조체를 거칩니다.
+ * @brief 동적 라이브러리(모듈 라이브러리)의 이름 · 위치 규칙과 이미지 조회입니다. 라이브러리를 열고 쥐고 내리는 것은 `DynamicLibrary`(Core/Module) 입니다.
+ * @details 게임과 에디터 모듈(`GameModuleManager`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`ModuleHotReloadManager`), DXC 로더가 모두 이 이름 규칙으로 경로를 찾는다.
  *          라이브러리의 코드를 가리키는 등록은 여기서 주소로 훑어 떼지 않는다 — 등록은 구독(`Subscription`)이나 모듈 등록자(`ModuleObjectRegistrar`)가 소유하고,
  *          모듈 타입의 인스턴스는 타입의 모듈 이름으로 고른다(`engine::unregisterModuleTypes`).
  *          섀도 복사본의 파일 바이트를 고치는 `ModuleLibraryPatch` 는 핫 리로드만 쓰므로 `GameModuleManager/ModuleLibraryPatch` 에 있습니다.
@@ -10,7 +9,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -19,7 +17,7 @@ namespace sw
 {
     /**
      * @struct ModuleLibraryUtil
-     * @brief 모듈 라이브러리의 이름, 로드, 조회, 언로드를 담당합니다.
+     * @brief 모듈 라이브러리의 이름 · 위치 · 이미지 조회를 담당합니다.
      */
     struct SW_API ModuleLibraryUtil
     {
@@ -58,24 +56,8 @@ namespace sw
         static bool getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory );
 
         // ------------------------------------------------------------------------------
-        // 2) 로드, 심볼, 언로드(OS 로더). 등록을 해제하지 않는다. 엔진 코드를 가리킬 수 있는 모듈은 4)의 함수로 언로드한다.
+        // 2) 이미지 고정 · 이름. 라이브러리를 열고 내리는 일은 소유 형식 `DynamicLibrary` 가 맡는다.
         // ------------------------------------------------------------------------------
-        /**
-         * @brief 절대 경로 @p libraryPath 의 라이브러리를 로드합니다. 검색하지 않고 한 번만 시도한다(경로인지 이름인지 추측하지 않는다).
-         * @details 의존 라이브러리는 그 라이브러리 폴더 · 응용 프로그램 폴더 · `Bin` · `Bin/Modules` · 시스템 폴더에서 찾는다(Windows `AddDllDirectory`, Linux 는 RPATH).
-         *          연 쪽이 핸들을 소유하고 내린다(`ModuleHotReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈). 프로세스 끝까지 두는 곳은 그 자리에
-         *          이유를 적는다(DXC 의 함수 정적 · OnlineLoadBot 의 서버 키트). `unloadModuleLibrary` 가 고정하는 의존 라이브러리도 같은 규칙의 예외다.
-         * @return 실패하면 이유(OS 오류)를 경고로 남기고 nullptr 입니다.
-         */
-        static void* loadLibraryAt( const AbsolutePath& libraryPath );
-        /**
-         * @brief OS 가 가진 라이브러리를 이름 @p libraryName(`xinput1_4.dll` · `libasound.so.2`)으로 로드합니다. Windows 는 System32 에서만, Linux 는 동적 링커 검색 경로에서 찾는다.
-         * @details 응용 프로그램 폴더를 보지 않는다(같은 이름의 DLL 을 옆에 두어 바꿔치기하는 것을 막는다). 엔진이 함께 내놓는 라이브러리는 `loadLibraryAt` 이다.
-         * @return 실패하면 nullptr 입니다. 없을 수 있는 선택 라이브러리가 많아(XInput 판 · ALSA) 로그는 부르는 쪽이 남긴다.
-         */
-        static void* loadSystemLibrary( string_view libraryName );
-        /** @brief 이미 로드된 라이브러리 @p libraryName 을 찾아 프로세스 끝까지 내려가지 않게 고정합니다(주입된 RenderDoc 같은 남의 라이브러리를 빌릴 때). 없으면 nullptr 입니다. */
-        static void* findLoadedLibrary( string_view libraryName );
         /**
          * @brief 주소 @p pAddress 를 담은 라이브러리를 프로세스 끝까지 내려가지 않게 고정합니다. 고정했으면 true 입니다.
          * @details 떼어 낸 스레드가 아직 그 라이브러리의 코드를 돌 수 있을 때 쓴다(언로드 뒤 남은 몇 명령이 빈 주소를 돈다). 리로드는 새 사본을 따로 싣으므로 옛 사본만 남는다.
@@ -83,16 +65,6 @@ namespace sw
         static bool pinLibraryContaining( const void* pAddress );
         /** @brief 주소 @p pAddress 를 담은 이미지의 모듈 이름(접두어 · 확장자 없는 파일 이름)입니다. 실행 파일이면 그 이름이고, 찾지 못하면 비어 있습니다. */
         [[nodiscard]] static string findImageNameContaining( const void* pAddress );
-        /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
-        static void* getDynamicSymbol( void* pHandle, string_view symbolName );
-        /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */
-        static void unloadDynamicLibrary( void* pHandle );
-        /**
-         * @brief 라이브러리 @p pHandle 이 import 하는 라이브러리 중 지금 로드된 것을 프로세스 끝까지 언로드되지 않게 고정하고, 고정한 수를 반환합니다.
-         * @details 이 핸들을 언로드해도 그 라이브러리가 끌어온 의존 라이브러리는 남긴다. Windows 는 import 테이블의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN` 으로,
-         *          리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정한다. 아직 로드되지 않은 의존 라이브러리는 로드하지 않는다.
-         */
-        static uint32 pinDynamicLibraryDependencies( void* pHandle );
 
         // ------------------------------------------------------------------------------
         // 3) 로드된 라이브러리 조회.
@@ -102,21 +74,5 @@ namespace sw
          * @details PE 머리를 읽는 식은 이 함수 한 곳에만 둔다. 부르는 쪽이 `IMAGE_NT_HEADERS` 로 형변환해 import · 디버그 디렉터리를 읽는다.
          */
         [[nodiscard]] static const void* findImageNtHeaders( const void* pBase );
-
-#if SW_WITH_DYNAMIC_MODULES
-        // ------------------------------------------------------------------------------
-        // 4) 언로드.
-        // ------------------------------------------------------------------------------
-        /**
-         * @brief `loadLibraryAt` 으로 로드한 모듈 라이브러리 @p pHandle 을 언로드합니다.
-         * @details 그 라이브러리를 가리키는 등록은 부르는 쪽(모듈 경로)이 먼저 뗐다 — 구독은 소유자가, 모듈 등록자 · 타입은 `engine::unregisterModuleTypes` 가.
-         *          그 라이브러리가 끌어온 의존 라이브러리(GameFramework 같은 공유 모듈)는 언로드하지 않는다. 의존 라이브러리가 언제 함께 언로드되는지는 로더만 알아서 그 코드를 미리 해제할 수 없기 때문이다.
-         *          Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 붙잡으므로 원래 그렇다. 리눅스는 `DT_NEEDED` 참조가 함께 풀려 언로드되므로 여기서 고정한다(`pinDynamicLibraryDependencies`).
-         *          핫 리로드(`ModuleHotReloadManager`)는 언로드를 미룬다(`DeferredLibraryUnloadQueue`).
-         * @return 라이브러리를 내렸으면 true 입니다.
-         */
-        [[nodiscard]] static bool unloadModuleLibrary( string_view moduleName, void* pHandle );
-
-#endif // SW_WITH_DYNAMIC_MODULES
     };
 } // namespace sw

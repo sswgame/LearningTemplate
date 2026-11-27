@@ -7,6 +7,7 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Module/DynamicLibrary.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
@@ -269,12 +270,16 @@ namespace sw
             static void* loadDXCCreateInstance()
             {
                 const AbsolutePath libraryPath = FileUtil::getExecutablePath().getParent().join( ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
-                void* const        pLibrary    = ModuleLibraryUtil::loadLibraryAt( libraryPath );
-                if ( pLibrary == nullptr )
+                DynamicLibrary     library     = DynamicLibrary::loadAt( libraryPath );
+                if ( library.isValid() == false )
                     return nullptr;
-                void* const pCreateInstance = ModuleLibraryUtil::getDynamicSymbol( pLibrary, "DxcCreateInstance" );
+                void* const pCreateInstance = library.findSymbol( "DxcCreateInstance" );
                 if ( pCreateInstance == nullptr )
+                {
                     SW_LOG_WARNING_ID( "ShaderCompiler.LoadedButDxcCreateInstanceNot", "%# loaded but DxcCreateInstance not found", libraryPath.c_str() );
+                    return nullptr;
+                }
+                (void)library.leakForProcessLifetime(); // 함수 정적(`findDXCCreateInstance`)이 주소를 프로세스 끝까지 쥔다
                 return pCreateInstance;
             }
 
