@@ -28,38 +28,33 @@ namespace sw
 
     void ShooterHUDViewModel::setHealth( float32 health, float32 ratio )
     {
-        (void)setField( _health, static_cast<int32>( MathUtil::ceil( MathUtil::max( 0.0f, health ) ) ), "_health" );
-        (void)setField( _healthRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ), "_healthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _health, static_cast<int32>( MathUtil::ceil( MathUtil::max( 0.0f, health ) ) ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ) );
     }
 
     void ShooterHUDViewModel::setAmmo( int32 magazineAmmo, int32 reserveAmmo )
     {
-        (void)setField( _magazineAmmo, magazineAmmo, "_magazineAmmo" );
-        (void)setField( _reserveAmmo, reserveAmmo, "_reserveAmmo" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _magazineAmmo, magazineAmmo );
+        (void)SW_SET_VIEW_MODEL_FIELD( _reserveAmmo, reserveAmmo );
     }
 
     void ShooterHUDViewModel::setWeaponName( string_view weaponName )
     {
-        (void)setField( _weaponName, string( weaponName ), "_weaponName" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _weaponName, string( weaponName ) );
     }
 
     void ShooterHUDViewModel::setItemName( string_view itemName )
     {
-        (void)setField( _itemName, string( itemName ), "_itemName" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _itemName, string( itemName ) );
     }
 
     void ShooterHUDViewModel::setCrosshairShown( bool bShown )
     {
-        (void)setField( _crosshairVisibility, toVisibility( bShown ), "_crosshairVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _crosshairVisibility, toHUDVisibility( bShown ) );
     }
 
     void ShooterHUDViewModel::setHitMarkerShown( bool bShown )
     {
-        (void)setField( _hitMarkerVisibility, toVisibility( bShown ), "_hitMarkerVisibility" );
-    }
-
-    WidgetVisibility ShooterHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _hitMarkerVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

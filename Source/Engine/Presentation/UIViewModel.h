@@ -15,6 +15,12 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+/**
+ * @brief 뷰모델 멤버 @p member 에 @p value 를 넣고 바뀌었으면 그 멤버 이름의 필드를 알립니다(`UIViewModel::setField`). 바뀌었으면 true 입니다.
+ * @details 필드 이름을 멤버 토큰에서 만든다. 이름 글자를 따로 적으면 멤버 이름을 바꿀 때 어긋나도 컴파일되고 바인딩만 조용히 멈춘다(언리얼 `UE_MVVM_SET_PROPERTY_VALUE` 와 같은 자리).
+ */
+#define SW_SET_VIEW_MODEL_FIELD( member, value ) setField( member, value, #member )
+
 namespace sw
 {
     struct TypeInfo;
@@ -59,7 +65,10 @@ namespace sw
 
         /** @brief 필드 @p field(PROPERTY 이름)가 바뀌었음을 알립니다. 묶인 위젯 필드는 다음 바인딩 단계에서 한 번 갱신됩니다. */
         void notifyFieldChanged( const hashed_string& field );
-        /** @brief 값이 다르면 @p inoutField 에 넣고 @p field 를 알립니다(세터 도우미). 바뀌었으면 true 입니다. */
+        /**
+         * @brief 값이 다르면 @p inoutField 에 넣고 @p field 를 알립니다(세터 도우미). 바뀌었으면 true 입니다.
+         * @details 필드 이름이 멤버 이름과 같으면 `SW_SET_VIEW_MODEL_FIELD( _member, value )` 를 쓴다(이름을 글자로 다시 적지 않는다).
+         */
         template <typename ValueType>
         bool setField( ValueType& inoutField, const ValueType& value, const hashed_string& field )
         {

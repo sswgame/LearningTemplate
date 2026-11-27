@@ -372,6 +372,14 @@ namespace sw
                                      type._name.c_str(), function._name.c_str() );
                     bValid = false;
                 }
+                // 인자를 받는 서버 함수는 검증 짝이 있어야 한다 — 클라이언트가 고른 값이 검증 없이 서버 상태에 닿지 않는다.
+                if ( function._metadata->_netRole == FunctionNetRole::Server && function._listParameter.empty() == false && function._metadata->_bValidate == SW_FALSE )
+                {
+                    SW_LOG_ERROR_ID( "RemoteCall.ServerFunctionNotValidated",
+                                     "Remote function %#::%# is a Server function with arguments but is not marked Validate - add Validate and a 'bool validate%#( same parameters )' FUNCTION()",
+                                     type._name.c_str(), function._name.c_str(), function._name.c_str() );
+                    bValid = false;
+                }
                 // 와이어는 이름 해시로 함수를 가리킨다 — 사슬에서 먼저 찾히는 함수가 이 함수(또는 같은 이름의 재정의)가 아니면 번호가 겹친 것이다.
                 const RemoteFunction byID  = findFunctionByID( type, getFunctionID( function ) );
                 const FunctionInfo*  pByID = byID._pFunction;

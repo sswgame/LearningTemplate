@@ -610,7 +610,7 @@ namespace sw
     {
         const RTSPlayer* pA = findPlayer( playerA );
         const RTSPlayer* pB = findPlayer( playerB );
-        return pA != nullptr && pB != nullptr && TeamAttitudeUtil::isHostile( pA->_team, pB->_team );
+        return pA != nullptr && pB != nullptr && isHostileTeam( pA->_team, pB->_team );
     }
 
     bool RTSSimulation::canAttack( const RTSUnit& attacker, const RTSUnit& target ) const
@@ -682,7 +682,7 @@ namespace sw
         const RTSPlayer* pPlayer = findPlayer( player );
         if ( pUnit == nullptr || pPlayer == nullptr )
             return false;
-        if ( pUnit->_owner != kNoOwner && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( pUnit->_owner )]._team, pPlayer->_team ) )
+        if ( pUnit->_owner != kNoOwner && isFriendlyTeam( _listPlayer[static_cast<size_t>( pUnit->_owner )]._team, pPlayer->_team ) )
             return true;
         if ( pUnit->isMobile() )
             return getVisibility( player, _grid.computeCell( pUnit->_position ) ) == RTSVisibility::Visible;

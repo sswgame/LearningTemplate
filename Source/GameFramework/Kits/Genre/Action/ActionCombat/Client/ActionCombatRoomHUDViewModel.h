@@ -37,9 +37,6 @@ namespace sw
         WidgetVisibility getDefeatedVisibility() const { return _defeatedVisibility; }
 
     private:
-        static WidgetVisibility toVisibility( bool bShown );
-
-    private:
         PROPERTY( DisplayName = "Gate Locked Visibility" )
         WidgetVisibility _gateLockedVisibility;
         PROPERTY( DisplayName = "Cleared Visibility" )

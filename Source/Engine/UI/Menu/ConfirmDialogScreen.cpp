@@ -26,10 +26,10 @@ namespace sw
 
     void ConfirmDialogViewModel::apply( const ConfirmDialogDesc& desc )
     {
-        (void)setField( _title, desc._title, "_title" );
-        (void)setField( _message, desc._message, "_message" );
-        (void)setField( _acceptText, desc._acceptText, "_acceptText" );
-        (void)setField( _cancelText, desc._cancelText, "_cancelText" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _title, desc._title );
+        (void)SW_SET_VIEW_MODEL_FIELD( _message, desc._message );
+        (void)SW_SET_VIEW_MODEL_FIELD( _acceptText, desc._acceptText );
+        (void)SW_SET_VIEW_MODEL_FIELD( _cancelText, desc._cancelText );
     }
 
     ConfirmDialogScreen::ConfirmDialogScreen( const UIScreenDef& desc, unique_ptr<Widget> root )

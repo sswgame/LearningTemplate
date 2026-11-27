@@ -52,10 +52,6 @@ namespace sw
         WidgetVisibility getBattleVisibility() const { return _battleVisibility; }
 
     private:
-        /** @brief 보임 여부를 위젯의 보임 칸 값으로 바꿉니다(보이면 클릭을 받지 않는 보임, 아니면 접힘). */
-        static WidgetVisibility toVisibility( bool bShown );
-
-    private:
         PROPERTY( DisplayName = "Member Name", Tooltip = "Localization key (the source text when the table has no entry)" )
         string _memberName;
         PROPERTY( DisplayName = "Target Name", Tooltip = "Localization key (the source text when the table has no entry)" )

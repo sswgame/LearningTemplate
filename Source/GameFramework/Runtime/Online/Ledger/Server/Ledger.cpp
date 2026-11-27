@@ -199,8 +199,8 @@ namespace sw
                 outFailedPostingIndex        = nullopt;
                 const int32 postingCount     = static_cast<int32>( request._listPosting.size() );
                 const bool  bCountOk         = 1 <= postingCount && postingCount <= LedgerConstant::kMaxPostingCount;
-                const bool  bKeyOk           = LedgerUtil::isValidJournalKey( request._journalKey );
-                const bool  bReasonOk        = LedgerUtil::isValidReasonCode( request._reason );
+                const bool  bKeyOk           = LedgerJournalKey::isValid( request._journalKey );
+                const bool  bReasonOk        = LedgerTransferRequest::isValidReason( request._reason );
                 const bool  bMemoOk          = request._memo.size() <= static_cast<size_t>( LedgerConstant::kMaxMemoSize );
                 const bool  bInvalidTransfer = bCountOk == false || bKeyOk == false || bReasonOk == false || bMemoOk == false;
                 if ( bInvalidTransfer )
@@ -210,9 +210,8 @@ namespace sw
                     const LedgerPosting& posting         = request._listPosting[static_cast<size_t>( postingIndex )];
                     const bool           bHolderOk       = posting._from.isValid() && posting._to.isValid() && posting._from != posting._to;
                     const bool           bSystemOnly     = posting._from.isSystem() && posting._to.isSystem();
-                    const bool           bInstance       = LedgerItemInstance::isInstanceAssetID( posting._assetID );
-                    const bool           bAmountOk       = bInstance ? posting._amount == 1 : 1 <= posting._amount && posting._amount <= LedgerConstant::kMaxAmount; // 인스턴스 아이템은 하나씩 옮긴다
-                    const bool           bInvalidPosting = bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerUtil::isValidAssetID( posting._assetID ) == false;
+                    const bool           bAmountOk       = LedgerItemInstance::isValidAmount( posting._assetID, posting._amount );
+                    const bool           bInvalidPosting = bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerAssetID::isValid( posting._assetID ) == false;
                     if ( bInvalidPosting )
                     {
                         outFailedPostingIndex = postingIndex;
@@ -710,7 +709,7 @@ namespace sw
 
     ServiceStoreResult Ledger::listBalances( IServiceStoreConnection& connection, const LedgerHolder& holder, vector<LedgerBalance>& outListBalance )
     {
-        string afterAssetID;
+        optional<LedgerAssetID> afterAssetID;
         while ( true )
         {
             const size_t             sizeBefore = outListBalance.size();
@@ -719,21 +718,23 @@ namespace sw
                 return listed;
             if ( outListBalance.size() - sizeBefore < static_cast<size_t>( LedgerInternal::kListPageSize ) )
                 return ServiceStoreResult::Ok;
-            afterAssetID = outListBalance.back()._assetID;
+            afterAssetID = LedgerAssetID::tryParse( outListBalance.back()._assetID );
+            if ( afterAssetID.has_value() == false )
+                return ServiceStoreResult::Unavailable; // 저장된 잔액 키가 자산 id 규칙 밖이다
         }
     }
 
-    ServiceStoreResult Ledger::listBalancePage( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view afterAssetID, int32 maxCount,
+    ServiceStoreResult Ledger::listBalancePage( IServiceStoreConnection& connection, const LedgerHolder& holder, const optional<LedgerAssetID>& afterAssetID, int32 maxCount,
                                                 vector<LedgerBalance>& outListBalance )
     {
-        const bool bInvalidPageQuery = holder.isValid() == false || holder.isSystem() || maxCount <= 0 || ( afterAssetID.empty() == false && LedgerUtil::isValidAssetID( afterAssetID ) == false );
+        const bool bInvalidPageQuery = holder.isValid() == false || holder.isSystem() || maxCount <= 0;
         if ( bInvalidPageQuery )
             return ServiceStoreResult::Invalid;
         string prefix = holder.makeKey();
         prefix.push_back( '/' );
         StringBuilder<constant::buffer::kMax256> cursorBuilder;
-        if ( afterAssetID.empty() == false )
-            cursorBuilder.appendFormat( "%#%#", prefix, afterAssetID );
+        if ( afterAssetID.has_value() )
+            cursorBuilder.appendFormat( "%#%#", prefix, afterAssetID->getText() );
         const string             cursor( cursorBuilder.view() );
         vector<ServiceRecord>    listRecord;
         const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getBalanceTable(), prefix, cursor, maxCount, false, listRecord )._result;
@@ -750,15 +751,15 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
-    ServiceStoreResult Ledger::readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetID, LedgerBalance& outBalance )
+    ServiceStoreResult Ledger::readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, const LedgerAssetID& assetID, LedgerBalance& outBalance )
     {
         outBalance                      = LedgerBalance{};
-        outBalance._assetID             = string( assetID );
-        const bool bInvalidBalanceQuery = holder.isValid() == false || holder.isSystem() || LedgerUtil::isValidAssetID( assetID ) == false;
+        outBalance._assetID             = assetID.getText();
+        const bool bInvalidBalanceQuery = holder.isValid() == false || holder.isSystem();
         if ( bInvalidBalanceQuery )
             return ServiceStoreResult::Invalid;
         ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getBalanceTable(), LedgerInternal::makeBalanceKey( holder.makeKey(), assetID ), record );
+        const ServiceStoreResult read = connection.readRecord( getBalanceTable(), LedgerInternal::makeBalanceKey( holder.makeKey(), assetID.getText() ), record );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
@@ -803,7 +804,7 @@ namespace sw
     ServiceStoreResult Ledger::findJournal( IServiceStoreConnection& connection, string_view journalKey, LedgerJournalEntry& outEntry )
     {
         outEntry = LedgerJournalEntry{};
-        if ( LedgerUtil::isValidJournalKey( journalKey ) == false )
+        if ( LedgerJournalKey::isValid( journalKey ) == false )
             return ServiceStoreResult::Invalid;
         ServiceRecord            record;
         const ServiceStoreResult read = connection.readRecord( getJournalTable(), journalKey, record );

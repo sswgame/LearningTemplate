@@ -343,9 +343,9 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
 
     // 지운 Judy 의 잔액은 같은 정리에서 소각됐고 묘비가 남는다. 취소한 Ivan 의 잔액은 그대로다(감사 P0-7)
     LedgerBalance balance;
-    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[0] ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[0] ), *LedgerAssetID::tryParse( "cur.gold" ), balance ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64{ 50 }, balance._amount );
-    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[1] ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[1] ), *LedgerAssetID::tryParse( "cur.gold" ), balance ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64{ 0 }, balance._amount );
     ServiceRecord tombstone;
     SW_EXPECT_TRUE( fixture.database.readRecord( Ledger::getTombstoneTable(), LedgerHolder::makeAccount( listAccountID[1] ).makeKey(), tombstone ) == ServiceStoreResult::Ok );

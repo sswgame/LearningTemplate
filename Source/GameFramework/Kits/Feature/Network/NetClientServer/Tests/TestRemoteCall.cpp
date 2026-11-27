@@ -58,7 +58,7 @@ namespace sw
         bool _bLastFlag{ false }; // NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
 
         /** @brief 모든 인자 꼴을 하나씩 받아 적습니다. */
-        FUNCTION( Server, Reliable )
+        FUNCTION( Server, Reliable, Validate )
         void recordArguments( uint64 bigID, float64 number, const string& text, bool bFlag, RemoteCallTestMode mode )
         {
             _lastBigID  = bigID;
@@ -66,6 +66,18 @@ namespace sw
             _lastText   = text;
             _bLastFlag  = bFlag;
             _lastMode   = mode;
+        }
+
+        /** @brief `recordArguments` 의 검증 짝 — 인자 꼴을 그대로 보는 테스트라 모두 받습니다. */
+        FUNCTION()
+        bool validateRecordArguments( uint64 bigID, float64 number, const string& text, bool bFlag, RemoteCallTestMode mode ) const
+        {
+            (void)bigID;
+            (void)number;
+            (void)text;
+            (void)bFlag;
+            (void)mode;
+            return true;
         }
 
         /** @brief 검증을 지난 공격 — 대상과 힘을 적습니다. */
@@ -81,12 +93,26 @@ namespace sw
         bool validateAttackTarget( int32 targetID, int32 power ) const { return targetID > 0 && power >= 0 && power <= 50; }
 
         /** @brief 비신뢰 이동 — 잃어도 되는 호출입니다. */
-        FUNCTION( Server )
+        FUNCTION( Server, Validate )
         void moveStep( float32 distance ) { _movedDistance += distance; }
+        /** @brief `moveStep` 의 검증 짝 — 모두 받습니다. */
+        FUNCTION()
+        bool validateMoveStep( float32 distance ) const
+        {
+            (void)distance;
+            return true;
+        }
 
         /** @brief 함수별 상한이 있는 표시 놓기 — 연결마다 초당 2 번입니다(`MaxCallsPerSecond`). */
-        FUNCTION( Server, MaxCallsPerSecond = 2 )
+        FUNCTION( Server, Validate, MaxCallsPerSecond = 2 )
         void placeMarker( int32 markerID ) { _lastMarkerID = markerID; }
+        /** @brief `placeMarker` 의 검증 짝 — 모두 받습니다(상한 테스트라 값은 보지 않는다). */
+        FUNCTION()
+        bool validatePlaceMarker( int32 markerID ) const
+        {
+            (void)markerID;
+            return true;
+        }
 
         /** @brief 원격 역할이 없는 함수 — 서버가 원격으로 받지 않습니다. */
         FUNCTION()
@@ -111,6 +137,20 @@ namespace sw
         void act( int32 value ) { _value = value; }
     };
 
+    /** @brief 인자를 받는데 `Validate` 가 없는 서버 함수 — 등록이 거절해야 합니다. */
+    REFLECT()
+    struct RemoteCallTestServerWithoutValidate
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _value{ 0 };
+
+        /** @brief 검증 짝이 없는 서버 함수입니다. */
+        FUNCTION( Server, Reliable )
+        void act( int32 value ) { _value = value; }
+    };
+
     /** @brief 실을 수 없는 인자(벡터)를 받는 원격 함수 — 등록이 거절해야 합니다. */
     REFLECT()
     struct RemoteCallTestVectorArgument
@@ -121,8 +161,15 @@ namespace sw
         float3 _position{};
 
         /** @brief 벡터 인자는 원격 인자가 될 수 없습니다. */
-        FUNCTION( Server, Reliable )
+        FUNCTION( Server, Reliable, Validate )
         void place( float3 position ) { _position = position; }
+        /** @brief `place` 의 검증 짝 — 인자 꼴만 거절되게 짝은 맞춘다. */
+        FUNCTION()
+        bool validatePlace( float3 position ) const
+        {
+            (void)position;
+            return true;
+        }
     };
 
     /** @brief `Client` 함수에 함수별 상한을 적은 대상 — 서버가 지킬 수 없으므로 등록이 거절해야 합니다. */
@@ -402,7 +449,7 @@ SW_TEST_CASE( RemoteCallTest, ServerCallsTheOwnerClientFunction )
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._client.getInvokedCount() );
 }
 
-/** @brief [RemoteCallTest] 계약을 어긴 타입(검증 짝 없음 · 실을 수 없는 인자)은 등록되지 않는다 — 실행 중에 부를 수 없는 함수를 발견하지 않는다. */
+/** @brief [RemoteCallTest] 계약을 어긴 타입(검증 짝 없음 · 인자 있는 서버 함수의 검증 없음 · 실을 수 없는 인자)은 등록되지 않는다 — 실행 중에 부를 수 없는 함수를 발견하지 않는다. */
 SW_TEST_CASE( RemoteCallTest, RegistrationChecksTheContract )
 {
     RemoteCallServer               server;
@@ -412,8 +459,12 @@ SW_TEST_CASE( RemoteCallTest, RegistrationChecksTheContract )
     SW_EXPECT_FALSE( server.registerTarget( 1, *RemoteCallTestMissingValidator::StaticType(), &missing, 0 ).isActive() );
     SW_EXPECT_LOG( "RemoteCall.ParameterNotWire" );
     SW_EXPECT_FALSE( server.registerTarget( 2, *RemoteCallTestVectorArgument::StaticType(), &vectorArgument, 0 ).isActive() );
+    RemoteCallTestServerWithoutValidate withoutValidate;
+    SW_EXPECT_LOG( "RemoteCall.ServerFunctionNotValidated" );
+    SW_EXPECT_FALSE( server.registerTarget( 4, *RemoteCallTestServerWithoutValidate::StaticType(), &withoutValidate, 0 ).isActive() );
     SW_EXPECT_FALSE( server.hasTarget( 1 ) );
     SW_EXPECT_FALSE( server.hasTarget( 2 ) );
+    SW_EXPECT_FALSE( server.hasTarget( 4 ) );
 
     RemoteCallTestAvatar avatar;
     const Subscription   registered = server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 );

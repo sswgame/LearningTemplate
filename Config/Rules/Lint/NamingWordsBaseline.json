@@ -401,7 +401,6 @@
     "Source/GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.cpp": {"suffix:Subsystem": 1},
     "Source/GameFramework/Runtime/Gameplay/Interaction/InteractionInterruptionSystem.h": {"suffix:System": 1},
     "Source/GameFramework/Runtime/Gameplay/Interaction/InteractorComponent.cpp": {"word:spec": 1},
-    "Source/GameFramework/Runtime/Gameplay/Match/TeamAttitude.h": {"suffix:Util": 1},
     "Source/GameFramework/Runtime/Gameplay/Mechanism/Circuit/LogicCircuit.cpp": {"word:spec": 1},
     "Source/GameFramework/Runtime/Gameplay/Mechanism/Circuit/LogicCircuitNodeRegistry.cpp": {"word:spec": 1},
     "Source/GameFramework/Runtime/Gameplay/Progression/MinigameRewardComponent.cpp": {"word:spec": 1},

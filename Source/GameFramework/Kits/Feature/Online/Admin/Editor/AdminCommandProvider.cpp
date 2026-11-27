@@ -204,7 +204,7 @@ namespace sw::editor
         if ( pAccount == nullptr )
             return AdminResult::UnknownAccount;
         // 서버와 같은 규칙이다(`AdminStoreLogic`) - 예전에는 길이만 봐 서버가 거절할 자산 이름이 메모리 제공자에서는 잔액이 되었다.
-        if ( LedgerUtil::isValidAssetID( request._assetID ) == false || request._amount == 0 )
+        if ( LedgerAssetID::isValid( request._assetID ) == false || request._amount == 0 )
             return AdminServiceResult::fail( OnlineError::kInvalidRequest );
         // 부호를 뒤집지 않고 비교한다 - INT64_MIN 의 부호 반전은 정의되지 않은 동작이다.
         if ( request._amount > kMaxAdjustAmount || request._amount < -kMaxAdjustAmount )

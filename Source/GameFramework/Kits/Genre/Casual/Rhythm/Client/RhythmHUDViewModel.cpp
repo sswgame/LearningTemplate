@@ -24,38 +24,33 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility RhythmHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void RhythmHUDViewModel::setScore( int32 score )
     {
-        (void)setField( _score, score, "_score" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _score, score );
     }
 
     void RhythmHUDViewModel::setCombo( int32 combo )
     {
-        (void)setField( _combo, combo, "_combo" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _combo, combo );
     }
 
     void RhythmHUDViewModel::setAccuracy( int32 accuracy )
     {
-        (void)setField( _accuracy, accuracy, "_accuracy" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _accuracy, accuracy );
     }
 
     void RhythmHUDViewModel::setLifeRatio( float32 lifeRatio )
     {
-        (void)setField( _lifeRatio, MathUtil::clamp( lifeRatio, 0.0f, 1.0f ), "_lifeRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _lifeRatio, MathUtil::clamp( lifeRatio, 0.0f, 1.0f ) );
     }
 
     void RhythmHUDViewModel::setClearedShown( bool bShown )
     {
-        (void)setField( _clearedVisibility, toVisibility( bShown ), "_clearedVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _clearedVisibility, toHUDVisibility( bShown ) );
     }
 
     void RhythmHUDViewModel::setFailedShown( bool bShown )
     {
-        (void)setField( _failedVisibility, toVisibility( bShown ), "_failedVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _failedVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

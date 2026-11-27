@@ -535,8 +535,9 @@ namespace sw
     {
         for ( const TradeLeg& leg : side._listLeg )
         {
-            LedgerBalance balance;
-            if ( Ledger::readBalance( _connection, LedgerHolder::makeAccount( side._accountID ), leg._assetID, balance ) != ServiceStoreResult::Ok )
+            const optional<LedgerAssetID> assetID = LedgerAssetID::tryParse( leg._assetID ); // 제안 때 거른 다리다(`TradeStateMachine::validateOffer`)
+            LedgerBalance                 balance;
+            if ( assetID.has_value() == false || Ledger::readBalance( _connection, LedgerHolder::makeAccount( side._accountID ), *assetID, balance ) != ServiceStoreResult::Ok )
                 return TradeServiceResult::fail( OnlineError::kUnavailable );
             if ( balance._amount < leg._amount )
                 return TradeResult::InsufficientFunds;

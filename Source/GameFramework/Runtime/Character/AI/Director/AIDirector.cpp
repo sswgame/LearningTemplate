@@ -5,10 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Serializer/Archive.h"
@@ -75,7 +73,6 @@ namespace sw
         , _pickSerial{ 0 }
         , _phaseIndex{ -1 }
         , _cycle{ 0 }
-
     {
     }
 
@@ -435,101 +432,17 @@ namespace sw
     void AIDirector::pushEvent( const AIDirectorEvent& event )
     {
         _eventBuffer.push( event );
-        _listTrace.push( event ); // 최근 사건은 `explain` 이 보여 준다
+        if constexpr ( kTraceEnabled )
+        {
+            if ( _listTrace.size() >= kMaxTraceEvent )
+                _listTrace.pop_front();    // 가득 차면 가장 오래된 것을 버린다
+            _listTrace.push_back( event ); // 최근 사건은 `dumpTrace` 가 보여 준다
+        }
     }
 
     void AIDirector::pollEvents( vector<AIDirectorEvent>& outListEvent )
     {
         _eventBuffer.moveAllTo( outListEvent );
-    }
-
-    void AIDirector::explain( string& outText ) const
-    {
-        outText.clear();
-        if ( _pProfile == nullptr || _phaseIndex < 0 )
-        {
-            outText = "director: not initialized\n";
-            return;
-        }
-        const AIDirectorPhaseDef&                 phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
-        StringBuilder<constant::buffer::kMax4096> text;
-        text.appendFormat( "director t=%.2fs phase '%#' (%.2fs) intensity %.2f calm %.2fs cycle %#\n", _time, phase._id.c_str(), _phaseTime, _intensity,
-                           getIntensityModel().getCalmSeconds(), _cycle );
-        if ( _pSpawnTable != nullptr )
-        {
-            text.appendFormat( "  spawn: budget %.2f scale %.2f alive %# pending '%#'\n", _spawnDirector.getBudget(), _spawnDirector.getBudgetScale(),
-                               _spawnDirector.getTotalAliveCount(), _spawnDirector.getPendingEntry().c_str() );
-        }
-        const float32 calmSeconds = getIntensityModel().getCalmSeconds();
-        for ( size_t exitIndex = 0; exitIndex < phase._listExit.size(); ++exitIndex )
-        {
-            const AIDirectorExitDef& exit = phase._listExit[exitIndex];
-            text.appendFormat( "  exit #%# -> '%#':", exitIndex, exit._to.c_str() );
-            bool bBlocked = false;
-            if ( _phaseTime < exit._minTime )
-            {
-                text.appendFormat( " [minTime %.2f]", exit._minTime );
-                bBlocked = true;
-            }
-            if ( exit._intensityAbove >= 0.0f && _intensity < exit._intensityAbove )
-            {
-                text.appendFormat( " [intensityAbove %.2f]", exit._intensityAbove );
-                bBlocked = true;
-            }
-            if ( exit._intensityBelow >= 0.0f && _intensity > exit._intensityBelow )
-            {
-                text.appendFormat( " [intensityBelow %.2f]", exit._intensityBelow );
-                bBlocked = true;
-            }
-            if ( calmSeconds < exit._calmFor )
-            {
-                text.appendFormat( " [calmFor %.2f]", exit._calmFor );
-                bBlocked = true;
-            }
-            text.append( bBlocked ? "\n" : " open\n" );
-        }
-        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
-        for ( size_t poolIndex = 0; poolIndex < listPool.size(); ++poolIndex )
-        {
-            const AIDirectorPoolDef& pool  = listPool[poolIndex];
-            const PoolState&         state = _listPoolState[poolIndex];
-            text.appendFormat( "  pool '%#' (%#, %#)%#%# budget %.2f timer %.2f\n", pool._id.c_str(), getEnumName( pool._kind ), getEnumName( pool._trigger ),
-                               isPoolActive( pool ) ? "" : " [pacing]", isPoolCooledDown( pool, state ) ? "" : " [cooldown]", state._budget, state._timer );
-            for ( size_t encounterIndex = 0; encounterIndex < pool._listEncounter.size(); ++encounterIndex )
-            {
-                const AIDirectorEncounterDef& encounter = pool._listEncounter[encounterIndex];
-                const uint32                  mask      = computeBlockMask( static_cast<int32>( poolIndex ), static_cast<int32>( encounterIndex ) );
-                text.appendFormat( "    %# %# w%.2f picked %#", mask == 0 ? "+" : "-", encounter._id.c_str(), encounter._weight,
-                                   state._listEncounter[encounterIndex]._count );
-                for ( uint32 bitIndex = 0; bitIndex < AIDirectorBlock::kCount; ++bitIndex )
-                {
-                    if ( ( mask & ( 1u << bitIndex ) ) != 0 )
-                        text.appendFormat( " [%#]", AIDirectorBlock::getName( bitIndex ) );
-                }
-                text.append( "\n" );
-            }
-        }
-        outText = text.c_str();
-    }
-
-    void AIDirector::dumpTrace( string& outText ) const
-    {
-        outText.clear();
-        for ( const AIDirectorEvent& event : _listTrace )
-        {
-            StringBuilder<constant::buffer::kMax256> line;
-            line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str() );
-            if ( event._source.empty() == false )
-                line.appendFormat( " from '%#'", event._source.c_str() );
-            if ( event._kind == AIDirectorEventKind::PhaseChanged )
-                line.appendFormat( " exit %# cycle %#", event._detail, event._count );
-            else
-                line.appendFormat( " count %# scale %.2f", event._count, event._scale );
-            if ( event._spawnID != 0 )
-                line.appendFormat( " spawn #%#", event._spawnID );
-            line.append( "\n" );
-            outText += line.c_str();
-        }
     }
 
     uint64 AIDirector::computeStateHash() const

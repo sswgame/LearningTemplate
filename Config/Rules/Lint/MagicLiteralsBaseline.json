@@ -825,7 +825,7 @@
     "Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.cpp": {"integer": 2},
     "Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleLocator.cpp": {"minus-one": 2},
     "Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h": {"minus-one": 1},
-    "Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.cpp": {"minus-one": 2, "float": 5, "integer": 5},
+    "Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.cpp": {"minus-one": 2, "float": 4, "integer": 1},
     "Source/GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h": {"minus-one": 10},
     "Source/GameFramework/Runtime/Character/AI/SpawnDirector.cpp": {"minus-one": 6, "float": 1},
     "Source/GameFramework/Runtime/Character/Camera/CameraMode.cpp": {"float": 1},

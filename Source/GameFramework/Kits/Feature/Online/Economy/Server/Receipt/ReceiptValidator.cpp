@@ -19,7 +19,7 @@ namespace sw
                     return false;
                 StringBuilder<constant::buffer::kMax64> scope;
                 scope.appendFormat( "%#%#", kScopePrefix, storeName );
-                return LedgerUtil::isValidReasonCode( scope.view() );
+                return LedgerJournalKey::isValidScope( scope.view() );
             }
         };
     } // namespace

@@ -34,51 +34,46 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility MonsterCollectorHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void MonsterCollectorHUDViewModel::setPhase( MonsterCollectorPhase phase, bool bAwaitingSwitch )
     {
         const bool bBattle = phase == MonsterCollectorPhase::Battle;
-        (void)setField( _exploreVisibility, toVisibility( phase == MonsterCollectorPhase::Explore ), "_exploreVisibility" );
-        (void)setField( _battleVisibility, toVisibility( bBattle ), "_battleVisibility" );
-        (void)setField( _commandVisibility, toVisibility( bBattle && bAwaitingSwitch == false ), "_commandVisibility" );
-        (void)setField( _switchVisibility, toVisibility( bBattle && bAwaitingSwitch ), "_switchVisibility" );
-        (void)setField( _victoryVisibility, toVisibility( phase == MonsterCollectorPhase::Victory ), "_victoryVisibility" );
-        (void)setField( _defeatVisibility, toVisibility( phase == MonsterCollectorPhase::Defeat ), "_defeatVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _exploreVisibility, toHUDVisibility( phase == MonsterCollectorPhase::Explore ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _battleVisibility, toHUDVisibility( bBattle ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _commandVisibility, toHUDVisibility( bBattle && bAwaitingSwitch == false ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _switchVisibility, toHUDVisibility( bBattle && bAwaitingSwitch ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _victoryVisibility, toHUDVisibility( phase == MonsterCollectorPhase::Victory ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _defeatVisibility, toHUDVisibility( phase == MonsterCollectorPhase::Defeat ) );
     }
 
     void MonsterCollectorHUDViewModel::setLead( string_view name, int32 level, int32 hp, int32 maxHP )
     {
-        (void)setField( _leadName, string( name ), "_leadName" );
-        (void)setField( _leadLevel, level, "_leadLevel" );
-        (void)setField( _leadHP, hp, "_leadHP" );
-        (void)setField( _leadMaxHP, maxHP, "_leadMaxHP" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _leadName, string( name ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _leadLevel, level );
+        (void)SW_SET_VIEW_MODEL_FIELD( _leadHP, hp );
+        (void)SW_SET_VIEW_MODEL_FIELD( _leadMaxHP, maxHP );
     }
 
     void MonsterCollectorHUDViewModel::setFoe( string_view name, int32 level, int32 hp )
     {
-        (void)setField( _foeName, string( name ), "_foeName" );
-        (void)setField( _foeLevel, level, "_foeLevel" );
-        (void)setField( _foeHP, hp, "_foeHP" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _foeName, string( name ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _foeLevel, level );
+        (void)SW_SET_VIEW_MODEL_FIELD( _foeHP, hp );
     }
 
     void MonsterCollectorHUDViewModel::setMoveName( string_view name )
     {
-        (void)setField( _moveName, string( name ), "_moveName" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _moveName, string( name ) );
     }
 
     void MonsterCollectorHUDViewModel::setCapture( int32 remainingBallCount, int32 captureCount, int32 captureGoal )
     {
-        (void)setField( _remainingBallCount, remainingBallCount, "_remainingBallCount" );
-        (void)setField( _captureCount, captureCount, "_captureCount" );
-        (void)setField( _captureGoal, captureGoal, "_captureGoal" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _remainingBallCount, remainingBallCount );
+        (void)SW_SET_VIEW_MODEL_FIELD( _captureCount, captureCount );
+        (void)SW_SET_VIEW_MODEL_FIELD( _captureGoal, captureGoal );
     }
 
     void MonsterCollectorHUDViewModel::setRestShown( bool bShown )
     {
-        (void)setField( _restVisibility, toVisibility( bShown ), "_restVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _restVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

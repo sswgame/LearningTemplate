@@ -21,21 +21,16 @@ namespace sw
 
     void ActionCombatRoomHUDViewModel::setGateLockedShown( bool bShown )
     {
-        (void)setField( _gateLockedVisibility, toVisibility( bShown ), "_gateLockedVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _gateLockedVisibility, toHUDVisibility( bShown ) );
     }
 
     void ActionCombatRoomHUDViewModel::setClearedShown( bool bShown )
     {
-        (void)setField( _clearedVisibility, toVisibility( bShown ), "_clearedVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _clearedVisibility, toHUDVisibility( bShown ) );
     }
 
     void ActionCombatRoomHUDViewModel::setDefeatedShown( bool bShown )
     {
-        (void)setField( _defeatedVisibility, toVisibility( bShown ), "_defeatedVisibility" );
-    }
-
-    WidgetVisibility ActionCombatRoomHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _defeatedVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

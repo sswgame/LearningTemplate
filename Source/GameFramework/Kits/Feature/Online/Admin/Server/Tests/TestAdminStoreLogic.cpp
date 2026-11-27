@@ -61,7 +61,7 @@ namespace
     int64 getGoldOf( MemoryServiceDatabase& database )
     {
         LedgerBalance balance;
-        SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kPlayer ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+        SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kPlayer ), *LedgerAssetID::tryParse( "cur.gold" ), balance ) == ServiceStoreResult::Ok );
         return balance._amount;
     }
 

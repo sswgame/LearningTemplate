@@ -34,72 +34,67 @@ namespace sw
 
     void ScavengerHUDViewModel::setQuotaLeft( int32 value )
     {
-        (void)setField( _quotaLeft, value, "_quotaLeft" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _quotaLeft, value );
     }
 
     void ScavengerHUDViewModel::setDaysLeft( int32 value )
     {
-        (void)setField( _daysLeft, value, "_daysLeft" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _daysLeft, value );
     }
 
     void ScavengerHUDViewModel::setShipValue( int32 value )
     {
-        (void)setField( _shipValue, value, "_shipValue" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _shipValue, value );
     }
 
     void ScavengerHUDViewModel::setCredits( int32 value )
     {
-        (void)setField( _credits, value, "_credits" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _credits, value );
     }
 
     void ScavengerHUDViewModel::setHealthRatio( float32 ratio )
     {
-        (void)setField( _healthRatio, MathUtil::saturate( ratio ), "_healthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::saturate( ratio ) );
     }
 
     void ScavengerHUDViewModel::setDayRatio( float32 ratio )
     {
-        (void)setField( _dayRatio, MathUtil::saturate( ratio ), "_dayRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _dayRatio, MathUtil::saturate( ratio ) );
     }
 
     void ScavengerHUDViewModel::setHour( int32 value )
     {
-        (void)setField( _hour, value, "_hour" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _hour, value );
     }
 
     void ScavengerHUDViewModel::setScrapPercent( int32 value )
     {
-        (void)setField( _scrapPercent, value, "_scrapPercent" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _scrapPercent, value );
     }
 
     void ScavengerHUDViewModel::setThreatPercent( int32 value )
     {
-        (void)setField( _threatPercent, value, "_threatPercent" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _threatPercent, value );
     }
 
     void ScavengerHUDViewModel::setTerminalItem( string_view name, int32 price )
     {
-        (void)setField( _terminalName, string( name ), "_terminalName" );
-        (void)setField( _terminalPrice, price, "_terminalPrice" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _terminalName, string( name ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _terminalPrice, price );
     }
 
     void ScavengerHUDViewModel::setOrbitShown( bool bShown )
     {
-        (void)setField( _orbitVisibility, toVisibility( bShown ), "_orbitVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _orbitVisibility, toHUDVisibility( bShown ) );
     }
 
     void ScavengerHUDViewModel::setWinShown( bool bShown )
     {
-        (void)setField( _winVisibility, toVisibility( bShown ), "_winVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bShown ) );
     }
 
     void ScavengerHUDViewModel::setLoseShown( bool bShown )
     {
-        (void)setField( _loseVisibility, toVisibility( bShown ), "_loseVisibility" );
-    }
-
-    WidgetVisibility ScavengerHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

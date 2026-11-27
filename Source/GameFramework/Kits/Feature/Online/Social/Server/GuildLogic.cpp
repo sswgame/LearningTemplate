@@ -11,6 +11,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
@@ -804,7 +805,7 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 if ( listBalance.empty() == false )
                 {
-                    if ( LedgerUtil::isValidJournalKey( _request._journalKey ) == false )
+                    if ( LedgerJournalKey::isValid( _request._journalKey ) == false )
                         return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                     LedgerTransferRequest transfer;
                     for ( const LedgerBalance& balance : listBalance ) // 자산 종류는 맡기기가 `kMaxDepositorAsset`(다리 상한) 안으로 막는다
@@ -847,9 +848,10 @@ namespace sw
              */
             ServiceStoreResult runListStorage( ServiceCommitAttempt& connection, uint64 guildID )
             {
-                using Internal                         = GuildLogicInternal;
-                const GuildStorageCursor& cursor       = _request._storageCursor;
-                const bool                bInvalidPage = _request._storageMaxCount < 1 || ( cursor.isEnd() == false && LedgerUtil::isValidAssetID( cursor._assetID ) == false ) ||
+                using Internal                              = GuildLogicInternal;
+                const GuildStorageCursor&     cursor        = _request._storageCursor;
+                const optional<LedgerAssetID> cursorAssetID = cursor.isEnd() ? optional<LedgerAssetID>{} : LedgerAssetID::tryParse( cursor._assetID );
+                const bool                    bInvalidPage  = _request._storageMaxCount < 1 || ( cursor.isEnd() == false && cursorAssetID.has_value() == false ) ||
                                           ( cursor.isEnd() && cursor._depositorID != kInvalidAccountID );
                 if ( bInvalidPage )
                     return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
@@ -858,7 +860,7 @@ namespace sw
                 // 커서가 든 보유자(처음이면 공용 창고)의 남은 품목부터 읽는다.
                 const LedgerHolder firstHolder = cursor._depositorID == kInvalidAccountID ? Internal::makeStorageHolder( guildID )
                                                                                           : Internal::makeDepositorHolder( guildID, cursor._depositorID );
-                if ( appendStoragePage( connection, firstHolder, cursor._depositorID, cursor._assetID, maxCount ) != ServiceStoreResult::Ok )
+                if ( appendStoragePage( connection, firstHolder, cursor._depositorID, cursorAssetID, maxCount ) != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
                 StringBuilder<constant::buffer::kMax128> prefixBuilder;
                 prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
@@ -875,7 +877,7 @@ namespace sw
                         AccountID depositorID = kInvalidAccountID;
                         if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), depositorID ) == false )
                             return ServiceStoreResult::Unavailable;
-                        if ( appendStoragePage( connection, Internal::makeDepositorHolder( guildID, depositorID ), depositorID, "", maxCount ) != ServiceStoreResult::Ok )
+                        if ( appendStoragePage( connection, Internal::makeDepositorHolder( guildID, depositorID ), depositorID, nullopt, maxCount ) != ServiceStoreResult::Ok )
                             return ServiceStoreResult::Unavailable;
                         if ( static_cast<int32>( _serviceResult._listStorage.size() ) == maxCount )
                             break;
@@ -893,7 +895,7 @@ namespace sw
             }
 
             /** @brief 보유자 @p holder 의 잔액을 @p afterAssetID 다음부터 쪽이 찰 때까지(@p maxCount) 창고 품목으로 결과에 붙입니다. */
-            ServiceStoreResult appendStoragePage( IServiceStoreConnection& connection, const LedgerHolder& holder, AccountID depositorID, string_view afterAssetID, int32 maxCount )
+            ServiceStoreResult appendStoragePage( IServiceStoreConnection& connection, const LedgerHolder& holder, AccountID depositorID, const optional<LedgerAssetID>& afterAssetID, int32 maxCount )
             {
                 const int32 remaining = maxCount - static_cast<int32>( _serviceResult._listStorage.size() );
                 if ( remaining <= 0 )
@@ -1044,8 +1046,8 @@ namespace sw
             {
                 using Internal      = GuildLogicInternal;
                 const bool bDeposit = _request._operation == GuildOperation::Deposit;
-                const bool bValid   = LedgerUtil::isValidAssetID( _request._assetID ) && _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount &&
-                                    LedgerUtil::isValidJournalKey( _request._journalKey );
+                const bool bValid   = LedgerAssetID::isValid( _request._assetID ) && LedgerItemInstance::isValidAmount( _request._assetID, _request._amount ) &&
+                                    LedgerJournalKey::isValid( _request._journalKey );
                 if ( bValid == false )
                     return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 const bool bShare = _pLedgerPolicy != nullptr && _pLedgerPolicy->isTransferable( _request._assetID ) == false;
@@ -1109,8 +1111,9 @@ namespace sw
                         return ServiceStoreResult::Ok;
                     }
                 }
-                LedgerBalance balance; // 다시 온 요청이면 이동 뒤 잔액이 없을 수 있어 지금 잔액을 읽는다
-                if ( Ledger::readBalance( connection, storage, _request._assetID, balance ) == ServiceStoreResult::Ok )
+                LedgerBalance                 balance;                                                // 다시 온 요청이면 이동 뒤 잔액이 없을 수 있어 지금 잔액을 읽는다
+                const optional<LedgerAssetID> assetID = LedgerAssetID::tryParse( _request._assetID ); // 이동 앞에서 거른 id 다
+                if ( assetID.has_value() && Ledger::readBalance( connection, storage, *assetID, balance ) == ServiceStoreResult::Ok )
                     _serviceResult._listStorage.push_back( GuildStorageItem{ _request._assetID, balance._amount, itemDepositorID } );
                 return ServiceStoreResult::Ok;
             }
@@ -1158,7 +1161,7 @@ namespace sw
             {
                 using Internal    = GuildLogicInternal;
                 const bool bGrant = _request._operation == GuildOperation::GrantWithdrawal;
-                const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && _request._idempotencyKey.isValid() && _request._targetID != kInvalidAccountID &&
+                const bool bValid = LedgerAssetID::isValid( _request._assetID ) && _request._idempotencyKey.isValid() && _request._targetID != kInvalidAccountID &&
                                     _request._targetID != _request._accountID && ( bGrant == false || ( _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount ) );
                 if ( bValid == false )
                     return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );

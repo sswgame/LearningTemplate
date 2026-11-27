@@ -520,7 +520,7 @@ SW_TEST_CASE( AppearanceResolverHashTest, HashSeesEveryOutputField )
 }
 
 // 장비 상태를 요청에 옮긴다: 아이템 · 꾸미기 · 떨어진 부품 · 숨김, 피해는 맞은 값과 닳은 값 중 큰 쪽. 빈 칸은 비운다.
-SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
+SW_TEST_CASE( CharacterAppearanceSpecTest, ApplyEquipmentCopiesTheInstanceState )
 {
     ItemCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ItemCatalog><Item id="helm" category="Armor" slot="Head" maxStack="1" weight="1" durability="100"/></ItemCatalog>)", "test" ) );
@@ -548,7 +548,7 @@ SW_TEST_CASE( AppearanceInputUtilTest, ApplyEquipmentCopiesTheInstanceState )
     spec._listSlot[1]._itemID = hashed_string( "stale" );
     spec._listSlot[1]._damage = 1.0f;
     spec._listSlot[1]._listDetachedPart.push_back( hashed_string( "Stale" ) );
-    AppearanceInputUtil::applyEquipment( equipment, spec );
+    spec.applyEquipment( equipment );
 
     SW_EXPECT_TRUE( spec._listSlot[0]._itemID == hashed_string( "helm" ) );
     SW_EXPECT_NEAR( spec._listSlot[0]._damage, ResolvedAppearance::snapDamage( 0.75f ), 1.0e-6f ); // 닳음 0.75 > 맞음 0.5

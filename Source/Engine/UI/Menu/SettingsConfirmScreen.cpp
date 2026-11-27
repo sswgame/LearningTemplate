@@ -22,7 +22,7 @@ namespace sw
 
     void SettingsConfirmViewModel::setSecondsLeft( float32 secondsLeft )
     {
-        (void)setField( _secondsLeft, secondsLeft, "_secondsLeft" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _secondsLeft, secondsLeft );
     }
 
     SettingsConfirmScreen::SettingsConfirmScreen( const UIScreenDef& desc, unique_ptr<Widget> root )

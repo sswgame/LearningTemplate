@@ -49,10 +49,6 @@ namespace sw
         void setLoseShown( bool bShown );
 
     private:
-        /** @brief 보이면 클릭을 받지 않는 보임, 아니면 접힘입니다. */
-        static WidgetVisibility toVisibility( bool bShown );
-
-    private:
         PROPERTY( DisplayName = "Items" )
         int32 _items;
         PROPERTY( DisplayName = "Health Ratio", Min = 0.0, Max = 1.0, Units = ratio )

@@ -89,8 +89,11 @@ namespace sw
         bool validateInviteToParty( uint32 avatarID ) const;
 
         /** @brief 받은 초대를 받아들입니다. */
-        FUNCTION( Server, Reliable )
+        FUNCTION( Server, Reliable, Validate )
         void acceptPartyInvite( uint32 leaderAvatarID );
+        /** @brief 파티장 번호가 아바타 번호 꼴이고 자기가 아닌지 봅니다(초대가 있는지는 게임 규칙이라 몸이 답한다). */
+        FUNCTION()
+        bool validateAcceptPartyInvite( uint32 leaderAvatarID ) const;
         /** @brief 파티를 떠납니다. */
         FUNCTION( Server, Reliable )
         void leaveParty();

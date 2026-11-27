@@ -34,50 +34,45 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility RestaurantHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void RestaurantHUDViewModel::setPhase( RestaurantPhase phase )
     {
-        (void)setField( _prepareVisibility, toVisibility( phase == RestaurantPhase::Prepare ), "_prepareVisibility" );
-        (void)setField( _openVisibility, toVisibility( phase == RestaurantPhase::Open ), "_openVisibility" );
-        (void)setField( _closedVisibility, toVisibility( phase == RestaurantPhase::Closed ), "_closedVisibility" );
-        (void)setField( _victoryVisibility, toVisibility( phase == RestaurantPhase::Victory ), "_victoryVisibility" );
-        (void)setField( _defeatVisibility, toVisibility( phase == RestaurantPhase::Defeat ), "_defeatVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _prepareVisibility, toHUDVisibility( phase == RestaurantPhase::Prepare ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _openVisibility, toHUDVisibility( phase == RestaurantPhase::Open ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _closedVisibility, toHUDVisibility( phase == RestaurantPhase::Closed ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _victoryVisibility, toHUDVisibility( phase == RestaurantPhase::Victory ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _defeatVisibility, toHUDVisibility( phase == RestaurantPhase::Defeat ) );
     }
 
     void RestaurantHUDViewModel::setDay( int32 day, int32 dayCount )
     {
-        (void)setField( _day, day, "_day" );
-        (void)setField( _dayCount, dayCount, "_dayCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _day, day );
+        (void)SW_SET_VIEW_MODEL_FIELD( _dayCount, dayCount );
     }
 
     void RestaurantHUDViewModel::setMoney( int32 gold, int32 totalProfit, int32 targetProfit )
     {
-        (void)setField( _gold, gold, "_gold" );
-        (void)setField( _totalProfit, totalProfit, "_totalProfit" );
-        (void)setField( _targetProfit, targetProfit, "_targetProfit" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _gold, gold );
+        (void)SW_SET_VIEW_MODEL_FIELD( _totalProfit, totalProfit );
+        (void)SW_SET_VIEW_MODEL_FIELD( _targetProfit, targetProfit );
     }
 
     void RestaurantHUDViewModel::setHouse( int32 reputation, int32 cookLevel )
     {
-        (void)setField( _reputation, reputation, "_reputation" );
-        (void)setField( _cookLevel, cookLevel, "_cookLevel" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _reputation, reputation );
+        (void)SW_SET_VIEW_MODEL_FIELD( _cookLevel, cookLevel );
     }
 
     void RestaurantHUDViewModel::setCustomers( int32 hour, int32 servedCount, int32 seatedCount )
     {
-        (void)setField( _hour, hour, "_hour" );
-        (void)setField( _servedCount, servedCount, "_servedCount" );
-        (void)setField( _seatedCount, seatedCount, "_seatedCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _hour, hour );
+        (void)SW_SET_VIEW_MODEL_FIELD( _servedCount, servedCount );
+        (void)SW_SET_VIEW_MODEL_FIELD( _seatedCount, seatedCount );
     }
 
     void RestaurantHUDViewModel::setSelection( string_view dishName, int32 price, int32 ingredientCount )
     {
-        (void)setField( _dishName, string( dishName ), "_dishName" );
-        (void)setField( _price, price, "_price" );
-        (void)setField( _ingredientCount, ingredientCount, "_ingredientCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _dishName, string( dishName ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _price, price );
+        (void)SW_SET_VIEW_MODEL_FIELD( _ingredientCount, ingredientCount );
     }
 } // namespace sw

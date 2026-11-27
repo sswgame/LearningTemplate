@@ -94,7 +94,7 @@ namespace sw
     {
         CurrencyDef def;
         bool        bValid = XMLFields::readProperties( node, def, sourceName );
-        if ( bValid && LedgerUtil::isValidAssetID( def._id ) == false )
+        if ( bValid && LedgerAssetID::isValid( def._id ) == false )
         {
             SW_LOG_ERROR_ID( "CurrencyCatalog.CurrencyIdMustZ", "%#: currency id '%#' must be [0-9a-z_.-]", sourceName, def._id );
             bValid = false;

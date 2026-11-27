@@ -146,7 +146,7 @@ namespace sw
         BattleRoyalePlayer&   target     = _listPlayer[static_cast<size_t>( victim )];
         if ( target.isDead() )
             return 0.0f;
-        const bool bFriendlyFire = isValidPlayer( attacker ) && attacker != victim && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( attacker )]._team, target._team );
+        const bool bFriendlyFire = isValidPlayer( attacker ) && attacker != victim && isFriendlyTeam( _listPlayer[static_cast<size_t>( attacker )]._team, target._team );
         if ( bFriendlyFire )
             return 0.0f;
 
@@ -177,7 +177,7 @@ namespace sw
             return false;
         BattleRoyalePlayer& helper = _listPlayer[static_cast<size_t>( reviver )];
         BattleRoyalePlayer& downed = _listPlayer[static_cast<size_t>( target )];
-        const bool          bValid = TeamAttitudeUtil::isFriendly( helper._team, downed._team ) && helper.isAlive() && downed.isDowned() && helper._revivingTarget < 0;
+        const bool          bValid = isFriendlyTeam( helper._team, downed._team ) && helper.isAlive() && downed.isDowned() && helper._revivingTarget < 0;
         if ( bValid == false || downed._revive.join( static_cast<uint32>( reviver ) ) == false )
             return false;
         helper._revivingTarget = target;
@@ -311,7 +311,7 @@ namespace sw
         target._revive.reset();
         endRevive( player ); // 살리던 사람이 기절하면 그만둔다
         // 처치(`handleDeath`)와 같은 규칙이다. 자기 자신을 기절시킨 것은 세지 않는다.
-        if ( instigator.has_value() && isValidPlayer( *instigator ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( *instigator )]._team, target._team ) )
+        if ( instigator.has_value() && isValidPlayer( *instigator ) && isHostileTeam( _listPlayer[static_cast<size_t>( *instigator )]._team, target._team ) )
             ++_listPlayer[static_cast<size_t>( *instigator )]._knocks;
         pushEvent( BattleRoyaleEvent::Kind::PlayerDowned, player, instigator, target._team, 0 );
         resolveTeamWipe( target._team );
@@ -329,7 +329,7 @@ namespace sw
                 other._revivingTarget = constant::invalid_index::kInt32;
         }
         target._revive.reset();
-        if ( killer.has_value() && isValidPlayer( *killer ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( *killer )]._team, target._team ) )
+        if ( killer.has_value() && isValidPlayer( *killer ) && isHostileTeam( _listPlayer[static_cast<size_t>( *killer )]._team, target._team ) )
             ++_listPlayer[static_cast<size_t>( *killer )]._kills;
         _matchState.reportKill( player, killer );
         pushEvent( BattleRoyaleEvent::Kind::PlayerKilled, player, killer, target._team, countRemainingPlayers() );

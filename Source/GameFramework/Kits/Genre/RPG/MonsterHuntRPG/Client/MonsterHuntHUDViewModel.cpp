@@ -32,52 +32,47 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility MonsterHuntHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void MonsterHuntHUDViewModel::setPhase( MonsterHuntPhase phase )
     {
-        (void)setField( _haggleVisibility, toVisibility( phase == MonsterHuntPhase::Haggle ), "_haggleVisibility" );
-        (void)setField( _investigateVisibility, toVisibility( phase == MonsterHuntPhase::Investigate ), "_investigateVisibility" );
-        (void)setField( _huntVisibility, toVisibility( phase == MonsterHuntPhase::Hunt ), "_huntVisibility" );
-        (void)setField( _victoryVisibility, toVisibility( phase == MonsterHuntPhase::Victory ), "_victoryVisibility" );
-        (void)setField( _defeatVisibility, toVisibility( phase == MonsterHuntPhase::Defeat ), "_defeatVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _haggleVisibility, toHUDVisibility( phase == MonsterHuntPhase::Haggle ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _investigateVisibility, toHUDVisibility( phase == MonsterHuntPhase::Investigate ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _huntVisibility, toHUDVisibility( phase == MonsterHuntPhase::Hunt ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _victoryVisibility, toHUDVisibility( phase == MonsterHuntPhase::Victory ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _defeatVisibility, toHUDVisibility( phase == MonsterHuntPhase::Defeat ) );
     }
 
     void MonsterHuntHUDViewModel::setReward( int32 reward )
     {
-        (void)setField( _reward, reward, "_reward" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _reward, reward );
     }
 
     void MonsterHuntHUDViewModel::setHunter( int32 hp, int32 stamina )
     {
-        (void)setField( _hunterHP, hp, "_hunterHP" );
-        (void)setField( _stamina, stamina, "_stamina" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _hunterHP, hp );
+        (void)SW_SET_VIEW_MODEL_FIELD( _stamina, stamina );
     }
 
     void MonsterHuntHUDViewModel::setMonster( int32 hp, bool bWeaknessKnown )
     {
-        (void)setField( _monsterHP, hp, "_monsterHP" );
-        (void)setField( _weaknessVisibility, toVisibility( bWeaknessKnown ), "_weaknessVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _monsterHP, hp );
+        (void)SW_SET_VIEW_MODEL_FIELD( _weaknessVisibility, toHUDVisibility( bWeaknessKnown ) );
     }
 
     void MonsterHuntHUDViewModel::setAlchemy( int32 oilHits, int32 toxicity )
     {
-        (void)setField( _oilHits, oilHits, "_oilHits" );
-        (void)setField( _toxicity, toxicity, "_toxicity" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _oilHits, oilHits );
+        (void)SW_SET_VIEW_MODEL_FIELD( _toxicity, toxicity );
     }
 
     void MonsterHuntHUDViewModel::setSkills( int32 skillPoints, int32 signIntensity )
     {
-        (void)setField( _skillPoints, skillPoints, "_skillPoints" );
-        (void)setField( _signIntensity, signIntensity, "_signIntensity" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _skillPoints, skillPoints );
+        (void)SW_SET_VIEW_MODEL_FIELD( _signIntensity, signIntensity );
     }
 
     void MonsterHuntHUDViewModel::setClues( int32 foundCount, bool bNearby )
     {
-        (void)setField( _foundClueCount, foundCount, "_foundClueCount" );
-        (void)setField( _senseVisibility, toVisibility( bNearby ), "_senseVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _foundClueCount, foundCount );
+        (void)SW_SET_VIEW_MODEL_FIELD( _senseVisibility, toHUDVisibility( bNearby ) );
     }
 } // namespace sw

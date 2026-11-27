@@ -36,42 +36,54 @@ namespace
 SW_TEST_CASE( LedgerTypesTest, TextRulesAcceptOnlyTheirAlphabetAndLength )
 {
     // 틀리면: 대문자 · 남의 기호 · 빈 글 · 상한+1 을 받으면 해당 거짓 단언이, 상한 정확히를 거절하면 참 단언이 진다.
-    SW_EXPECT_TRUE( LedgerUtil::isValidAssetID( "cur.gold" ) );
-    SW_EXPECT_TRUE( LedgerUtil::isValidAssetID( "item.sword-2_b" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidAssetID( "Cur.gold" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidAssetID( "" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidAssetID( "cur gold" ) );
-    SW_EXPECT_TRUE( LedgerUtil::isValidAssetID( Util::repeat( LedgerConstant::kMaxAssetIDSize, 'a' ) ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidAssetID( Util::repeat( LedgerConstant::kMaxAssetIDSize + 1, 'a' ) ) );
+    SW_EXPECT_TRUE( LedgerAssetID::isValid( "cur.gold" ) );
+    SW_EXPECT_TRUE( LedgerAssetID::isValid( "item.sword-2_b" ) );
+    SW_EXPECT_FALSE( LedgerAssetID::isValid( "Cur.gold" ) );
+    SW_EXPECT_FALSE( LedgerAssetID::isValid( "" ) );
+    SW_EXPECT_FALSE( LedgerAssetID::isValid( "cur gold" ) );
+    SW_EXPECT_TRUE( LedgerAssetID::isValid( Util::repeat( LedgerConstant::kMaxAssetIDSize, 'a' ) ) );
+    SW_EXPECT_FALSE( LedgerAssetID::isValid( Util::repeat( LedgerConstant::kMaxAssetIDSize + 1, 'a' ) ) );
 
-    SW_EXPECT_TRUE( LedgerUtil::isValidReasonCode( "shop.buy" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidReasonCode( "shop-buy" ) ); // '-' 는 자산 · 토큰에만
-    SW_EXPECT_TRUE( LedgerUtil::isValidReasonCode( Util::repeat( LedgerConstant::kMaxReasonSize, 'r' ) ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidReasonCode( Util::repeat( LedgerConstant::kMaxReasonSize + 1, 'r' ) ) );
+    SW_EXPECT_TRUE( LedgerTransferRequest::isValidReason( "shop.buy" ) );
+    SW_EXPECT_FALSE( LedgerTransferRequest::isValidReason( "shop-buy" ) ); // '-' 는 자산 · 토큰에만
+    SW_EXPECT_TRUE( LedgerTransferRequest::isValidReason( Util::repeat( LedgerConstant::kMaxReasonSize, 'r' ) ) );
+    SW_EXPECT_FALSE( LedgerTransferRequest::isValidReason( Util::repeat( LedgerConstant::kMaxReasonSize + 1, 'r' ) ) );
 
-    SW_EXPECT_TRUE( LedgerUtil::isValidEscrowDomain( "mail_box" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidEscrowDomain( "mail.box" ) ); // 도메인은 '_' 만
-    SW_EXPECT_FALSE( LedgerUtil::isValidEscrowDomain( Util::repeat( 17, 'd' ) ) );
-    SW_EXPECT_TRUE( LedgerUtil::isValidEscrowToken( "t-1.a_b" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidEscrowToken( "t/1" ) );
-    SW_EXPECT_TRUE( LedgerUtil::isValidEscrowToken( Util::repeat( 64, 't' ) ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidEscrowToken( Util::repeat( 65, 't' ) ) );
+    SW_EXPECT_TRUE( LedgerHolder::isValidEscrowDomain( "mail_box" ) );
+    SW_EXPECT_FALSE( LedgerHolder::isValidEscrowDomain( "mail.box" ) ); // 도메인은 '_' 만
+    SW_EXPECT_FALSE( LedgerHolder::isValidEscrowDomain( Util::repeat( 17, 'd' ) ) );
+    SW_EXPECT_TRUE( LedgerHolder::isValidEscrowToken( "t-1.a_b" ) );
+    SW_EXPECT_FALSE( LedgerHolder::isValidEscrowToken( "t/1" ) );
+    SW_EXPECT_TRUE( LedgerHolder::isValidEscrowToken( Util::repeat( 64, 't' ) ) );
+    SW_EXPECT_FALSE( LedgerHolder::isValidEscrowToken( Util::repeat( 65, 't' ) ) );
+}
+
+/** @brief [LedgerTypesTest] 자산 id 값은 규칙에 맞는 글로만 생기고 글을 그대로 든다 */
+SW_TEST_CASE( LedgerTypesTest, AssetIDParsesOnlyValidText )
+{
+    // 틀리면: `tryParse` 가 규칙 밖 글로 값을 만들면 거짓 단언이, 글을 바꿔 들면 글 비교가 진다.
+    const optional<LedgerAssetID> gold = LedgerAssetID::tryParse( "cur.gold" );
+    SW_REQUIRE_TRUE( gold.has_value() );
+    SW_EXPECT_EQUAL( sw::string( "cur.gold" ), gold->getText() );
+    SW_EXPECT_FALSE( LedgerAssetID::tryParse( "Cur.gold" ).has_value() );
+    SW_EXPECT_FALSE( LedgerAssetID::tryParse( "" ).has_value() );
+    SW_EXPECT_FALSE( LedgerAssetID::tryParse( Util::repeat( LedgerConstant::kMaxAssetIDSize + 1, 'a' ) ).has_value() );
 }
 
 /** @brief [LedgerTypesTest] 분개 키는 가운데 '/' 가 있어야 하고(앞뒤 '/' 는 범위나 꼬리가 빈 것) 길이 상한을 넘지 않는다 */
 SW_TEST_CASE( LedgerTypesTest, JournalKeyNeedsAScopeAndATail )
 {
     // 틀리면: '/' 검사 · 앞뒤 검사 · 길이 상한 중 하나를 빼면 해당 거짓 단언이 진다.
-    SW_EXPECT_TRUE( LedgerUtil::isValidJournalKey( "acct.1/abc" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidJournalKey( "acct.1abc" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidJournalKey( "/abc" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidJournalKey( "abc/" ) );
-    SW_EXPECT_FALSE( LedgerUtil::isValidJournalKey( "" ) );
+    SW_EXPECT_TRUE( LedgerJournalKey::isValid( "acct.1/abc" ) );
+    SW_EXPECT_FALSE( LedgerJournalKey::isValid( "acct.1abc" ) );
+    SW_EXPECT_FALSE( LedgerJournalKey::isValid( "/abc" ) );
+    SW_EXPECT_FALSE( LedgerJournalKey::isValid( "abc/" ) );
+    SW_EXPECT_FALSE( LedgerJournalKey::isValid( "" ) );
     sw::string longest = "s/";
     longest += Util::repeat( LedgerConstant::kMaxJournalKeySize - 2, 'k' );
-    SW_EXPECT_TRUE( LedgerUtil::isValidJournalKey( longest ) );
+    SW_EXPECT_TRUE( LedgerJournalKey::isValid( longest ) );
     longest += 'k';
-    SW_EXPECT_FALSE( LedgerUtil::isValidJournalKey( longest ) );
+    SW_EXPECT_FALSE( LedgerJournalKey::isValid( longest ) );
 }
 
 /** @brief [LedgerTypesTest] 보유자 키 — 계정은 소문자 16 진 16 자, 에스크로는 도메인/토큰, 시스템은 고정 이름이다 */
@@ -178,7 +190,7 @@ SW_TEST_CASE( LedgerTypesTest, JournalKeysFromIdempotencyAndTokens )
     sw::string key;
     SW_REQUIRE_TRUE( LedgerJournalKey::makeFromToken( "mail.claim", "ab", key ) );
     SW_EXPECT_EQUAL( sw::string( "mail.claim/6162" ), key );
-    SW_EXPECT_TRUE( LedgerUtil::isValidJournalKey( key ) );
+    SW_EXPECT_TRUE( LedgerJournalKey::isValid( key ) );
 
     SW_EXPECT_FALSE( LedgerJournalKey::makeFromToken( "Mail", "ab", key ) );
     SW_EXPECT_TRUE( key.empty() );
@@ -198,7 +210,7 @@ SW_TEST_CASE( LedgerTypesTest, TokenJournalKeyIsAlwaysAValidJournalKey )
     const sw::string longestToken = Util::repeat( LedgerConstant::kMaxTokenBytes, 'x' );
     sw::string       key;
     SW_REQUIRE_TRUE( LedgerJournalKey::makeFromToken( longestScope, longestToken, key ) );
-    SW_EXPECT_TRUE( LedgerUtil::isValidJournalKey( key ) );
+    SW_EXPECT_TRUE( LedgerJournalKey::isValid( key ) );
     SW_EXPECT_FALSE( LedgerJournalKey::makeFromToken( Util::repeat( LedgerConstant::kMaxJournalScopeSize + 1, 's' ), "ab", key ) );
     SW_EXPECT_TRUE( key.empty() );
 }

@@ -122,12 +122,13 @@ namespace sw
             static AdminServiceResult stageAdjust( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
                                                    ServiceAuditEntry& inoutAudit )
             {
-                const AdminRequest& request   = command._request;
-                const bool          bGrant    = request._amount > 0;
-                const int64         magnitude = bGrant ? request._amount : -request._amount;
-                const LedgerHolder  account   = LedgerHolder::makeAccount( request._accountID );
-                LedgerBalance       before;
-                if ( Ledger::readBalance( connection, account, request._assetID, before ) != ServiceStoreResult::Ok )
+                const AdminRequest&           request   = command._request;
+                const bool                    bGrant    = request._amount > 0;
+                const int64                   magnitude = bGrant ? request._amount : -request._amount;
+                const LedgerHolder            account   = LedgerHolder::makeAccount( request._accountID );
+                const optional<LedgerAssetID> assetID   = LedgerAssetID::tryParse( request._assetID ); // 명령 검사(`isValidCommand`)가 거른 id 다
+                LedgerBalance                 before;
+                if ( assetID.has_value() == false || Ledger::readBalance( connection, account, *assetID, before ) != ServiceStoreResult::Ok )
                     return AdminServiceResult::fail( OnlineError::kUnavailable );
                 const bool            bRefund = bGrant == false && request._bRefund == SW_TRUE;
                 LedgerTransferRequest transfer;
@@ -398,7 +399,7 @@ namespace sw
                 switch ( command._method )
                 {
                     case AdminMethod::AdjustAsset::kID:
-                        return bHasAccount && request._amount != 0 && request._amount != std::numeric_limits<int64>::min() && LedgerUtil::isValidAssetID( request._assetID ); // 최솟값은 부호를 뒤집지 못한다
+                        return bHasAccount && request._amount != 0 && request._amount != std::numeric_limits<int64>::min() && LedgerAssetID::isValid( request._assetID ); // 최솟값은 부호를 뒤집지 못한다
                     case AdminMethod::SetSanction::kID:
                         return bHasAccount && request._untilMs >= 0;
                     case AdminMethod::SendMail::kID:

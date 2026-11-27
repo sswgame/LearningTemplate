@@ -273,6 +273,11 @@ namespace sw
         float32 _ratingPerNausea{ 300.0f }; ///< 평균 멀미 1 이 깎는 평가
         PROPERTY( Required, Min = 0.0 )
         float32 _ratingPerQueueComplaint{ 100.0f }; ///< 줄이 길다고 생각하는 손님 비율 1 이 깎는 평가
+        // ---- 코스터 운영비 — 트랙이 길수록 분당 운영비가 오른다(밸런스 값이라 코드가 아니라 이 칸이다) ----
+        PROPERTY( Required, Min = 0 )
+        int32 _coasterBaseRunningCost{ 8 }; ///< 코스터의 분당 운영비 바탕
+        PROPERTY( Required, Min = 1.0 )
+        float32 _coasterTrackPerRunningCost{ 60.0f }; ///< 트랙 이만큼(m)마다 분당 운영비가 1 오른다
         PROPERTY( Required, Min = 0.001 )
         float32 _fixedStep{ 0.25f }; ///< 시뮬레이션 간격(s)이다. 프레임 수와 상관없이 같은 결과가 나온다
         PROPERTY( Required, Min = 0.001 )

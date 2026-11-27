@@ -23,8 +23,8 @@ namespace sw
         ~ShopViewModel() override;
 
         const TypeInfo* getTypeInfo() const override;
-        void            setBalance( const string& text ) { (void)setField( _balance, text, "_balance" ); }
-        void            setStatus( const string& text ) { (void)setField( _status, text, "_status" ); }
+        void            setBalance( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _balance, text ); }
+        void            setStatus( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _status, text ); }
 
     private:
         PROPERTY( DisplayName = "Balance" )

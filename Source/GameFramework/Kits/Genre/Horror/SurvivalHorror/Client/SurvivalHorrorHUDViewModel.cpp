@@ -29,51 +29,46 @@ namespace sw
 
     void SurvivalHorrorHUDViewModel::setItems( int32 value )
     {
-        (void)setField( _items, value, "_items" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _items, value );
     }
 
     void SurvivalHorrorHUDViewModel::setHealthRatio( float32 ratio )
     {
-        (void)setField( _healthRatio, MathUtil::saturate( ratio ), "_healthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::saturate( ratio ) );
     }
 
     void SurvivalHorrorHUDViewModel::setSanityRatio( float32 ratio )
     {
-        (void)setField( _sanityRatio, MathUtil::saturate( ratio ), "_sanityRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _sanityRatio, MathUtil::saturate( ratio ) );
     }
 
     void SurvivalHorrorHUDViewModel::setBatteryRatio( float32 ratio )
     {
-        (void)setField( _batteryRatio, MathUtil::saturate( ratio ), "_batteryRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _batteryRatio, MathUtil::saturate( ratio ) );
     }
 
     void SurvivalHorrorHUDViewModel::setDarkShown( bool bShown )
     {
-        (void)setField( _darkVisibility, toVisibility( bShown ), "_darkVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _darkVisibility, toHUDVisibility( bShown ) );
     }
 
     void SurvivalHorrorHUDViewModel::setHallucinationShown( bool bShown )
     {
-        (void)setField( _hallucinationVisibility, toVisibility( bShown ), "_hallucinationVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _hallucinationVisibility, toHUDVisibility( bShown ) );
     }
 
     void SurvivalHorrorHUDViewModel::setFightShown( bool bShown )
     {
-        (void)setField( _fightVisibility, toVisibility( bShown ), "_fightVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _fightVisibility, toHUDVisibility( bShown ) );
     }
 
     void SurvivalHorrorHUDViewModel::setWinShown( bool bShown )
     {
-        (void)setField( _winVisibility, toVisibility( bShown ), "_winVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bShown ) );
     }
 
     void SurvivalHorrorHUDViewModel::setLoseShown( bool bShown )
     {
-        (void)setField( _loseVisibility, toVisibility( bShown ), "_loseVisibility" );
-    }
-
-    WidgetVisibility SurvivalHorrorHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

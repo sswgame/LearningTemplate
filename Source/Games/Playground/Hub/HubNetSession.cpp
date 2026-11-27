@@ -51,6 +51,11 @@ namespace sw
             _onAction( *this, _pWorld->acceptPartyInvite( _avatarID, leaderAvatarID ) );
     }
 
+    bool HubAvatarAgent::validateAcceptPartyInvite( uint32 leaderAvatarID ) const
+    {
+        return HubSimulation::isValidAvatarID( leaderAvatarID ) && leaderAvatarID != _avatarID;
+    }
+
     void HubAvatarAgent::leaveParty()
     {
         if ( _pWorld != nullptr )

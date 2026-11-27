@@ -6,16 +6,15 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
-#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
+#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystemInternal.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
@@ -25,134 +24,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        /**
-         * @struct ScheduleHash
-         * @brief 일정 시스템이 쓰는 해시 함수 모음입니다(구간의 식별 키, 이름 키, 키 섞기). 모두 static 입니다.
-         * @details 계획, 실행, 저장, 디버그가 같은 구간에서 같은 키를 얻어야 합니다. 사건, 경로 캐시, 계획 비교, 저장 해시가 이 키를 씁니다.
-         *          바이트를 섞는 규칙과 상수는 `HashUtil` 에 있습니다. 저장과 네트워크로 나가는 값이라 섞는 순서를 바꾸지 않습니다.
-         */
-        struct ScheduleHash
-        {
-            static constexpr uint32 kGoldenRatio32 = 0x9e3779b1u; ///< 2^32 / 황금비 — 키 섞기의 곱수(저장 · 네트워크 값이라 바꾸지 않는다)
-            static constexpr uint32 kMixOffset     = 0x7f4a7c15u; ///< 둘째 키에 더하는 값(저장 · 네트워크 값이라 바꾸지 않는다)
-
-            /** @brief 이름의 글자 바이트를 @p hash 에 이어 섞습니다. */
-            [[nodiscard]] static uint64 appendName( const uint64 hash, const hashed_string& name ) { return HashUtil::appendBytes64( hash, name.c_str(), name.size() ); }
-
-            /** @brief 위치의 x, y, z 를 @p hash 에 이어 섞습니다. */
-            [[nodiscard]] static uint64 appendPosition( uint64 hash, const float3& position )
-            {
-                hash = HashUtil::appendValue64( hash, position._x );
-                hash = HashUtil::appendValue64( hash, position._y );
-                return HashUtil::appendValue64( hash, position._z );
-            }
-
-            /** @brief 이름 하나의 32 비트 키입니다(64 비트 해시의 아래 32 비트). */
-            [[nodiscard]] static uint32 computeNameKey( const hashed_string& name ) { return static_cast<uint32>( appendName( HashUtil::kFNVOffset64, name ) ); }
-
-            /** @brief 두 32 비트 키를 섞습니다(순서가 있다). */
-            [[nodiscard]] static uint32 mixKey( const uint32 lhs, const uint32 rhs ) { return HashUtil::mix32( lhs * kGoldenRatio32 ^ HashUtil::mix32( rhs + kMixOffset ) ); }
-
-            /** @brief 구간의 식별 키입니다. 출처, 블록, 시간, 위치, 출발이 같으면 같은 값입니다. 사건, 경로 캐시, 계획 비교가 씁니다. 0 은 쓰지 않습니다. */
-            [[nodiscard]] static uint64 computeSegmentKey( const ScheduleSegment& segment )
-            {
-                uint64 hash = HashUtil::kFNVOffset64;
-                hash        = appendName( hash, segment._sourceID );
-                hash        = appendName( hash, segment._activity );
-                hash        = HashUtil::appendValue64( hash, segment._startMinute );
-                hash        = HashUtil::appendValue64( hash, segment._endMinute );
-                hash        = HashUtil::appendValue64( hash, segment._blockIndex );
-                hash        = HashUtil::appendValue64( hash, segment._ownerIndex );
-                hash        = HashUtil::appendValue64( hash, segment._source );
-                hash        = appendPosition( hash, segment._target._position );
-                hash        = HashUtil::appendValue64( hash, segment._departMinute );
-                hash        = HashUtil::appendValue64( hash, segment._travelMinutes );
-                return hash == 0 ? 1 : hash;
-            }
-        };
-
-        struct ScheduleSystemInternal
-        {
-            static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
-
-            /** @brief 마지막으로 나선 칸 — 나선 시각이 @p minuteOfDay 이하인 마지막 칸입니다(출발 시각은 순서대로 늘어난다). */
-            static optional<int32> findActiveSegment( const vector<ScheduleSegment>& listSegment, float32 minuteOfDay )
-            {
-                optional<int32> activeIndex;
-                optional<int32> firstIndex;
-                for ( int32 segmentIndex = 0; segmentIndex < static_cast<int32>( listSegment.size() ); ++segmentIndex )
-                {
-                    const ScheduleSegment& segment = listSegment[static_cast<size_t>( segmentIndex )];
-                    if ( segment._bPast != SW_FALSE )
-                        continue;
-                    if ( firstIndex.has_value() == false )
-                        firstIndex = segmentIndex;
-                    if ( static_cast<float32>( segment._departMinute ) <= minuteOfDay )
-                        activeIndex = segmentIndex;
-                }
-                return activeIndex.has_value() ? activeIndex : firstIndex;
-            }
-            static int32 toMinuteOfDay( int32 absoluteMinute ) { return absoluteMinute % kScheduleMinutesPerDay; }
-
-            template <uint32 Capacity>
-            static void appendClock( StringBuilder<Capacity>& inoutText, int32 minuteOfDay )
-            {
-                const int32 hours   = minuteOfDay / 60;
-                const int32 minutes = minuteOfDay % 60;
-                inoutText.appendFormat( "%#%#:%#%#", hours < 10 ? "0" : "", hours, minutes < 10 ? "0" : "", minutes );
-            }
-            static constexpr float32 kSamePlaceDistance = 1.0e-3f;
-
-            static bool isSamePlace( const ScheduleLocation& lhs, const ScheduleLocation& rhs )
-            {
-                return float3::getDistance( lhs._position, rhs._position ) <= kSamePlaceDistance;
-            }
-
-            static int32 ceilMinutes( float32 minutes )
-            {
-                if ( minutes <= 0.0f )
-                    return 0;
-                return static_cast<int32>( ::ceilf( minutes - MathUtil::kLooseEpsilon ) );
-            }
-
-            static constexpr int32 kNoWake = 0x7fffffff;
-
-            static int32 roundUpToStep( int32 minute, int32 step )
-            {
-                if ( step <= 1 )
-                    return minute;
-                return ( ( minute + step - 1 ) / step ) * step;
-            }
-
-            static constexpr size_t kNetHeaderSize = 6;  ///< 분 int32 + 수 uint16
-            static constexpr size_t kNetEntrySize  = 26; ///< 자리 3 × float32 + 지역 · 활동 해시 2 × uint32 + NPC uint16 + 칸 int16 + 상태 2 × uint8
-
-            static void writeBytes( vector<uint8>& outBytes, const void* pData, size_t size )
-            {
-                const uint8* pByte = static_cast<const uint8*>( pData );
-                outBytes.insert( outBytes.end(), pByte, pByte + size );
-            }
-
-            template <typename T>
-            static void writeValue( vector<uint8>& outBytes, const T& value )
-            {
-                // 엔진은 리틀 엔디언(x64 · ARM64)에서만 돈다 — 바이트 그대로가 리틀 엔디언이다.
-                writeBytes( outBytes, &value, sizeof( T ) );
-            }
-
-            template <typename T>
-            static T readValue( const vector<uint8>& bytes, size_t& inoutOffset )
-            {
-                T value{};
-                ::memcpy( &value, bytes.data() + inoutOffset, sizeof( T ) );
-                inoutOffset += sizeof( T );
-                return value;
-            }
-        };
-    } // namespace
-
     /**
      * @class ScheduleSystemRegistry
      * @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창 · 감시 값(`collectLiveSystems`)만 읽습니다.
@@ -634,122 +505,6 @@ namespace sw
     void ScheduleSystem::pollEvents( vector<ScheduleEvent>& outListEvent )
     {
         _eventBuffer.moveAllTo( outListEvent );
-    }
-} // namespace sw
-
-namespace sw
-{
-    void ScheduleSystem::explainNPC( int32 npcIndex, string& outText ) const
-    {
-        using Internal = ScheduleSystemInternal;
-        outText.clear();
-        if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
-            return;
-        const NPCRuntime&                         npc     = _listNPC[static_cast<size_t>( npcIndex )];
-        const NPCScheduleDef&                     def     = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
-        const NPCScheduleView                     view    = getNPCView( npcIndex );
-        const ScheduleConditionContext            context = makeContext( npcIndex, npc._planDay, 0 );
-        const int32                               now     = Internal::toMinuteOfDay( _minute );
-        StringBuilder<constant::buffer::kMax4096> text;
-        text.appendFormat( "npc '%#' day %# (%#, %#, day %# of season, weather '%#') ", def._id.c_str(), npc._planDay, context._weekday.c_str(), context._season.c_str(),
-                           context._dayOfSeason, _weather.c_str() );
-        Internal::appendClock( text, now );
-        text.appendFormat( " - %# %# at (%#, %#, %#) area '%#' [%#]\n", getEnumName( view._phase ), view._activity.c_str(), view._location._position._x,
-                           view._location._position._y, view._location._position._z, view._location._area.c_str(), getEnumName( view._lod ) );
-        if ( view._segmentIndex.has_value() )
-        {
-            const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( *view._segmentIndex )];
-            text.appendFormat( "  active: %# '%#' block #%# ", getEnumName( segment._source ), segment._sourceID.c_str(), segment._blockIndex );
-            Internal::appendClock( text, segment._startMinute );
-            text.append( "-" );
-            Internal::appendClock( text, segment._endMinute );
-            text.appendFormat( " priority %#, left ", segment._priority );
-            Internal::appendClock( text, segment._departMinute );
-            text.appendFormat( " (travel %# min) for '%#'\n", segment._travelMinutes, segment._target._area.c_str() );
-        }
-        if ( npc._listInterruption.empty() )
-            text.append( "  interruptions: none\n" );
-        for ( size_t interruptionIndex = npc._listInterruption.size(); interruptionIndex > 0; --interruptionIndex )
-        {
-            const Interruption& interruption = npc._listInterruption[interruptionIndex - 1];
-            text.appendFormat( "  interruption: %# priority %# since minute %# until %#\n", interruption._id.c_str(), interruption._priority, interruption._startMinute,
-                               interruption._expireMinute );
-        }
-
-        // 후보 — 지금 시각을 덮는 루틴 · 행사 칸과 그 조건 결과.
-        text.append( "  candidates now:\n" );
-        for ( int32 routineIndex = 0; routineIndex < static_cast<int32>( def._listRoutine.size() ); ++routineIndex )
-        {
-            const ScheduleRoutineDef& routine    = def._listRoutine[static_cast<size_t>( routineIndex )];
-            const uint32              routineKey = ScheduleHash::mixKey( ScheduleHash::computeNameKey( def._id ), ScheduleHash::computeNameKey( routine._id ) );
-            for ( int32 blockIndex = 0; blockIndex < static_cast<int32>( routine._listBlock.size() ); ++blockIndex )
-            {
-                const ScheduleBlockDef& block = routine._listBlock[static_cast<size_t>( blockIndex )];
-                if ( block._startMinute > now || now >= block._endMinute )
-                    continue;
-                ScheduleConditionContext blockContext       = makeContext( npcIndex, npc._planDay, routineKey );
-                blockContext._phase                         = WorldClock::computePhaseAt( _settings._clock, static_cast<float32>( block._startMinute ) / 60.0f );
-                const ScheduleConditionResult routineResult = routine._condition.evaluate( blockContext );
-                blockContext._chanceKey                     = ScheduleHash::mixKey( routineKey, static_cast<uint32>( blockIndex ) );
-                const ScheduleConditionResult blockResult   = block._condition.evaluate( blockContext );
-                text.appendFormat( "    %# routine '%#' p%# block #%# %#", routineResult.isPassed() && blockResult.isPassed() ? "+" : "-", routine._id.c_str(),
-                                   routine._priority, blockIndex, block._activity.c_str() );
-                for ( uint32 clauseIndex = 0; clauseIndex < static_cast<uint32>( ScheduleConditionClause::Count ); ++clauseIndex )
-                {
-                    const ScheduleConditionClause clause = static_cast<ScheduleConditionClause>( clauseIndex );
-                    if ( routineResult.hasFailed( clause ) || blockResult.hasFailed( clause ) )
-                        text.appendFormat( " [%# failed]", toString( clause ) );
-                }
-                if ( block._appointment.empty() == false && isAppointmentBroken( block._appointment ) )
-                    text.appendFormat( " [appointment '%#' broken]", block._appointment.c_str() );
-                text.append( "\n" );
-            }
-        }
-        const vector<ScheduleEventDef>& listEvent = _pCatalog->getEvents();
-        for ( const ScheduleEventDef& event : listEvent )
-        {
-            ScheduleConditionContext      eventContext = makeContext( npcIndex, npc._planDay, ScheduleHash::computeNameKey( event._id ) );
-            const ScheduleConditionResult result       = event._condition.evaluate( eventContext );
-            text.appendFormat( "    %# event '%#' p%#", result.isPassed() ? "+" : "-", event._id.c_str(), event._priority );
-            for ( uint32 clauseIndex = 0; clauseIndex < static_cast<uint32>( ScheduleConditionClause::Count ); ++clauseIndex )
-            {
-                const ScheduleConditionClause clause = static_cast<ScheduleConditionClause>( clauseIndex );
-                if ( result.hasFailed( clause ) )
-                    text.appendFormat( " [%# failed]", toString( clause ) );
-            }
-            text.append( "\n" );
-        }
-        outText.assign( text.c_str() );
-    }
-
-    void ScheduleSystem::dumpTimeline( int32 npcIndex, string& outText ) const
-    {
-        using Internal = ScheduleSystemInternal;
-        outText.clear();
-        if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
-            return;
-        const NPCRuntime&                         npc = _listNPC[static_cast<size_t>( npcIndex )];
-        StringBuilder<constant::buffer::kMax4096> text;
-        text.appendFormat( "timeline '%#' day %# (planned at ", getNPCID( npcIndex ).c_str(), npc._planDay );
-        Internal::appendClock( text, Internal::toMinuteOfDay( npc._originMinute ) );
-        text.append( ")\n" );
-        for ( const ScheduleSegment& segment : npc._listSegment )
-        {
-            text.append( segment._bPast != SW_FALSE ? "  (past) " : "  " );
-            Internal::appendClock( text, segment._startMinute );
-            text.append( "-" );
-            Internal::appendClock( text, segment._endMinute );
-            text.appendFormat( " %# @ '%#' (%#, %#, %#)", segment._activity.c_str(), segment._target._area.c_str(), segment._target._position._x, segment._target._position._y,
-                               segment._target._position._z );
-            if ( segment._travelMinutes > 0 )
-            {
-                text.append( " leave " );
-                Internal::appendClock( text, segment._departMinute );
-                text.appendFormat( " (+%# min)", segment._travelMinutes );
-            }
-            text.appendFormat( " [%# '%#' p%#]\n", getEnumName( segment._source ), segment._sourceID.c_str(), segment._priority );
-        }
-        outText.assign( text.c_str() );
     }
 } // namespace sw
 

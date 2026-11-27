@@ -30,40 +30,35 @@ namespace sw
 
     void BattleRoyaleHUDViewModel::setHealth( float32 ratio )
     {
-        (void)setField( _healthRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ), "_healthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ) );
     }
 
     void BattleRoyaleHUDViewModel::setWeapon( string_view name, int32 magazine, int32 spareAmmo )
     {
-        (void)setField( _weaponName, string( name ), "_weaponName" );
-        (void)setField( _magazine, magazine, "_magazine" );
-        (void)setField( _spareAmmo, spareAmmo, "_spareAmmo" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _weaponName, string( name ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _magazine, magazine );
+        (void)SW_SET_VIEW_MODEL_FIELD( _spareAmmo, spareAmmo );
     }
 
     void BattleRoyaleHUDViewModel::setRemaining( int32 remaining )
     {
-        (void)setField( _remaining, remaining, "_remaining" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _remaining, remaining );
     }
 
     void BattleRoyaleHUDViewModel::setZoneSeconds( float32 seconds )
     {
-        (void)setField( _zoneSeconds, static_cast<int32>( MathUtil::ceil( seconds ) ), "_zoneSeconds" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _zoneSeconds, static_cast<int32>( MathUtil::ceil( seconds ) ) );
     }
 
     void BattleRoyaleHUDViewModel::setHints( bool bDropHint, bool bDowned )
     {
-        (void)setField( _dropHintVisibility, toVisibility( bDropHint ), "_dropHintVisibility" );
-        (void)setField( _downedVisibility, toVisibility( bDowned ), "_downedVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _dropHintVisibility, toHUDVisibility( bDropHint ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _downedVisibility, toHUDVisibility( bDowned ) );
     }
 
     void BattleRoyaleHUDViewModel::setResult( bool bWon, bool bLost )
     {
-        (void)setField( _winVisibility, toVisibility( bWon ), "_winVisibility" );
-        (void)setField( _loseVisibility, toVisibility( bLost ), "_loseVisibility" );
-    }
-
-    WidgetVisibility BattleRoyaleHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bWon ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( bLost ) );
     }
 } // namespace sw

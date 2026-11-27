@@ -27,41 +27,36 @@ namespace sw
 
     void AsymmetricHorrorHUDViewModel::setRemainingGenerators( int32 value )
     {
-        (void)setField( _remainingGenerators, value, "_remainingGenerators" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _remainingGenerators, value );
     }
 
     void AsymmetricHorrorHUDViewModel::setActivityRatio( float32 ratio )
     {
-        (void)setField( _activityRatio, MathUtil::saturate( ratio ), "_activityRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _activityRatio, MathUtil::saturate( ratio ) );
     }
 
     void AsymmetricHorrorHUDViewModel::setHeartbeat( float32 ratio )
     {
-        (void)setField( _heartbeat, MathUtil::saturate( ratio ), "_heartbeat" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _heartbeat, MathUtil::saturate( ratio ) );
     }
 
     void AsymmetricHorrorHUDViewModel::setSkillCheckShown( bool bShown )
     {
-        (void)setField( _skillCheckVisibility, toVisibility( bShown ), "_skillCheckVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _skillCheckVisibility, toHUDVisibility( bShown ) );
     }
 
     void AsymmetricHorrorHUDViewModel::setWinShown( bool bShown )
     {
-        (void)setField( _winVisibility, toVisibility( bShown ), "_winVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bShown ) );
     }
 
     void AsymmetricHorrorHUDViewModel::setDrawShown( bool bShown )
     {
-        (void)setField( _drawVisibility, toVisibility( bShown ), "_drawVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _drawVisibility, toHUDVisibility( bShown ) );
     }
 
     void AsymmetricHorrorHUDViewModel::setLoseShown( bool bShown )
     {
-        (void)setField( _loseVisibility, toVisibility( bShown ), "_loseVisibility" );
-    }
-
-    WidgetVisibility AsymmetricHorrorHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

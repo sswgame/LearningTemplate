@@ -59,8 +59,12 @@ namespace sw
         /** @brief 계정 id 가 0 이거나, 도메인이나 토큰이 규칙 밖이거나, 모르는 종류면 false 입니다. */
         bool   isValid() const;
         string makeKey() const;
-        bool   operator==( const LedgerHolder& other ) const;
-        bool   operator!=( const LedgerHolder& other ) const { return ( *this == other ) == false; }
+        /** @brief 에스크로 도메인 규칙(`[0-9a-z_]`, 1..16)에 맞으면 true 입니다. */
+        [[nodiscard]] static bool isValidEscrowDomain( string_view domain );
+        /** @brief 에스크로 토큰 규칙(`[0-9a-z_.-]`, 1..64)에 맞으면 true 입니다. 우편 멱등 키도 이 규칙이다. */
+        [[nodiscard]] static bool isValidEscrowToken( string_view token );
+        bool                      operator==( const LedgerHolder& other ) const;
+        bool                      operator!=( const LedgerHolder& other ) const { return ( *this == other ) == false; }
 
         static void write( BitWriter& outWriter, const LedgerHolder& holder );
 
@@ -204,6 +208,9 @@ namespace sw
         uint64                _actorID{ 0 };
         LedgerActorKind       _actorKind{ LedgerActorKind::System };
         uint8                 _bAllowDebt{ SW_FALSE };
+
+        /** @brief 사유 코드 규칙(`[0-9a-z_.]`, 1..`LedgerConstant::kMaxReasonSize`)에 맞으면 true 입니다. */
+        [[nodiscard]] static bool isValidReason( string_view reason );
     };
 } // namespace sw
 
@@ -256,18 +263,39 @@ namespace sw
         [[nodiscard]] static bool makeFromToken( string_view scope, string_view token, string& outKey );
         static string             makeAccountScope( uint64 accountID );    ///< `acct.<16 진 16>`
         static string             makeAdminScope( uint64 adminAccountID ); ///< `gm.<16 진 16>`
+        /** @brief 범위 규칙(`[0-9a-z_.]`, 1..`LedgerConstant::kMaxJournalScopeSize`)에 맞으면 true 입니다. `makeFromToken` 이 같은 규칙으로 거른다. */
+        [[nodiscard]] static bool isValidScope( string_view scope );
+        /** @brief 분개 키 규칙(저장소 키 글자, 1..`LedgerConstant::kMaxJournalKeySize`, 앞뒤가 아닌 `/` 하나 이상)에 맞으면 true 입니다. */
+        [[nodiscard]] static bool isValid( string_view journalKey );
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 원장의 글자 규칙과 보유자 직렬화입니다. 원장, 우편, 키트가 같이 씁니다. */
-    struct SW_GF_API LedgerUtil
+    /**
+     * @class LedgerAssetID
+     * @brief 원장 글자 규칙(`[0-9a-z_.-]`, 1..`LedgerConstant::kMaxAssetIDSize`)을 지난 자산 id 입니다. 규칙 밖 글로는 만들 수 없습니다(`tryParse`).
+     * @details 언리얼 `FUniqueNetIdRepl` · 유니티 Services `PlayerId` 처럼 식별자를 검증된 값 형식으로 둔다. 원장 잔액 질의(`Ledger::readBalance` · `listBalancePage`)는
+     *          이 형식만 받아, 와이어 · 레코드 글을 넘기는 쪽이 검사를 빼먹으면 컴파일에서 멈춘다. 이동 다리(`LedgerPosting`)와 와이어 구조체 칸은 리플렉션 칸이라 아직 `string` 이고
+     *          원장이 이동 앞에서 다시 본다(`Ledger::stageTransfer`).
+     */
+    class SW_GF_API LedgerAssetID
     {
-        static bool isValidAssetID( string_view assetID );       ///< `[0-9a-z_.-]`, 1..48
-        static bool isValidReasonCode( string_view reason );     ///< `[0-9a-z_.]`, 1..32
-        static bool isValidEscrowDomain( string_view domain );   ///< `[0-9a-z_]`, 1..16
-        static bool isValidEscrowToken( string_view token );     ///< `[0-9a-z_.-]`, 1..64
-        static bool isValidJournalKey( string_view journalKey ); ///< 저장소 키 규칙, 1..200, `/` 하나 이상
+    public:
+        /** @brief @p text 가 규칙에 맞으면 그 값, 아니면 비어 있습니다. */
+        [[nodiscard]] static optional<LedgerAssetID> tryParse( string_view text );
+        /** @brief @p text 가 규칙에 맞으면 true 입니다. 값을 들지 않고 거르기만 하는 자리(카탈로그 읽기 · 조기 거절)가 씁니다. */
+        [[nodiscard]] static bool isValid( string_view text );
+
+        const string& getText() const { return _text; }
+
+    private:
+        explicit LedgerAssetID( string_view text )
+            : _text( text )
+        {
+        }
+
+    private:
+        string _text;
     };
 } // namespace sw

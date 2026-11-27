@@ -23,10 +23,10 @@ namespace sw
         ~InventoryViewModel() override;
 
         const TypeInfo* getTypeInfo() const override;
-        void            setDetails( const string& text ) { (void)setField( _details, text, "_details" ); }
-        void            setStats( const string& text ) { (void)setField( _stats, text, "_stats" ); }
-        void            setWeight( const string& text ) { (void)setField( _weight, text, "_weight" ); }
-        void            setStatus( const string& text ) { (void)setField( _status, text, "_status" ); }
+        void            setDetails( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _details, text ); }
+        void            setStats( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _stats, text ); }
+        void            setWeight( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _weight, text ); }
+        void            setStatus( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _status, text ); }
 
     private:
         PROPERTY( DisplayName = "Details" )

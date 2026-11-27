@@ -26,58 +26,53 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility KartHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void KartHUDViewModel::setPlace( int32 place )
     {
-        (void)setField( _place, place, "_place" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _place, place );
     }
 
     void KartHUDViewModel::setRacerCount( int32 racerCount )
     {
-        (void)setField( _racerCount, racerCount, "_racerCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _racerCount, racerCount );
     }
 
     void KartHUDViewModel::setLap( int32 lap )
     {
-        (void)setField( _lap, lap, "_lap" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _lap, lap );
     }
 
     void KartHUDViewModel::setLapCount( int32 lapCount )
     {
-        (void)setField( _lapCount, lapCount, "_lapCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _lapCount, lapCount );
     }
 
     void KartHUDViewModel::setSpeed( int32 speed )
     {
-        (void)setField( _speed, speed, "_speed" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _speed, speed );
     }
 
     void KartHUDViewModel::setCountdown( int32 countdown )
     {
-        (void)setField( _countdown, countdown, "_countdown" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _countdown, countdown );
     }
 
     void KartHUDViewModel::setCountdownShown( bool bShown )
     {
-        (void)setField( _countdownVisibility, toVisibility( bShown ), "_countdownVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _countdownVisibility, toHUDVisibility( bShown ) );
     }
 
     void KartHUDViewModel::setItemShown( bool bShown )
     {
-        (void)setField( _itemVisibility, toVisibility( bShown ), "_itemVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _itemVisibility, toHUDVisibility( bShown ) );
     }
 
     void KartHUDViewModel::setWrongWayShown( bool bShown )
     {
-        (void)setField( _wrongWayVisibility, toVisibility( bShown ), "_wrongWayVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _wrongWayVisibility, toHUDVisibility( bShown ) );
     }
 
     void KartHUDViewModel::setFinishShown( bool bShown )
     {
-        (void)setField( _finishVisibility, toVisibility( bShown ), "_finishVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _finishVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

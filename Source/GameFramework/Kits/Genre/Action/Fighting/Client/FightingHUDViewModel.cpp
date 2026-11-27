@@ -30,25 +30,25 @@ namespace sw
 
     void FightingHUDViewModel::setHealth( float32 playerRatio, float32 opponentRatio )
     {
-        (void)setField( _playerHealthRatio, MathUtil::clamp( playerRatio, 0.0f, 1.0f ), "_playerHealthRatio" );
-        (void)setField( _opponentHealthRatio, MathUtil::clamp( opponentRatio, 0.0f, 1.0f ), "_opponentHealthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _playerHealthRatio, MathUtil::clamp( playerRatio, 0.0f, 1.0f ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _opponentHealthRatio, MathUtil::clamp( opponentRatio, 0.0f, 1.0f ) );
     }
 
     void FightingHUDViewModel::setRounds( int32 playerRounds, int32 opponentRounds )
     {
-        (void)setField( _playerRounds, playerRounds, "_playerRounds" );
-        (void)setField( _opponentRounds, opponentRounds, "_opponentRounds" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _playerRounds, playerRounds );
+        (void)SW_SET_VIEW_MODEL_FIELD( _opponentRounds, opponentRounds );
     }
 
     void FightingHUDViewModel::setSecondsRemaining( float32 seconds )
     {
-        (void)setField( _secondsRemaining, static_cast<int32>( MathUtil::ceil( seconds ) ), "_secondsRemaining" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _secondsRemaining, static_cast<int32>( MathUtil::ceil( seconds ) ) );
     }
 
     void FightingHUDViewModel::setMatchWinner( int32 winner )
     {
-        (void)setField( _winVisibility, winner == FightingGameModeComponent::kPlayer ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed, "_winVisibility" );
-        (void)setField( _loseVisibility, winner == FightingGameModeComponent::kOpponent ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed, "_loseVisibility" );
-        (void)setField( _drawVisibility, winner == FightingMatch::kDraw ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed, "_drawVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( winner == FightingGameModeComponent::kPlayer ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( winner == FightingGameModeComponent::kOpponent ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _drawVisibility, toHUDVisibility( winner == FightingMatch::kDraw ) );
     }
 } // namespace sw

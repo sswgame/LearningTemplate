@@ -22,7 +22,6 @@ namespace sw
     struct CharacterAppearanceSpec;
 
     class AppearanceDatabase;
-    class Equipment;
 
     /** @brief 해석된 부품 하나입니다. 스폰(풀), 부착, 병합하는 쪽이 이 값을 그대로 씁니다. */
     struct ResolvedPart
@@ -264,19 +263,5 @@ namespace sw
         static uint64 computeMeshHash( const ResolvedAppearance& resolved );
         /** @brief 피해를 전송 정밀도(255 단계)로 맞춥니다. 해석기는 맞춘 값만 씁니다. */
         static float32 snapDamage( float32 damage );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @struct AppearanceInputUtil
-     *  @brief 장비 상태를 해석 입력에 반영합니다. */
-    struct SW_GF_API AppearanceInputUtil
-    {
-        /**
-         * @brief @p equipment 의 슬롯을 @p inoutSpec 에 덮어씁니다. 아이템, 인스턴스 상태(꾸미기, 피해, 떨어진 부품), 숨김을 반영하고, 형상 변경과 외형 상태는 spec 의 것을 그대로 둡니다.
-         * @details 피해는 맞은 피해와 닳은 내구도(1 - 내구도 / 최대) 중 큰 쪽이다. 장비에 없는 슬롯은 비운다.
-         */
-        static void applyEquipment( const Equipment& equipment, CharacterAppearanceSpec& inoutSpec );
     };
 } // namespace sw

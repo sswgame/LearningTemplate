@@ -279,8 +279,9 @@ namespace sw
                 int64 remaining = totalAmount;
                 for ( const string& fundingAsset : pCurrency->_listFundingAsset )
                 {
-                    LedgerBalance            balance;
-                    const ServiceStoreResult read = Ledger::readBalance( connection, account, fundingAsset, balance );
+                    const optional<LedgerAssetID> fundingAssetID = LedgerAssetID::tryParse( fundingAsset ); // 화폐 카탈로그가 읽을 때 거른 id 다
+                    LedgerBalance                 balance;
+                    const ServiceStoreResult      read = fundingAssetID.has_value() ? Ledger::readBalance( connection, account, *fundingAssetID, balance ) : ServiceStoreResult::Invalid;
                     if ( read != ServiceStoreResult::Ok )
                         return EconomyServiceResult::fail( OnlineError::kUnavailable );
                     if ( balance.isDebt() )
@@ -433,7 +434,7 @@ namespace sw
         if ( pOffer->isRealMoney() )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotPurchasable );
         const bool bCountOk         = 1 <= input._count && input._count <= pOffer->_maxCountPerPurchase;
-        const bool bInvalidPurchase = bCountOk == false || input._accountID == 0 || LedgerUtil::isValidJournalKey( input._journalKey ) == false;
+        const bool bInvalidPurchase = bCountOk == false || input._accountID == 0 || LedgerJournalKey::isValid( input._journalKey ) == false;
         if ( bInvalidPurchase )
             return EconomyStoreLogicInternal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
         if ( pOffer->isOnSale( input._nowMs ) == false )
@@ -661,8 +662,9 @@ namespace sw
                 int64 amount = posting._amount;
                 if ( recovery == EconomyRefundRecoveryMode::Unspent )
                 {
-                    LedgerBalance balance;
-                    if ( Ledger::readBalance( attempt, posting._to, posting._assetID, balance ) != ServiceStoreResult::Ok )
+                    const optional<LedgerAssetID> assetID = LedgerAssetID::tryParse( posting._assetID ); // 원장이 적은 분개의 다리다
+                    LedgerBalance                 balance;
+                    if ( assetID.has_value() == false || Ledger::readBalance( attempt, posting._to, *assetID, balance ) != ServiceStoreResult::Ok )
                         return EconomyServiceResult::fail( OnlineError::kUnavailable );
                     amount = balance._amount < amount ? balance._amount : amount; // 남은 만큼만 — 이미 쓴 몫은 빚으로 만들지 않는다
                 }
@@ -741,8 +743,9 @@ namespace sw
             {
                 if ( posting._to != account )
                     return Internal::finish( outReply, EconomyResult::NotPurchaser );
-                LedgerBalance balance;
-                if ( Ledger::readBalance( attempt, account, posting._assetID, balance ) != ServiceStoreResult::Ok )
+                const optional<LedgerAssetID> assetID = LedgerAssetID::tryParse( posting._assetID ); // 원장이 적은 분개의 다리다
+                LedgerBalance                 balance;
+                if ( assetID.has_value() == false || Ledger::readBalance( attempt, account, *assetID, balance ) != ServiceStoreResult::Ok )
                     return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
                 const int64 unused = balance._amount < posting._amount ? balance._amount : posting._amount; // 쓰지 않은 만큼만 돌려받는다
                 if ( unused <= 0 )

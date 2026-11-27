@@ -19,7 +19,7 @@ namespace sw
 {
     /**
      * @brief 슬롯 하나의 요청입니다. 낀 아이템과 그 인스턴스 상태, 보이는 외형 덮어쓰기(형상 변경), 외형 상태를 담으며 해석기의 입력으로 쓰입니다.
-     * @details `_damage` 는 맞은 피해와 닳은 내구도 중 큰 쪽(0..1)이다. `AppearanceInputUtil::fillFromEquipment` 가 채운다.
+     * @details `_damage` 는 맞은 피해와 닳은 내구도 중 큰 쪽(0..1)이다. `CharacterAppearanceSpec::applyEquipment` 가 채운다.
      */
     struct AppearanceSlotRequest
     {

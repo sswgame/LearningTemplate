@@ -28,7 +28,7 @@ namespace
     int64 readGold( sw::MemoryServiceDatabase& database, uint64 accountID )
     {
         sw::LedgerBalance balance;
-        SW_EXPECT_TRUE( sw::Ledger::readBalance( database, sw::LedgerHolder::makeAccount( accountID ), kGold, balance ) == sw::ServiceStoreResult::Ok );
+        SW_EXPECT_TRUE( sw::Ledger::readBalance( database, sw::LedgerHolder::makeAccount( accountID ), *sw::LedgerAssetID::tryParse( kGold ), balance ) == sw::ServiceStoreResult::Ok );
         return balance._amount;
     }
 
