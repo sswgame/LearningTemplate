@@ -210,7 +210,7 @@ namespace
         int64 getBalanceOf( AccountID accountID, string_view assetID = "cur.gold" )
         {
             LedgerBalance balance;
-            SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
+            SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), *LedgerAssetID::tryParse( assetID ), balance ) == ServiceStoreResult::Ok );
             return balance._amount;
         }
     };

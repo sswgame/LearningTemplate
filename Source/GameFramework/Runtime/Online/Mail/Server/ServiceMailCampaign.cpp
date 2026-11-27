@@ -4,6 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -114,8 +115,7 @@ namespace sw
             return false;
         for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
         {
-            const bool bAmountOk = 1 <= attachment._amount && attachment._amount <= LedgerConstant::kMaxAmount;
-            if ( bAmountOk == false || LedgerUtil::isValidAssetID( attachment._assetID ) == false )
+            if ( LedgerAssetID::isValid( attachment._assetID ) == false || LedgerItemInstance::isValidAmount( attachment._assetID, attachment._amount ) == false )
                 return false;
         }
         const string campaignKey = ServiceKeyUtil::makeHex64( campaign._campaignID );

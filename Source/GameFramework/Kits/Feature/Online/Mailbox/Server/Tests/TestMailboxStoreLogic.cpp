@@ -57,7 +57,7 @@ namespace
     int64 readBalance( MemoryServiceDatabase& database, uint64 accountID, string_view assetID )
     {
         LedgerBalance balance;
-        SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
+        SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( accountID ), *LedgerAssetID::tryParse( assetID ), balance ) == ServiceStoreResult::Ok );
         return balance._amount;
     }
 
@@ -361,7 +361,7 @@ SW_TEST_CASE( MailboxStoreLogicTest, CampaignEndedBetweenReadAndCommitIsNotPaid 
     MailboxClaimReply reply;
     SW_EXPECT_TRUE( MailboxStoreLogic::claim( connection, input, reply ) == MailboxResult::Expired );
     LedgerBalance balance;
-    SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kRecipient ), "gold", balance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kRecipient ), *LedgerAssetID::tryParse( "gold" ), balance ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64( 0 ), balance._amount );
 }
 

@@ -62,6 +62,11 @@ namespace sw
         [[nodiscard]] static bool makeAssetID( string_view defID, uint64 instanceID, string& outAssetID );
         /** @brief 인스턴스 아이템의 자산 id 이면 true 입니다. 원장이 개수 1 규칙을 지킬 때 씁니다. */
         static bool isInstanceAssetID( string_view assetID );
+        /**
+         * @brief 다리 하나의 수량 규칙입니다. 인스턴스 아이템은 1 개씩이고 그 밖은 1 ~ `LedgerConstant::kMaxAmount` 이다.
+         * @details 원장 이동 검사와 그 앞에서 조기 거절하는 서비스(거래 · 길드 창고 · 우편 첨부)가 같은 규칙을 쓴다.
+         */
+        [[nodiscard]] static bool isValidAmount( string_view assetID, int64 amount );
         /** @brief 상태가 규칙 안이면 true 입니다(자산 id, 내구도 0..최대, 강화 0..100). */
         static bool isValidState( const LedgerItemState& state );
 

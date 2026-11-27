@@ -73,6 +73,13 @@ namespace sw
                ServiceKeyUtil::parseHex64( assetID.substr( separator + 1 ), instanceID ) && instanceID != 0;
     }
 
+    bool LedgerItemInstance::isValidAmount( string_view assetID, int64 amount )
+    {
+        if ( isInstanceAssetID( assetID ) )
+            return amount == 1; // 인스턴스 아이템은 상태 레코드가 하나씩 따라간다
+        return 1 <= amount && amount <= LedgerConstant::kMaxAmount;
+    }
+
     bool LedgerItemInstance::isValidState( const LedgerItemState& state )
     {
         const bool bDurabilityOk = 0 <= state._durability && state._durability <= state._maxDurability;

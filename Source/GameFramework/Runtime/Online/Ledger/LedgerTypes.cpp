@@ -59,7 +59,7 @@ namespace sw
             case LedgerHolderKind::Account:
                 return _accountID != 0;
             case LedgerHolderKind::Escrow:
-                return LedgerUtil::isValidEscrowDomain( _escrowDomain ) && LedgerUtil::isValidEscrowToken( _escrowToken );
+                return isValidEscrowDomain( _escrowDomain ) && isValidEscrowToken( _escrowToken );
             case LedgerHolderKind::Mint:
             case LedgerHolderKind::Sink:
                 return true;
@@ -137,7 +137,7 @@ namespace sw
         outKey.clear();
         // 상한 범위 + '/' + 상한 토큰의 16 진이 분개 키 상한 안이다(토큰 상한이 그 식에서 나온다) — 받은 범위 · 토큰은 언제나 원장이 받는 키가 된다.
         static_assert( LedgerConstant::kMaxJournalScopeSize + 1 + LedgerConstant::kMaxTokenBytes * 2 <= LedgerConstant::kMaxJournalKeySize );
-        const bool bScopeOk = ServiceKeyUtil::isTokenText( scope, LedgerConstant::kMaxJournalScopeSize, "_." );
+        const bool bScopeOk = isValidScope( scope );
         const bool bTokenOk = token.empty() == false && token.size() <= static_cast<size_t>( LedgerConstant::kMaxTokenBytes );
         if ( bScopeOk == false || bTokenOk == false )
             return false;
@@ -162,27 +162,39 @@ namespace sw
         return scope;
     }
 
-    bool LedgerUtil::isValidAssetID( string_view assetID )
+    optional<LedgerAssetID> LedgerAssetID::tryParse( string_view text )
     {
-        return ServiceKeyUtil::isTokenText( assetID, LedgerConstant::kMaxAssetIDSize, "_.-" );
+        if ( isValid( text ) == false )
+            return nullopt;
+        return LedgerAssetID{ text };
     }
 
-    bool LedgerUtil::isValidReasonCode( string_view reason )
+    bool LedgerAssetID::isValid( string_view text )
+    {
+        return ServiceKeyUtil::isTokenText( text, LedgerConstant::kMaxAssetIDSize, "_.-" );
+    }
+
+    bool LedgerTransferRequest::isValidReason( string_view reason )
     {
         return ServiceKeyUtil::isTokenText( reason, LedgerConstant::kMaxReasonSize, "_." );
     }
 
-    bool LedgerUtil::isValidEscrowDomain( string_view domain )
+    bool LedgerHolder::isValidEscrowDomain( string_view domain )
     {
         return ServiceKeyUtil::isTokenText( domain, LedgerTypesInternal::kMaxEscrowDomainSize, "_" );
     }
 
-    bool LedgerUtil::isValidEscrowToken( string_view token )
+    bool LedgerHolder::isValidEscrowToken( string_view token )
     {
         return ServiceKeyUtil::isTokenText( token, LedgerTypesInternal::kMaxEscrowTokenSize, "_.-" );
     }
 
-    bool LedgerUtil::isValidJournalKey( string_view journalKey )
+    bool LedgerJournalKey::isValidScope( string_view scope )
+    {
+        return ServiceKeyUtil::isTokenText( scope, LedgerConstant::kMaxJournalScopeSize, "_." );
+    }
+
+    bool LedgerJournalKey::isValid( string_view journalKey )
     {
         if ( journalKey.empty() )
             return false;

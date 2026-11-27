@@ -104,9 +104,9 @@ SW_TEST_CASE( ServiceMailTest, PlayerAttachmentsGoToEscrow )
     SW_REQUIRE_TRUE( send( database, gift, mailKey, bReplayed ) == sw::LedgerResult::Ok );
 
     sw::LedgerBalance balance;
-    SW_REQUIRE_TRUE( sw::Ledger::readBalance( database, sw::LedgerHolder::makeAccount( kSender ), "gold", balance ) == sw::ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sw::Ledger::readBalance( database, sw::LedgerHolder::makeAccount( kSender ), *sw::LedgerAssetID::tryParse( "gold" ), balance ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64( 10 ), balance._amount );
-    SW_REQUIRE_TRUE( sw::Ledger::readBalance( database, sw::ServiceMail::makeEscrowHolder( mailKey ), "gold", balance ) == sw::ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sw::Ledger::readBalance( database, sw::ServiceMail::makeEscrowHolder( mailKey ), *sw::LedgerAssetID::tryParse( "gold" ), balance ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( int64( 20 ), balance._amount );
 
     sw::ServiceMailMessage tooMuch = makeReward( "gift.2", 20 );

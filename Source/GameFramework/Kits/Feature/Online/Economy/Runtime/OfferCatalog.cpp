@@ -20,7 +20,7 @@ namespace sw
         bool isValidOfferLeg( const string& assetID, int64 amount )
         {
             const bool bAmountOk = 1 <= amount && amount <= LedgerConstant::kMaxAmount;
-            return bAmountOk && LedgerUtil::isValidAssetID( assetID );
+            return bAmountOk && LedgerAssetID::isValid( assetID );
         }
     } // namespace
 } // namespace sw
@@ -31,7 +31,7 @@ namespace sw
     {
         const bool bPriceXorProduct = def._listPrice.empty() != def._listProduct.empty();
         const bool bShapeOk         = def._listGrant.empty() == false && bPriceXorProduct && def._maxCountPerPurchase >= 1 && def._limitPerAccount >= 0;
-        const bool bInvalidOffer    = bShapeOk == false || LedgerUtil::isValidAssetID( def._id ) == false || findOffer( def._id ) != nullptr;
+        const bool bInvalidOffer    = bShapeOk == false || LedgerAssetID::isValid( def._id ) == false || findOffer( def._id ) != nullptr;
         if ( bInvalidOffer )
             return false;
         // 양의 상한(원장 다리 하나)은 float32 로 정확히 적을 수 없어 `PROPERTY( Max )` 대신 여기서 원장 상수로 본다.

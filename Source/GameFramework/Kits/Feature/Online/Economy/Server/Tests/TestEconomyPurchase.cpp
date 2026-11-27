@@ -59,7 +59,7 @@ namespace
     int64 getBalanceOf( MemoryServiceDatabase& database, string_view assetID )
     {
         LedgerBalance balance;
-        SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kBuyer ), assetID, balance ) == ServiceStoreResult::Ok );
+        SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kBuyer ), *LedgerAssetID::tryParse( assetID ), balance ) == ServiceStoreResult::Ok );
         return balance._amount;
     }
 
