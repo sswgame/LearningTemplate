@@ -23,8 +23,8 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 진입점(저장소 루트 기준)입니다. */
-        constexpr const utf8* kScriptRelativePath = "Scripts/package/package.py";
+        /** @brief 진입점 스크립트 명령입니다(`py -3 -m Scripts package`). */
+        constexpr const utf8* kScriptsCommand = "package";
         /** @brief 진입점이 받는 플랫폼 이름입니다(`--platform`, `pack.py` 의 `MAP_PLATFORM_PRESET`). 맨 앞이 이 호스트다. */
         constexpr const utf8* kArrPlatform[] = { "Desktop", "Web", "Android" };
         /** @brief 진입점이 받는 타깃 이름입니다(`--target`). */
@@ -141,9 +141,8 @@ namespace sw::editor
 
     ProcessCommand PackagingViewModel::makeCommand() const
     {
-        const AbsolutePath projectRoot  = ProcessRoots::get()._project;
-        ProcessCommand     command      = EditorExternalToolJob::makePythonScriptCommand( projectRoot.join( kScriptRelativePath ).str() );
-        vector<string>&    listArgument = command._listArgument;
+        ProcessCommand  command      = EditorExternalToolJob::makeScriptsCommand( kScriptsCommand );
+        vector<string>& listArgument = command._listArgument;
         listArgument.insert( listArgument.end(), { "--platform", kArrPlatform[_platformIndex] } );
         if ( isDesktopPlatform() )
             listArgument.insert( listArgument.end(), { "--target", kArrTarget[_targetIndex] } );

@@ -63,13 +63,16 @@ SW_TEST_CASE( EditorBackgroundJobTest, StaleGenerationIsIgnored )
     SW_EXPECT_EQUAL( 30, value );
 }
 
-/** @brief [EditorExternalToolJobTest] 파이썬 스크립트 명령은 검색 경로의 실행기에 스크립트를 마지막 인자로 주고, 요청하지 않은 잡은 줄도 결과도 없다 */
+/** @brief [EditorExternalToolJobTest] 스크립트 명령은 검색 경로의 실행기에 `-m Scripts <명령>` 을 주고, 요청하지 않은 잡은 줄도 결과도 없다 */
 SW_TEST_CASE( EditorExternalToolJobTest, ScriptCommandAndIdleJob )
 {
-    const ProcessCommand command = EditorExternalToolJob::makePythonScriptCommand( "Scripts/dev/tool.py" );
+    const ProcessCommand command = EditorExternalToolJob::makeScriptsCommand( "package" );
     SW_EXPECT_TRUE( command._bSearchPath != 0 );
-    SW_REQUIRE_FALSE( command._listArgument.empty() );
-    SW_EXPECT_EQUAL( string( "Scripts/dev/tool.py" ), command._listArgument.back() );
+    SW_REQUIRE_TRUE( command._listArgument.size() >= 3 );
+    const size_t argumentCount = command._listArgument.size();
+    SW_EXPECT_EQUAL( string( "-m" ), command._listArgument[argumentCount - 3] );
+    SW_EXPECT_EQUAL( string( "Scripts" ), command._listArgument[argumentCount - 2] );
+    SW_EXPECT_EQUAL( string( "package" ), command._listArgument.back() );
 
     EditorExternalToolJob    job;
     EditorExternalToolResult result;
