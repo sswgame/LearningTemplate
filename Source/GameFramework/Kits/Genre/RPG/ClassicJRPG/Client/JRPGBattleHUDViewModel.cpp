@@ -33,53 +33,48 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility JRPGBattleHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void JRPGBattleHUDViewModel::setPhase( JRPGGamePhase phase )
     {
-        (void)setField( _exploreVisibility, toVisibility( phase == JRPGGamePhase::Explore ), "_exploreVisibility" );
-        (void)setField( _battleVisibility, toVisibility( phase == JRPGGamePhase::Battle ), "_battleVisibility" );
-        (void)setField( _timingVisibility, toVisibility( phase == JRPGGamePhase::Timing ), "_timingVisibility" );
-        (void)setField( _victoryVisibility, toVisibility( phase == JRPGGamePhase::Victory ), "_victoryVisibility" );
-        (void)setField( _defeatVisibility, toVisibility( phase == JRPGGamePhase::Defeat ), "_defeatVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _exploreVisibility, toHUDVisibility( phase == JRPGGamePhase::Explore ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _battleVisibility, toHUDVisibility( phase == JRPGGamePhase::Battle ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _timingVisibility, toHUDVisibility( phase == JRPGGamePhase::Timing ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _victoryVisibility, toHUDVisibility( phase == JRPGGamePhase::Victory ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _defeatVisibility, toHUDVisibility( phase == JRPGGamePhase::Defeat ) );
     }
 
     void JRPGBattleHUDViewModel::setMember( string_view name, int32 hp, int32 maxHP, int32 mp )
     {
-        (void)setField( _memberName, string( name ), "_memberName" );
-        (void)setField( _memberHP, hp, "_memberHP" );
-        (void)setField( _memberMaxHP, maxHP, "_memberMaxHP" );
-        (void)setField( _memberMP, mp, "_memberMP" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _memberName, string( name ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _memberHP, hp );
+        (void)SW_SET_VIEW_MODEL_FIELD( _memberMaxHP, maxHP );
+        (void)SW_SET_VIEW_MODEL_FIELD( _memberMP, mp );
     }
 
     void JRPGBattleHUDViewModel::setTarget( string_view name, int32 hp )
     {
-        (void)setField( _targetName, string( name ), "_targetName" );
-        (void)setField( _targetHP, hp, "_targetHP" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _targetName, string( name ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _targetHP, hp );
     }
 
     void JRPGBattleHUDViewModel::setGold( int32 gold )
     {
-        (void)setField( _gold, gold, "_gold" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _gold, gold );
     }
 
     void JRPGBattleHUDViewModel::setTiming( float32 ratio, bool bBlock )
     {
-        (void)setField( _timingRatio, ratio, "_timingRatio" );
-        (void)setField( _swingVisibility, toVisibility( bBlock == false ), "_swingVisibility" );
-        (void)setField( _blockVisibility, toVisibility( bBlock ), "_blockVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _timingRatio, ratio );
+        (void)SW_SET_VIEW_MODEL_FIELD( _swingVisibility, toHUDVisibility( bBlock == false ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _blockVisibility, toHUDVisibility( bBlock ) );
     }
 
     void JRPGBattleHUDViewModel::setLeaderAttack( int32 attack )
     {
-        (void)setField( _leaderAttack, attack, "_leaderAttack" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _leaderAttack, attack );
     }
 
     void JRPGBattleHUDViewModel::setRestShown( bool bShown )
     {
-        (void)setField( _restVisibility, toVisibility( bShown ), "_restVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _restVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

@@ -27,25 +27,20 @@ namespace sw
 
     void MetroidvaniaHUDViewModel::setVitals( float32 healthRatio, float32 staminaRatio, int32 flaskCount )
     {
-        (void)setField( _healthRatio, MathUtil::clamp( healthRatio, 0.0f, 1.0f ), "_healthRatio" );
-        (void)setField( _staminaRatio, MathUtil::clamp( staminaRatio, 0.0f, 1.0f ), "_staminaRatio" );
-        (void)setField( _flaskCount, flaskCount, "_flaskCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::clamp( healthRatio, 0.0f, 1.0f ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _staminaRatio, MathUtil::clamp( staminaRatio, 0.0f, 1.0f ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _flaskCount, flaskCount );
     }
 
     void MetroidvaniaHUDViewModel::setProgress( int32 currency, float32 completionPercent )
     {
-        (void)setField( _currency, currency, "_currency" );
-        (void)setField( _completion, static_cast<int32>( completionPercent ), "_completion" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _currency, currency );
+        (void)SW_SET_VIEW_MODEL_FIELD( _completion, static_cast<int32>( completionPercent ) );
     }
 
     void MetroidvaniaHUDViewModel::setResult( bool bDead, bool bWon )
     {
-        (void)setField( _deadVisibility, toVisibility( bDead ), "_deadVisibility" );
-        (void)setField( _winVisibility, toVisibility( bWon ), "_winVisibility" );
-    }
-
-    WidgetVisibility MetroidvaniaHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _deadVisibility, toHUDVisibility( bDead ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bWon ) );
     }
 } // namespace sw

@@ -312,7 +312,7 @@ namespace sw
         if ( background._color != pBack->getBackground()._color )
             pBack->setBackground( background );
 
-        pName->setVisibility( pLine->_speaker.empty() ? WidgetVisibility::Collapsed : WidgetVisibility::HitTestInvisible );
+        pName->setVisibility( toHUDVisibility( pLine->_speaker.empty() == false ) );
         pName->setText( pLine->_speaker );
         pText->setText( pLine->_text );
         TextLayoutStyle nameStyle = pName->getTextStyle();

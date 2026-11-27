@@ -32,8 +32,6 @@ namespace sw
                     return message.addInteger( "value", card._rank ).str();
                 return message.addKey( "value", kArrValueKey[card._rank - kFirstKeyValue] ).str();
             }
-
-            static WidgetVisibility toVisibility( bool bShown ) { return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed; }
         };
     } // namespace
 } // namespace sw
@@ -60,8 +58,8 @@ namespace sw
     void HubCardHUDViewModel::setTable( bool bSeated, const HubCardSeatView& view, bool bMyTurn )
     {
         using Internal = HubCardHUDInternal;
-        (void)setField( _tableVisibility, Internal::toVisibility( bSeated ), "_tableVisibility" );
-        (void)setField( _turnVisibility, Internal::toVisibility( bMyTurn ), "_turnVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _tableVisibility, toHUDVisibility( bSeated ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _turnVisibility, toHUDVisibility( bMyTurn ) );
         if ( bSeated == false )
             return;
         CardPile deck;
@@ -72,8 +70,8 @@ namespace sw
         {
             listHand.push_back( Internal::makeCardText( deck, cardID ) );
         }
-        (void)setField( _hand, LocalizedMessage::join( " ", listHand ), "_hand" );
-        (void)setField( _topCard, Internal::makeCardText( deck, view._topCardID ), "_topCard" );
-        (void)setField( _opponentCount, view._opponentCardCount, "_opponentCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _hand, LocalizedMessage::join( " ", listHand ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _topCard, Internal::makeCardText( deck, view._topCardID ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _opponentCount, view._opponentCardCount );
     }
 } // namespace sw

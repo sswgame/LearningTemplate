@@ -24,48 +24,43 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility PartyHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void PartyHUDViewModel::setRound( int32 round )
     {
-        (void)setField( _round, round, "_round" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _round, round );
     }
 
     void PartyHUDViewModel::setTimeLeft( int32 timeLeft )
     {
-        (void)setField( _timeLeft, timeLeft, "_timeLeft" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _timeLeft, timeLeft );
     }
 
     void PartyHUDViewModel::setRoundScore( int32 roundScore )
     {
-        (void)setField( _roundScore, roundScore, "_roundScore" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _roundScore, roundScore );
     }
 
     void PartyHUDViewModel::setTotal( int32 total )
     {
-        (void)setField( _total, total, "_total" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _total, total );
     }
 
     void PartyHUDViewModel::setWinScore( int32 winScore )
     {
-        (void)setField( _winScore, winScore, "_winScore" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winScore, winScore );
     }
 
     void PartyHUDViewModel::setCombo( int32 combo )
     {
-        (void)setField( _combo, combo, "_combo" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _combo, combo );
     }
 
     void PartyHUDViewModel::setWonShown( bool bShown )
     {
-        (void)setField( _wonVisibility, toVisibility( bShown ), "_wonVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _wonVisibility, toHUDVisibility( bShown ) );
     }
 
     void PartyHUDViewModel::setLostShown( bool bShown )
     {
-        (void)setField( _lostVisibility, toVisibility( bShown ), "_lostVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _lostVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

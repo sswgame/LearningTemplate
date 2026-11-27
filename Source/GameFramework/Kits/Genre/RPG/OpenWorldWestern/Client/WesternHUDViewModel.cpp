@@ -24,17 +24,17 @@ namespace sw
 
     void WesternHUDViewModel::setRideStatus( string_view rideStatus )
     {
-        (void)setField( _rideStatus, string( rideStatus ), "_rideStatus" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _rideStatus, string( rideStatus ) );
     }
 
     void WesternHUDViewModel::setOutlawStatus( string_view outlawStatus )
     {
-        (void)setField( _outlawStatus, string( outlawStatus ), "_outlawStatus" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _outlawStatus, string( outlawStatus ) );
     }
 
     void WesternHUDViewModel::setStamina( float32 stamina, float32 ratio )
     {
-        (void)setField( _stamina, static_cast<int32>( MathUtil::ceil( MathUtil::max( 0.0f, stamina ) ) ), "_stamina" );
-        (void)setField( _staminaRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ), "_staminaRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _stamina, static_cast<int32>( MathUtil::ceil( MathUtil::max( 0.0f, stamina ) ) ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _staminaRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ) );
     }
 } // namespace sw

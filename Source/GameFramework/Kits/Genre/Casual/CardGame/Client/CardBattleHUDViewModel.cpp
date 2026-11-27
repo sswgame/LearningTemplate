@@ -26,58 +26,53 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility CardBattleHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void CardBattleHUDViewModel::setPlayerHP( int32 playerHP )
     {
-        (void)setField( _playerHP, playerHP, "_playerHP" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _playerHP, playerHP );
     }
 
     void CardBattleHUDViewModel::setPlayerBlock( int32 playerBlock )
     {
-        (void)setField( _playerBlock, playerBlock, "_playerBlock" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _playerBlock, playerBlock );
     }
 
     void CardBattleHUDViewModel::setEnemyHP( int32 enemyHP )
     {
-        (void)setField( _enemyHP, enemyHP, "_enemyHP" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _enemyHP, enemyHP );
     }
 
     void CardBattleHUDViewModel::setEnemyIntent( int32 enemyIntent )
     {
-        (void)setField( _enemyIntent, enemyIntent, "_enemyIntent" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _enemyIntent, enemyIntent );
     }
 
     void CardBattleHUDViewModel::setEnergy( int32 energy )
     {
-        (void)setField( _energy, energy, "_energy" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _energy, energy );
     }
 
     void CardBattleHUDViewModel::setTurn( int32 turn )
     {
-        (void)setField( _turn, turn, "_turn" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _turn, turn );
     }
 
     void CardBattleHUDViewModel::setCost( int32 cost )
     {
-        (void)setField( _cost, cost, "_cost" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _cost, cost );
     }
 
     void CardBattleHUDViewModel::setDrawCount( int32 drawCount )
     {
-        (void)setField( _drawCount, drawCount, "_drawCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _drawCount, drawCount );
     }
 
     void CardBattleHUDViewModel::setWonShown( bool bShown )
     {
-        (void)setField( _wonVisibility, toVisibility( bShown ), "_wonVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _wonVisibility, toHUDVisibility( bShown ) );
     }
 
     void CardBattleHUDViewModel::setLostShown( bool bShown )
     {
-        (void)setField( _lostVisibility, toVisibility( bShown ), "_lostVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _lostVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

@@ -29,31 +29,26 @@ namespace sw
 
     void MechArenaHUDViewModel::setPilot( float32 healthRatio, float32 boostRatio, int32 ammo )
     {
-        (void)setField( _healthRatio, MathUtil::clamp( healthRatio, 0.0f, 1.0f ), "_healthRatio" );
-        (void)setField( _boostRatio, MathUtil::clamp( boostRatio, 0.0f, 1.0f ), "_boostRatio" );
-        (void)setField( _ammo, ammo, "_ammo" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::clamp( healthRatio, 0.0f, 1.0f ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _boostRatio, MathUtil::clamp( boostRatio, 0.0f, 1.0f ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _ammo, ammo );
     }
 
     void MechArenaHUDViewModel::setTeamGauge( int32 playerGauge, int32 enemyGauge )
     {
-        (void)setField( _playerGauge, playerGauge, "_playerGauge" );
-        (void)setField( _enemyGauge, enemyGauge, "_enemyGauge" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _playerGauge, playerGauge );
+        (void)SW_SET_VIEW_MODEL_FIELD( _enemyGauge, enemyGauge );
     }
 
     void MechArenaHUDViewModel::setHints( bool bOverheated, bool bDestroyed )
     {
-        (void)setField( _overheatVisibility, toVisibility( bOverheated ), "_overheatVisibility" );
-        (void)setField( _destroyedVisibility, toVisibility( bDestroyed ), "_destroyedVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _overheatVisibility, toHUDVisibility( bOverheated ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _destroyedVisibility, toHUDVisibility( bDestroyed ) );
     }
 
     void MechArenaHUDViewModel::setResult( bool bWon, bool bLost )
     {
-        (void)setField( _winVisibility, toVisibility( bWon ), "_winVisibility" );
-        (void)setField( _loseVisibility, toVisibility( bLost ), "_loseVisibility" );
-    }
-
-    WidgetVisibility MechArenaHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bWon ) );
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( bLost ) );
     }
 } // namespace sw

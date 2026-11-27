@@ -27,12 +27,12 @@ namespace sw
 
     void QuantityDialogViewModel::setTitle( const string& title )
     {
-        (void)setField( _title, title, "_title" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _title, title );
     }
 
     void QuantityDialogViewModel::setCount( int32 count )
     {
-        (void)setField( _count, count, "_count" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _count, count );
     }
 
     QuantityDialogScreen::QuantityDialogScreen( const UIScreenDef& desc, unique_ptr<Widget> root )

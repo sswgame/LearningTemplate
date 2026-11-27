@@ -21,7 +21,7 @@ namespace sw
         ~UIStatusViewModel() override;
 
         const TypeInfo* getTypeInfo() const override;
-        void            setStatus( const string& text ) { (void)setField( _status, text, "_status" ); }
+        void            setStatus( const string& text ) { (void)SW_SET_VIEW_MODEL_FIELD( _status, text ); }
 
     private:
         PROPERTY( DisplayName = "Status" )

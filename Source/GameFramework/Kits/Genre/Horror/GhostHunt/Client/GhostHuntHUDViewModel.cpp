@@ -27,41 +27,36 @@ namespace sw
 
     void GhostHuntHUDViewModel::setDarkRooms( int32 value )
     {
-        (void)setField( _darkRooms, value, "_darkRooms" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _darkRooms, value );
     }
 
     void GhostHuntHUDViewModel::setCoins( int32 value )
     {
-        (void)setField( _coins, value, "_coins" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _coins, value );
     }
 
     void GhostHuntHUDViewModel::setKeys( int32 value )
     {
-        (void)setField( _keys, value, "_keys" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _keys, value );
     }
 
     void GhostHuntHUDViewModel::setHealthRatio( float32 ratio )
     {
-        (void)setField( _healthRatio, MathUtil::saturate( ratio ), "_healthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::saturate( ratio ) );
     }
 
     void GhostHuntHUDViewModel::setSurgeRatio( float32 ratio )
     {
-        (void)setField( _surgeRatio, MathUtil::saturate( ratio ), "_surgeRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _surgeRatio, MathUtil::saturate( ratio ) );
     }
 
     void GhostHuntHUDViewModel::setWinShown( bool bShown )
     {
-        (void)setField( _winVisibility, toVisibility( bShown ), "_winVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _winVisibility, toHUDVisibility( bShown ) );
     }
 
     void GhostHuntHUDViewModel::setLoseShown( bool bShown )
     {
-        (void)setField( _loseVisibility, toVisibility( bShown ), "_loseVisibility" );
-    }
-
-    WidgetVisibility GhostHuntHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+        (void)SW_SET_VIEW_MODEL_FIELD( _loseVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw

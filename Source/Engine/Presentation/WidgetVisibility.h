@@ -20,4 +20,13 @@ namespace sw
         HitTestInvisible,    ///< 보이지만 자기와 자식 모두 클릭을 받지 않습니다(HUD 장식).
         SelfHitTestInvisible ///< 보이고 자기만 클릭을 받지 않으며 자식은 받습니다(겹친 패널).
     };
+
+    /**
+     * @brief HUD 장식의 보임 여부를 보임 칸 값으로 바꿉니다. 보이면 클릭을 받지 않고(`HitTestInvisible`), 숨으면 공간도 차지하지 않습니다(`Collapsed`).
+     * @details 뷰모델마다 같은 삼항식을 복사하지 않게 열거형 옆에 한 벌 둔다(언리얼 MVVM 의 bool → ESlateVisibility 변환 함수 자리).
+     */
+    [[nodiscard]] constexpr WidgetVisibility toHUDVisibility( const bool bShown )
+    {
+        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
+    }
 } // namespace sw

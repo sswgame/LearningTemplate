@@ -27,53 +27,48 @@ namespace sw
         return StaticType();
     }
 
-    WidgetVisibility ConquestHUDViewModel::toVisibility( bool bShown )
-    {
-        return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
-    }
-
     void ConquestHUDViewModel::setTerritory( int32 territory )
     {
-        (void)setField( _territory, territory, "_territory" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _territory, territory );
     }
 
     void ConquestHUDViewModel::setSiteCount( int32 siteCount )
     {
-        (void)setField( _siteCount, siteCount, "_siteCount" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _siteCount, siteCount );
     }
 
     void ConquestHUDViewModel::setSquad( int32 squad )
     {
-        (void)setField( _squad, squad, "_squad" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _squad, squad );
     }
 
     void ConquestHUDViewModel::setPopulation( int32 population )
     {
-        (void)setField( _population, population, "_population" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _population, population );
     }
 
     void ConquestHUDViewModel::setPopulationCap( int32 populationCap )
     {
-        (void)setField( _populationCap, populationCap, "_populationCap" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _populationCap, populationCap );
     }
 
     void ConquestHUDViewModel::setResource( int32 resource )
     {
-        (void)setField( _resource, resource, "_resource" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _resource, resource );
     }
 
     void ConquestHUDViewModel::setHealthRatio( float32 healthRatio )
     {
-        (void)setField( _healthRatio, MathUtil::clamp( healthRatio, 0.0f, 1.0f ), "_healthRatio" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _healthRatio, MathUtil::clamp( healthRatio, 0.0f, 1.0f ) );
     }
 
     void ConquestHUDViewModel::setWonShown( bool bShown )
     {
-        (void)setField( _wonVisibility, toVisibility( bShown ), "_wonVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _wonVisibility, toHUDVisibility( bShown ) );
     }
 
     void ConquestHUDViewModel::setLostShown( bool bShown )
     {
-        (void)setField( _lostVisibility, toVisibility( bShown ), "_lostVisibility" );
+        (void)SW_SET_VIEW_MODEL_FIELD( _lostVisibility, toHUDVisibility( bShown ) );
     }
 } // namespace sw
