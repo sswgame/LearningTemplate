@@ -3,7 +3,7 @@
 CLAUDE.md 의 "보조 도구" 는 글로만 있어 세션마다 지켜지지 않았다(2026-11-08 사용자 지적). 에이전트의 행동은 형식으로 막을 수 없어
 정책으로 둔다: 규칙 표(`ToolPolicyRules.json` — 규칙은 데이터, 이 파일은 판정만)의 조건을 채우지 않은 호출은 거절하고 먼저 할 일을 알린다.
 
-PostToolUse 는 표지를 남긴다: `skill:<이름>`(Skill 도구), `graph`(graphify query · path · explain). 표지 `never` 는 남지 않아
+PostToolUse 는 표지를 남긴다: `skill:<이름>`(Skill 도구), 그리고 규칙 표 `_markers` 의 표지(graphify · CodeGraph · Serena 호출). 표지 `never` 는 남지 않아
 그것을 요구하는 규칙은 언제나 거절한다(금지 명령 · 손으로 고치지 않는 파일). 상태는 에이전트마다(하위 에이전트는 agent_id, 아니면 session_id) 임시 폴더의 JSON 에 둔다.
 
 경로 규칙은 `stemTables` 로 린트 표를 읽어 파일 줄기도 볼 수 있다(`newFileOnly` 면 아직 없는 파일만): 금지 낱말 목록을 훅에 다시 적지 않고 린트와 한 표를 쓴다.
@@ -18,7 +18,6 @@ import time
 
 STATE_DIR = os.path.join(tempfile.gettempdir(), "claude-toolgate")
 RULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ToolPolicyRules.json")
-GRAPH_COMMAND = re.compile(r"\bgraphify\s+(query|path|explain)\b")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")   # Scripts/lint/name_collection.py 의 ANY_WORD 와 같은 쪼개기
 
@@ -51,6 +50,10 @@ class ToolPolicy:
         self._tool_input = payload.get("tool_input") or {}
         key = str(payload.get("agent_id") or payload.get("session_id") or "unknown")
         self._state_path = os.path.join(STATE_DIR, re.sub(r"[^A-Za-z0-9_.-]", "_", key) + ".json")
+        with open(RULES_PATH, encoding="utf-8") as stream:
+            table = json.load(stream)
+        self._rules = table["_rules"]
+        self._markers = table["_markers"]
 
     def load_state(self) -> dict:
         try:
@@ -72,19 +75,23 @@ class ToolPolicy:
         parts = [str(self._tool_input.get(name, "")) for name in ("file_path", "notebook_path", "path", "pattern") if self._tool_input.get(name)]
         return "/" + "/".join(parts).replace("\\", "/").lstrip("/")
 
+    def shell_marker(self) -> str | None:
+        """셸 명령이 표지를 남기는 명령(graphify · codegraph CLI)이면 그 표지입니다."""
+        if self._tool_name not in ("Bash", "PowerShell"):
+            return None
+        return next((entry["marker"] for entry in self._markers if entry.get("shell") and re.search(entry["shell"], self.command())), None)
+
     def marker_for(self) -> str | None:
-        if self._tool_name in ("Bash", "PowerShell") and GRAPH_COMMAND.search(self.command()):
-            return "graph"
         if self._tool_name == "Skill":
             return "skill:" + str(self._tool_input.get("skill", "")).split(":")[-1]
-        return None
+        tool_marker = next((entry["marker"] for entry in self._markers if entry.get("tool") and re.search(entry["tool"], self._tool_name)), None)
+        return tool_marker or self.shell_marker()
 
     def rule_matches(self, rule: dict) -> bool:
         if self._tool_name not in rule.get("tools", []):
             return False
         if self._tool_name in ("Bash", "PowerShell", "Monitor"):
-            command = self.command()
-            return bool(rule.get("shell")) and re.search(rule["shell"], command) is not None and not GRAPH_COMMAND.search(command)
+            return bool(rule.get("shell")) and re.search(rule["shell"], self.command()) is not None and self.shell_marker() is None
         if not rule.get("path") or re.search(rule["path"], self.target_path()) is None:
             return False
         if rule.get("exceptPath") and re.search(rule["exceptPath"], self.target_path()) is not None:
@@ -102,11 +109,9 @@ class ToolPolicy:
         self.save_state(state)
 
     def on_pre_tool_use(self) -> dict | None:
-        with open(RULES_PATH, encoding="utf-8") as stream:
-            rules = json.load(stream)["_rules"]
         state = self.load_state()
         now = time.time()
-        for rule in rules:
+        for rule in self._rules:
             if not self.rule_matches(rule):
                 continue
             window = rule.get("windowMinutes")

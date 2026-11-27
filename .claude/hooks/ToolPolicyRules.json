@@ -1,22 +1,39 @@
 {
   "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain). never 는 언제나 거절(금지 명령 · 손으로 고치지 않는 파일). windowMinutes 가 있으면 그 시간 안에 한 것만 센다. stemTables 가 있으면 경로가 맞고 파일 줄기가 그 린트 표의 칸(lastWord: 끝 낱말, phrase: 이어 나오는 낱말)에 걸릴 때만, newFileOnly 면 아직 없는 파일만, exceptPath 에 맞는 경로는 빼고 본다.",
+  "_markersComment": "PostToolUse 가 남기는 표지. tool 은 도구 이름(정규식), shell 은 Bash · PowerShell 명령(정규식)에 맞으면 그 표지를 남긴다. 표지를 남기는 셸 명령은 셸 규칙에 걸리지 않는다. 코드 인텔리전스 우선 정책(CLAUDE.md, 사용자 결정 2026-11-27): 구조 · 문서는 Graphify, 호출 관계 · 영향은 CodeGraph, 심볼 정의 · 참조 · 고치기는 Serena.",
+  "_markers": [
+    { "marker": "graph", "shell": "\\bgraphify\\s+(query|path|explain)\\b" },
+    { "marker": "codegraph", "tool": "^mcp__codegraph__", "shell": "\\bcodegraph\\s+(query|explore|context|node|callers|callees|impact|files)\\b" },
+    { "marker": "serena", "tool": "^mcp__serena__" }
+  ],
   "_rules": [
+    {
+      "name": "code-intel-before-grep",
+      "tools": [
+        "Grep"
+      ],
+      "path": "/(Source|Scripts|IntegrationTests|cmake)(/|$)",
+      "requiresAny": [
+        "codegraph",
+        "serena"
+      ],
+      "windowMinutes": 60,
+      "hint": "Grep 은 마지막 수단이다 — 먼저 Serena(find_symbol · find_referencing_symbols)나 CodeGraph(codegraph_search · codegraph_callers · codegraph_impact)로 찾고, 그 도구로 답이 안 나오면 이유를 한 줄 말한 뒤 Grep 한다."
+    },
     {
       "name": "graph-before-reading-source",
       "tools": [
         "Read",
-        "Grep",
-        "Glob",
-        "Bash",
-        "PowerShell"
+        "Glob"
       ],
       "path": "/Source(/|$)",
-      "shell": "\\b(sed|cat|head|tail|grep|rg|awk|less)\\b[^|;&]*Source/",
       "requiresAny": [
-        "graph"
+        "graph",
+        "codegraph",
+        "serena"
       ],
       "windowMinutes": 60,
-      "hint": "graphify 로 범위를 먼저 좁힌다: 저장소 루트에서 `graphify explain \"<심볼>\"` · `graphify query \"<질문>\" --budget 4000`(워크트리에서는 `--graph \"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\"`)."
+      "hint": "소스를 열기 전에 범위를 좁힌다: 심볼은 Serena(find_symbol · get_symbols_overview), 관계 · 영향은 CodeGraph(codegraph_explore · codegraph_callers), 구조는 저장소 루트에서 `graphify query \"<질문>\" --budget 4000`(워크트리에서는 `--graph \"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\"`)."
     },
     {
       "name": "ponytail-before-editing-code",
@@ -290,6 +307,19 @@
         "never"
       ],
       "hint": "새 헤더 이름이 잡동사니 줄기(FolderLayout.json _bannedFileStems — Types · Support · Defines · Helpers · Misc)나 금지 구절(NamingWords.json _bannedPhrases)에 걸린다 — 파일 이름은 그 헤더의 주 형식 이름으로 짓는다(docs/agents/FolderLayout.md 4 절, 린트 folder-layout · naming-words 와 같은 표)."
+    },
+    {
+      "name": "no-shell-code-exploration",
+      "tools": [
+        "Bash",
+        "PowerShell",
+        "Monitor"
+      ],
+      "shell": "(?m)(?:^|[;(]|&&|\\|\\||\\bxargs\\s+(?:-\\S+\\s+)*|\\bgit\\s+(?:-C\\s+\\S+\\s+)?)\\s*(?:grep|egrep|fgrep|rg|sed|awk|cat|find)(?![-\\w])|\\b(?:Select-String|Get-Content)\\b",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "셸(grep · rg · sed · awk · cat · find · git grep · Select-String · Get-Content)로 파일을 읽거나 찾지 않는다 — Bash 는 빌드 · 테스트 · Git · 패키지 관리 같은 실행에만 쓴다. 심볼 정의 · 참조는 Serena, 호출 관계 · 영향은 CodeGraph, 구조는 Graphify, 파일은 Read · Glob, 글자 찾기는 마지막에 Grep 도구, 파일 만들기 · 고치기는 Write · Edit. 실행 결과를 `| grep` · `| sed` 로 거르는 것은 된다(사용자 결정 2026-11-27 코드 인텔리전스 우선)."
     }
   ]
 }

@@ -141,6 +141,10 @@ Content/Config/Editor/
 # graphify 산출물(코드 그래프 · 로컬 캐시)
 graphify-out/
 
+# Serena — 프로젝트 설정(project.yml)만 저장소에 두고, 사람마다의 덮어쓰기 · 언어 서버 캐시 · 기억은 로컬이다(CodeGraph 의 .codegraph/ 는 스스로 무시한다)
+/.serena/*
+!/.serena/project.yml
+
 # 내려받은 에셋 팩 원본(Quaternius 등) — 게임에 쓰는 모델만 Content/**/models_raw · textures_raw 로 옮겨 커밋한다(팩 전체는 LFS 용량을 넘긴다)
 /AssetLibrary/
 

@@ -76,8 +76,31 @@ class ToolPolicyTest(unittest.TestCase):
             self.assertIn("linux-verify-before-linux", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
         for command in ("git -C D:/P push origin abc:main", "cd x && bash Scripts/verify/preflight.sh --no-linux"):
             self.assertIn("preflight-before-push", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
-        for command in ("git grep -n run_in_wsl Scripts/verify/linux_verify.py", "git show HEAD:Scripts/verify/preflight.sh", "grep -n push Scripts/verify/preflight.sh"):
+        for command in ("git show HEAD:Scripts/verify/preflight.sh", "git log --oneline -- Scripts/verify/linux_verify.py"):
             self.assertIsNone(self.pre("Bash", {"command": command}))
+
+    def test_shell_code_exploration_is_refused(self):
+        """셸로 파일을 읽거나 찾는 명령은 거절하고, 실행 결과를 거르는 파이프 · Git 하위 명령 · 코드 인텔리전스 CLI 는 둔다(사용자 결정 2026-11-27)."""
+        for tool, command in (("Bash", "grep -rn foo Source"), ("Bash", "cd x && cat a.h"), ("Bash", "git grep -n foo"), ("Bash", "git -C D:/P grep foo"),
+                              ("Bash", "sed -i 's/a/b/' Source/A.h"), ("Bash", "ls; find . -name '*.h'"), ("Bash", "ls | xargs grep foo"),
+                              ("Bash", "cat > msg.txt <<'EOF'\nx\nEOF"), ("PowerShell", "Select-String -Path a.h -Pattern x"), ("Monitor", "awk '{print}' a.log")):
+            self.assertIn("no-shell-code-exploration", self.pre(tool, {"command": command})["hookSpecificOutput"]["permissionDecisionReason"], command)
+        for command in ("ctest -R foo | grep Passed", "git log --grep stash", "git cat-file -p HEAD", "git gc", "codegraph query Foo", 'graphify query "x"',
+                        "cmake --build --preset Ninja-Release 2>&1 | tail -3 | sed -n 1p"):
+            self.assertIsNone(self.pre("Bash", {"command": command}), command)
+
+    def test_text_search_needs_symbol_tool_first(self):
+        self.assertIn("code-intel-before-grep", self.pre("Grep", {"pattern": "Foo", "path": "D:/P/Source/Engine"})["hookSpecificOutput"]["permissionDecisionReason"])
+        self.assertIsNone(self.pre("Grep", {"pattern": "Foo", "path": "D:/P/docs"}))
+        self.post("mcp__serena__find_symbol", {"name_path": "Foo"})
+        self.assertIsNone(self.pre("Grep", {"pattern": "Foo", "path": "D:/P/Source/Engine"}))
+        self.assertIsNone(self.pre("Read", {"file_path": "D:/P/Source/Engine/A.h"}))
+
+    def test_call_graph_tool_marks_reading_source(self):
+        self.assertIsNotNone(self.pre("Read", {"file_path": "D:/P/Source/Engine/A.h"}))
+        self.post("mcp__codegraph__codegraph_callers", {"symbol": "Foo"})
+        self.assertIsNone(self.pre("Read", {"file_path": "D:/P/Source/Engine/A.h"}))
+        self.assertIsNone(self.pre("Grep", {"pattern": "Foo", "path": "D:/P/Source"}))
 
     def test_polling_loop_is_refused(self):
         for command in ('until grep -q "x" f; do sleep 5; done; cat f', "until ! tasklist | grep -q git; do :; done", "while true; do sleep 1; done"):
@@ -88,7 +111,7 @@ class ToolPolicyTest(unittest.TestCase):
                                     ("PowerShell", "Get-Content a.log -Wait", "no-endless-follow"), ("Bash", "(timeout 115 py -3 leaf.py | tail -2)", "no-timeout-python"),
                                     ("Bash", "py -3 a.py; cat > /dev/null; grep x f", "no-stdin-wait")):
             self.assertIn(rule, self.pre(tool, {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
-        for command in ("tail -60 a.log | cut -c1-300", "tail -n 5 Full.log", "x | tail -2; rm -f b", "timeout 60 ./App.exe", "echo x | cat > /dev/null", "cat a > /dev/null"):
+        for command in ("tail -60 a.log | cut -c1-300", "tail -n 5 Full.log", "x | tail -2; rm -f b", "timeout 60 ./App.exe", "echo x | cat > /dev/null"):
             self.assertIsNone(self.pre("Bash", {"command": command}), command)
 
     def test_build_only_in_main_tree(self):

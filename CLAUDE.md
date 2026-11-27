@@ -29,9 +29,30 @@
 | 모든 작업 | `ponytail`. 구조 개편을 시킬 때는 요청에 "구조는 장기 이득이면 과감히 바꾼다"를 적는다(스킬의 "기존 구조 유지"와 부딪힌다) |
 | 주석 · 커밋 메시지 · .md 를 쓸 때 | `humanizer`(저장소 스킬. Source · Scripts · Content · Config · Test · .md 편집과 git commit 앞에서 훅이 요구) |
 | 하위 작업자에게 맡길 때 | `agent-dispatch`. 지시문 첫 줄에 `작업 종류: <키>` 를 적고, subagent_type · model · effort 를 표(`HookRules.json` 의 `agentPrompt.kinds`)에서 고른다 |
-| 코드를 읽기 전 | `graphify query "<질문>"`(`path` · `explain` 도). 워크트리에서는 `--graph "$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json"`. 그래프 갱신은 Stop 훅이 한다. 작업자 보고에 찾은 범위를 한 줄 적는다 |
+| 코드를 읽기 전 | 아래 "코드 인텔리전스 우선" 의 도구 차례. graphify 는 워크트리에서 `--graph "$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json"` 을 붙이고, 그래프 갱신은 Stop 훅이 한다. 작업자 보고에 찾은 범위를 한 줄 적는다 |
 | 에디터 UI | `taste-skill` 의 `references/app-screens.md`. 확인은 `editor/uicapture.scenario.xml` 스크린샷 |
 | 묶음 끝 검증 · push / Linux / 시나리오 실패 | `preflight` / `linux-verify` / `scenario-debug`. 임시 스크립트를 새로 만들지 말고 여기에 더한다 |
 | 외부 API(RHI 백엔드 · Android · 웹) | `source-driven-development`. 그 판의 공식 문서를 먼저 찾는다 |
 | 결함 추적 · 성능 · 온라인 · 전수 이전 · 통합 전 읽기 | `debugging-and-error-recovery` · `performance-optimization`(측정 먼저) · `security-and-hardening`(온라인 서버 · HTTP · 로그인 · 영수증은 반드시) · `deprecation-and-migration` · `code-review-and-quality`(독립 검토는 에이전트 `code-reviewer`) |
 | 이전 세션에서 다뤘나 | claude-mem `mem-search`. 찾은 것은 코드 · 문서와 대조한 뒤에만 쓴다 |
+
+## 코드 인텔리전스 우선
+
+소스를 셸 명령(grep · rg · sed · awk · cat · find · `git grep`)으로 읽거나 찾지 않는다. Bash 는 테스트 · 빌드 · Git · 패키지 관리 같은 실행에만 쓰고, 실행 결과를 `| grep` 으로 거르는 것은 된다. 훅 `no-shell-code-exploration` · `code-intel-before-grep` 이 막는다.
+
+| 묻는 것 | 먼저 쓸 도구 |
+| --- | --- |
+| 구조 · 주요 모듈 · 문서와 설계 결정 | Graphify(`graphify query` · `path` · `explain`) |
+| 호출하는 곳 · 의존하는 곳 · 바꿨을 때 영향 · 실행 경로 | CodeGraph(MCP `codegraph_callers` · `codegraph_callees` · `codegraph_impact` · `codegraph_explore`) |
+| 심볼 정의 · 참조 · 함수 몸통 읽기 · 이름 바꾸기 · 심볼 단위 고치기 | Serena(MCP `find_symbol` · `find_referencing_symbols` · `get_symbols_overview` · `replace_symbol_body` · `rename_symbol`) |
+| 파일 읽기 · 고치기 · 만들기 | Read · Edit · Write |
+
+1. 맞는 코드 인텔리전스 도구를 먼저 쓰고, 그 전에 grep · sed 를 쓰지 않는다.
+2. 대화에 이미 있는 결과는 다시 찾지 않는다.
+3. 그래프 질의로 관련 파일을 고를 수 있으면 저장소 전체를 훑지 않는다.
+4. 심볼 단위의 정확한 변경은 Serena 로 한다.
+5. Graphify 는 구조 · 문서 맥락이 필요할 때만 쓴다. 코드 구조 질의는 CodeGraph 다.
+
+전용 도구로 답이 안 나오면 그 이유를 한 줄로 말하고 Glob · Read 를 쓴다. Grep 도구는 마지막 수단이고, 일상적인 소스 편집에 sed 를 쓰지 않는다.
+
+설치: CodeGraph 는 `npm i -g @colbymchenry/codegraph` 뒤 저장소 루트에서 `codegraph init -y --local-only`(인덱스 `.codegraph/` 는 git 밖, `codegraph telemetry off`). Serena 는 `uv tool install git+https://github.com/oraios/serena`(C++ 는 clangd 를 스스로 받고 `.clangd` 의 컴파일 DB 를 쓴다, 프로젝트 설정 `.serena/project.yml`). MCP 는 사람마다 `claude mcp add --scope local` 로 등록한다(경로가 사람마다 다르다).
