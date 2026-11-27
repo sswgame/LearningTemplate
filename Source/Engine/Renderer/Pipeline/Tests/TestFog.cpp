@@ -174,7 +174,7 @@ SW_TEST_CASE( FogTest, PassTypeRowDeclaresDepthOnlyBlendedDraw )
     // 볼륨 안개 컴퓨트는 뷰 패스가 아니라 프레임 패스다(`_listFramePass` — 프레임에 한 번, 뷰 그래프 앞).
     SW_EXPECT_FALSE( isViewPassType( RenderPassKind::VolumetricFog ) );
     SW_EXPECT_TRUE( isFramePassType( RenderPassKind::VolumetricFog ) );
-    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::VolumetricFog ).hasFlag( RenderPassTraitFlag::kCompute ) );
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::VolumetricFog ).isComputePass() );
 }
 
 /**

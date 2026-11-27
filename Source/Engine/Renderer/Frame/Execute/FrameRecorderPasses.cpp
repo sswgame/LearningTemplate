@@ -511,7 +511,7 @@ namespace sw
             return;
         }
         // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다. 에뮬 백엔드는 아래 픽셀 구현이다 — 능력이 정한 길이고 PSO 도 그 백엔드에는 만들지 않는다.
-        if ( passDesc._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
+        if ( passRunsComputeImplementation( passDesc, _pDevice->supportsNativeBindlessSampling() ) )
         {
             executeComputeImplementation( input );
             return;

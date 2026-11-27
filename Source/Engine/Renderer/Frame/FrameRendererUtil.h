@@ -19,7 +19,6 @@
 #include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Renderer/Frame/RenderPassNames.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
-#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
 namespace sw
 {
@@ -184,27 +183,6 @@ namespace sw
         };
 
         static bool isDepthFormat( RHIFormat format ) { return RHIFormatUtil::isDepth( format ); }
-        /** @brief 첨부 @p attachmentName 을 컴퓨트 패스가 읽거나 쓰면 true 입니다 — RW 텍스처로 묶을 수 있게 만들어야 합니다. */
-        static bool isComputeOutputOrInput( const vector<RenderGraphPassDesc>& listPass, string_view attachmentName )
-        {
-            for ( const RenderGraphPassDesc& pass : listPass )
-            {
-                if ( pass._type != RenderPassKind::Compute )
-                    continue;
-                for ( const string& name : pass._listOutput )
-                {
-                    if ( name == attachmentName )
-                        return true;
-                }
-                for ( const string& name : pass._listInput )
-                {
-                    if ( name == attachmentName )
-                        return true;
-                }
-            }
-            return false;
-        }
-
         /**
          * @brief IEEE half(16비트) 한 채널을 [0,1] 로 자른 8비트 값으로 바꿉니다.
          * @details HDR 첨부를 PPM 으로 덤프할 때만 쓴다. 톤매핑하지 않고 그냥 자른다. 이 덤프는
@@ -218,70 +196,6 @@ namespace sw
             if ( value.isFinite() == false )
                 return 255; // Inf 나 NaN 은 눈에 띄게 흰색으로 둔다. unorm8::fromFloat 는 NaN 을 0 으로 만들어 따로 가른다.
             return unorm8::fromFloat( value.toFloat() ).getRaw();
-        }
-
-        /**
-         * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
-         * @details PSO 생성(FramePSOManager::makePassPSODesc)과 셰이더 쿠커가 같은 답을 내야 하는 규칙이다. 컬러
-         *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없다. 출력 선언이
-         *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 반환한다(호출하는 쪽이 패스 타입으로 정한 값).
-         *          Swapchain 출력은 컬러 하나로 세고 포맷은 Unknown 이다(대상 포맷은 출력 패스가 정한다). 첨부에 없는 다른 이름은
-         *          파이프라인 로드가 이미 거절했으므로 세지 않는다 — 선언이 있으면 넘긴 수로 물러나지 않는다.
-         * @param pOutFormat 컬러 포맷을 받을 배열입니다. nullptr 이면 개수만 셉니다.
-         * @param capacity   pOutFormat 의 크기입니다. 그보다 많은 컬러 출력은 버립니다.
-         */
-        static uint32 collectColorOutputFormats( const RenderGraphPassDesc&          pass,
-                                                 const vector<RenderPassAttachment>& listAttachment,
-                                                 RHIFormat*                          pOutFormat,
-                                                 uint32                              capacity,
-                                                 uint32                              fallbackCount )
-        {
-            if ( pass._listOutput.empty() )
-                return fallbackCount;
-
-            uint32 colorCount{ 0 };
-            for ( const string& outName : pass._listOutput )
-            {
-                if ( colorCount >= capacity )
-                    break;
-                if ( outName == AttachmentNames::kSwapchain )
-                {
-                    if ( pOutFormat != nullptr )
-                        pOutFormat[colorCount] = RHIFormat::Unknown;
-                    ++colorCount;
-                    continue;
-                }
-                for ( const RenderPassAttachment& attachment : listAttachment )
-                {
-                    if ( attachment._name != outName )
-                        continue;
-                    const RHIFormat format = attachment._format;
-                    if ( isDepthFormat( format ) == false )
-                    {
-                        if ( pOutFormat != nullptr )
-                            pOutFormat[colorCount] = format;
-                        ++colorCount;
-                    }
-                    break;
-                }
-            }
-            return colorCount;
-        }
-
-        /**
-         * @brief 이 패스에 픽셀 스테이지가 있는지 반환합니다. 컬러 출력이 하나라도 있어야 합니다.
-         * @details 셰이더 쿠커가 "이 패스의 PS 를 쿠킹하는가" 를 정할 때 쓴다. 런타임은 같은 규칙을
-         *          FramePSOManager::makePassPSODesc 이 RT 수로 적용한다(RT 가 0개면 PS 경로를 비운다). 주의: 쿠커와 런타임이
-         *          다른 규칙을 쓰면 그림자 패스에 머티리얼 define 을 적용한 변형이 PS 리플렉션을 요구하는데 매니페스트에는
-         *          그 조합이 없다(Shipping 의 `리플렉션 매니페스트에 'shadow_depth.hlsl' 가 없습니다`).
-         * @note 언리얼은 그림자 깊이에도 마스크드 머티리얼일 때만 PS 를 붙인다(clip 을 위해). 알파 마스크가
-         *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 한다. 쿠커도 이 함수를
-         *       보므로 그때도 고칠 곳은 여기 하나다.
-         */
-        static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
-        {
-            const uint32 fallbackCount = getRenderPassKindInfo( pass._type ).isDepthOnly() ? 0u : 1u;
-            return collectColorOutputFormats( pass, listAttachment, nullptr, kMaxColorAttachments, fallbackCount ) > 0;
         }
 
         // 이름 목록에서 있는 첫 첨부를 고르던 도우미(`pickFirstExisting`)는 지웠다 — 선언 대신 이름으로 짐작하는 모양이라 다시 쓰지 못하게 했다.

@@ -409,7 +409,7 @@ namespace sw
                 const bool                bMissing = info._pDefaultShader != nullptr && _pCache->findEnginePSO( passType ) == 0;
                 if ( bMissing == false || shouldCreatePassPSO( passType, caps ) == false )
                     continue;
-                const bool bGraphics = info.hasFlag( RenderPassTraitFlag::kCompute ) == false;
+                const bool bGraphics = info.isComputePass() == false;
                 // 파이프라인이 선언한 그래픽스 종류는 아래 패스 단계가 패스마다 만든다(열쇠 = 패스 이름). 종류 하나에 PSO 하나면 같은 종류 둘째 패스의 서술이 버려진다.
                 // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스(kRequiresPassDesc)는 그래서 이 단계에서 늘 빠진다(서술이 없으면 실행도 없다).
                 if ( bGraphics && _pipeline.hasPass( passType ) )
@@ -442,13 +442,16 @@ namespace sw
                 const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) ? caps._bGPUCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable == false )
                     continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
-                // 셰이더 경로와 define 은 쿠커와 같은 함수가 정한다(셰이더 assert 변형이 define 으로 온다).
-                RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
-                ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
-                computeJob._shaderPath                  = std::move( computeShader._shaderPath );
-                computeJob._listDefine                  = std::move( computeShader._listDefine );
-                computeJob._passType                    = passType;
-                computeJob._parameters                  = ComputeShaderParameterTable{ info._pComputeParameters, info._computeParameterCount };
+                // 셰이더 경로 · 진입점 · define 은 쿠커와 같은 함수가 정한다(셰이더 assert 변형이 define 으로 온다). 컴퓨트 종류는 CS 하나다.
+                RenderPassShaderStages stages = enumeratePassShaderStages( passType, nullptr, nullptr, _pipeline.getDesc()._listAttachment, engineDefaultAssets );
+                if ( stages._listStage.empty() )
+                    continue;
+                ComputePSOJob& computeJob = listComputeJob.emplace_back();
+                computeJob._shaderPath    = std::move( stages._listStage.front()._shaderPath );
+                computeJob._entryPoint    = std::move( stages._listStage.front()._entryPoint );
+                computeJob._listDefine    = std::move( stages._listStage.front()._listDefine );
+                computeJob._passType      = passType;
+                computeJob._parameters    = ComputeShaderParameterTable{ info._pComputeParameters, info._computeParameterCount };
             }
 
             // 파이프라인 그래픽스 패스는 패스마다 제 서술로 PSO 를 만든다(열쇠 = 패스 이름). 서술이 앞 패스와 같은 같은 종류의 패스(방향광 · 점광 그림자)는
@@ -501,28 +504,21 @@ namespace sw
                 ComputePipeline existingCompute{};
                 if ( _pCache->findPipelineComputePSO( hashed_string( pass._name.c_str() ), existingCompute ) )
                     continue;
-                // 일반 풀스크린 패스의 컴퓨트 구현은 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돌고 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
-                if ( pass._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
-                {
-                    RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
-                    ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
-                    computeJob._shaderPath                  = std::move( computeShader._shaderPath );
-                    computeJob._listDefine                  = std::move( computeShader._listDefine );
-                    computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
-                    computeJob._passType                    = pass._type;
-                    computeJob._parameters                  = ComputePassShader::kParameters;
+                // 일반 풀스크린 패스의 컴퓨트 구현은 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돌고 그 PSO 는 위의 패스 단계가 만든다). 키는 패스 이름이다.
+                const bool bComputeImplementation = passRunsComputeImplementation( pass, _pDevice->supportsNativeBindlessSampling() );
+                if ( bComputeImplementation == false && getRenderPassKindInfo( pass._type ).isPipelineComputePass() == false )
                     continue;
-                }
-                if ( pass._type != RenderPassKind::Compute )
-                    continue;
-                RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassKind::Compute, &pass, &pass, engineDefaultAssets );
-                ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
-                computeJob._shaderPath                  = std::move( computeShader._shaderPath );
-                computeJob._entryPoint                  = pass._computeEntryPoint;
-                computeJob._listDefine                  = std::move( computeShader._listDefine );
-                computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
-                computeJob._passType                    = RenderPassKind::Compute;
-                computeJob._parameters                  = ComputePassShader::kParameters;
+                RenderPassShaderStages stages = enumeratePassShaderStages( pass._type, &pass, &pass, _pipeline.getDesc()._listAttachment, engineDefaultAssets );
+                if ( bComputeImplementation ? stages._computeImplementation.has_value() == false : stages._listStage.empty() )
+                    continue; // 셰이더가 없는 패스는 로드 검증이 거절했다
+                RenderPassShaderStage& stage      = bComputeImplementation ? *stages._computeImplementation : stages._listStage.front();
+                ComputePSOJob&         computeJob = listComputeJob.emplace_back();
+                computeJob._shaderPath            = std::move( stage._shaderPath );
+                computeJob._entryPoint            = std::move( stage._entryPoint );
+                computeJob._listDefine            = std::move( stage._listDefine );
+                computeJob._pipelinePassName      = hashed_string( pass._name.c_str() );
+                computeJob._passType              = pass._type;
+                computeJob._parameters            = ComputePassShader::kParameters;
             }
 
             // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
@@ -995,40 +991,46 @@ namespace sw
             // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷 · 화면 속도 쓰기를 정한다(`_targetSourceType`).
             const RenderGraphPassDesc* pTargetDesc =
                 ( pPassDesc == nullptr && info._targetSourceType != RenderPassKind::Invalid ) ? _pipeline.findUniquePass( info._targetSourceType ) : pPassDesc;
-            const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, pTargetDesc, engine::getSubsystem<EngineDefaultAssets>() );
+            // 스테이지(경로 · 진입점 · define)는 쿠커와 같은 함수(`enumeratePassShaderStages`)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
+            const RenderPassShaderStages stages = enumeratePassShaderStages( passType, pPassDesc, pTargetDesc, _pipeline.getDesc()._listAttachment, engine::getSubsystem<EngineDefaultAssets>() );
 
             RHIPipelineStateDesc& desc = outDesc;
             desc                       = RHIPipelineStateDesc{};
-            desc._vertexShaderPath     = shader._shaderPath;
-            desc._pixelShaderPath      = desc._vertexShaderPath;
-            desc._vertexEntryPoint     = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_vertexEntryPoint ) : string_view{}, ShaderStage::Vertex ) );
-            desc._pixelEntryPoint      = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_pixelEntryPoint ) : string_view{}, ShaderStage::Pixel ) );
             applyPassRenderState( desc, passType, pPassDesc );
-            if ( pPassDesc != nullptr )
+            for ( const RenderPassShaderStage& stage : stages._listStage )
             {
-                desc._geometryEntryPoint = pPassDesc->_geometryEntryPoint;
-                desc._hullEntryPoint     = pPassDesc->_hullEntryPoint;
-                desc._domainEntryPoint   = pPassDesc->_domainEntryPoint;
-                if ( desc._hullEntryPoint.empty() == false )
-                    desc._topology = RHIPrimitiveTopology::PatchList3;
+                desc._listShaderDefine = stage._listDefine; // 그래픽스 스테이지는 같은 define 을 쓴다
+                if ( stage._stage == ShaderStage::Vertex )
+                {
+                    desc._vertexShaderPath = stage._shaderPath;
+                    desc._vertexEntryPoint = stage._entryPoint;
+                }
+                else if ( stage._stage == ShaderStage::Pixel )
+                {
+                    desc._pixelShaderPath = stage._shaderPath;
+                    desc._pixelEntryPoint = stage._entryPoint;
+                }
+                else if ( stage._stage == ShaderStage::Geometry )
+                {
+                    desc._geometryEntryPoint = stage._entryPoint;
+                }
+                else if ( stage._stage == ShaderStage::Hull )
+                {
+                    desc._hullEntryPoint = stage._entryPoint;
+                    desc._topology       = RHIPrimitiveTopology::PatchList3;
+                }
+                else if ( stage._stage == ShaderStage::Domain )
+                {
+                    desc._domainEntryPoint = stage._entryPoint;
+                }
             }
-            desc._listShaderDefine = shader._listDefine;
             if ( fillPassRenderTargetFormats( desc, pTargetDesc, pRTVFormatOverride != nullptr ? pRTVFormatOverride : info._pColorFormat, info._colorTargetCount ) == false )
             {
                 SW_LOG_ERROR_ID( "FramePSOManager.PassNoRenderTarget", "Pass %# has no render target format (no fixed format, and no color output declaration with a known format) - no PSO is created", passType );
                 return false;
             }
-
-            // 컬러 출력이 없는 패스(그림자, 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
-            // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 적용한 변형
-            // (createMaterialPSOVariant 는 이 desc 를 그대로 물려받는다)은 쿠커가 쿠킹하지 않아 Shipping 에서 매니페스트 미스로
-            // 실패한다. 쿠커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
-            // 그림자 캐시 복원(kWritesPixelDepth)만 컬러 없이 픽셀 깊이를 쓰므로 픽셀 스테이지를 남긴다.
-            if ( desc._numRenderTargets == 0 && info.hasFlag( RenderPassTraitFlag::kWritesPixelDepth ) == false )
-            {
-                desc._pixelShaderPath.clear();
-                desc._pixelEntryPoint.clear();
-            }
+            // 픽셀 스테이지는 스테이지 목록이 컬러 RT 수로 정했다 — 여기서 센 RT 수와 같은 답이어야 이 desc 를 물려받는 머티리얼 변형(createMaterialPSOVariant)도 쿠커가 구운 조합이다.
+            SW_ASSERT( desc._pixelEntryPoint.empty() == ( desc._numRenderTargets == 0 && info.hasFlag( RenderPassTraitFlag::kWritesPixelDepth ) == false ) );
             return true;
         }
 
@@ -1050,8 +1052,7 @@ namespace sw
             {
                 // 출력 선언에서 컬러 RT 를 센다. 쿠커가 픽셀 스테이지 유무를 판정하는 것과 같은 함수다. Swapchain 출력은 포맷을 모른다(Unknown) —
                 // 그 포맷은 출력 패스의 대상 포맷(pRTVFormats)으로만 정하므로 여기까지 오면 근거가 없다.
-                desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats( *pPassDesc, _pipeline.getDesc()._listAttachment, desc._arrRTVFormat,
-                                                                                       kMaxColorAttachments, numRenderTargets );
+                desc._numRenderTargets = pPassDesc->collectColorOutputFormats( _pipeline.getDesc()._listAttachment, desc._arrRTVFormat, kMaxColorAttachments, numRenderTargets );
                 for ( uint32 rtIndex = 0; rtIndex < desc._numRenderTargets; ++rtIndex )
                 {
                     if ( desc._arrRTVFormat[rtIndex] == RHIFormat::Unknown )

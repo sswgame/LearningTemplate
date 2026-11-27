@@ -310,7 +310,7 @@ namespace sw
 
     /**
      * @enum RenderPassExecutionMode
-     * @brief 일반 풀스크린 패스의 실행 방식입니다. 파이프라인 XML 의 `_implementation` 이 적는다(블룸 다운샘플 · 피사계 심도 — 표의 `kComputeImplementation`).
+     * @brief 일반 풀스크린 패스의 실행 방식입니다. 파이프라인 XML 의 `_implementation` 이 적는다(블룸 다운샘플 · 피사계 심도 — 표의 실행 종류 `RenderPassExecution::GraphicsOrCompute`).
      * @details Pixel 은 풀스크린 삼각형, Compute 는 같은 셰이더 파일의 `CSMain`(그룹 공유 타일)을 출력 크기로 디스패치한다. 어느 쪽이 나은지는 측정이 정하고 XML 한 줄로 바꾼다.
      *          Compute 는 네이티브 bindless(DX12 · Vulkan)에서만 돌고, 에뮬 백엔드는 Pixel 이 돈다(능력이 정한 길).
      */
@@ -374,59 +374,6 @@ namespace sw
      * @details `_attachments` 에 선언되지 않는 유일한 출력이라 검증에서 예외로 다룬다.
      */
     inline constexpr const utf8* kSwapchainOutputName = "Swapchain";
-
-    /** @brief 뷰 그래프(`_listPass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 뷰마다 다시 도는 패스입니다(내부 슬롯 · 프레임 패스 · Invalid 는 제외합니다). */
-    constexpr bool isViewPassType( RenderPassKind type )
-    {
-        return type != RenderPassKind::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassKind::Fullscreen );
-    }
-
-    /**
-     * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있으면 true 입니다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다.
-     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute · Fullscreen 은 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
-     *          나머지 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`). 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)는 이 종류를 컴파일 때 거절한다 —
-     *          "그 종류의 첫 패스" 는 둘째 패스의 서술을 조용히 버린다. 언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다.
-     */
-    constexpr bool isRepeatablePassType( RenderPassKind type )
-    {
-        return type == RenderPassKind::Shadow || type == RenderPassKind::Compute || type == RenderPassKind::Fullscreen || type == RenderPassKind::PostProcessMaterial;
-    }
-
-    /**
-     * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FramePassRecorder`).
-     * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
-     *          InstanceSort · InstanceSortMultiPass · IndirectArgsReset 는 GPUCull 패스 안의 다른 디스패치라 따로 선언하지 않는다. 입자 정렬 · 메시 쓰기는 시뮬레이션과 읽는 상태가 달라
-     *          (렌더 입력 · 인자를 UAV 로 쓰고 셰이더 읽기로 읽는다) 따로 선언한다 — 패스 몸통은 전이하지 않고 그래프가 패스 사이에 낸다(렌더 그래프 접근 핸들 ②).
-     */
-    constexpr bool isFramePassType( RenderPassKind type )
-    {
-        switch ( type )
-        {
-            case RenderPassKind::DepthHistory:
-            case RenderPassKind::HZBBuild:
-            case RenderPassKind::VFXSimulation:
-            case RenderPassKind::VFXParticleSort:
-            case RenderPassKind::VFXMeshInstance:
-            case RenderPassKind::InstanceAnimation:
-            case RenderPassKind::MeshMorph:
-            case RenderPassKind::MeshSkin:
-            case RenderPassKind::GPUCull:
-            case RenderPassKind::LightGrid:
-            case RenderPassKind::VolumetricFog:
-            case RenderPassKind::SceneVoxelize:
-            case RenderPassKind::ProbeUpdate:
-            case RenderPassKind::CanvasMarker:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(뷰 패스 또는 프레임 패스 — 내부 슬롯과 Invalid 는 제외합니다). */
-    constexpr bool isPipelinePassType( RenderPassKind type )
-    {
-        return isViewPassType( type ) || isFramePassType( type );
-    }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 첫 사용의 로드 · 저장 동작, 초기값)입니다.
 
@@ -778,6 +725,16 @@ namespace sw
             const bool bOutputHistory = _listResolvedColorOutput.empty() == false && _listResolvedColorOutput[0]._historyResource.empty() == false;
             return ( bOutputHistory ? 1u : 0u ) + static_cast<uint32>( _listResolvedInput.size() + _listValue.size() );
         }
+
+        /**
+         * @brief `_listOutput` 의 컬러 첨부 포맷을 차례대로 모읍니다. 반환값은 컬러 RT 수입니다.
+         * @details PSO 의 RT 포맷(`FramePSOManager::makePassPSODesc`)과 패스의 셰이더 단계(`enumeratePassShaderStages` — 컬러가 없으면 픽셀 단계가 없다)가 같은 답을 본다.
+         *          출력 선언이 아예 없으면 알 수 없으므로 @p fallbackCount 를 돌려준다(부르는 쪽이 종류 표로 정한 값). Swapchain 출력은 컬러 하나로 세고 포맷은 Unknown 이다
+         *          (대상 포맷은 출력 패스가 정한다). 첨부에 없는 다른 이름은 파이프라인 로드가 이미 거절했으므로 세지 않는다 — 선언이 있으면 넘긴 수로 물러나지 않는다.
+         * @param pOutFormat 컬러 포맷을 받을 배열입니다. nullptr 이면 개수만 셉니다.
+         * @param capacity   @p pOutFormat 의 크기입니다. 그보다 많은 컬러 출력은 버립니다.
+         */
+        [[nodiscard]] uint32 collectColorOutputFormats( const vector<RenderPassAttachment>& listAttachment, RHIFormat* pOutFormat, uint32 capacity, uint32 fallbackCount ) const;
 
         /** @brief 풀스크린 패스가 PassCB 끝에 덧붙이는 칸의 상한입니다(4 바이트 칸). PassCB 는 패스 상수 슬롯(`PassConstantRing::kSlotBytes`) 하나에 든다 — 엔진 칸 뒤에 남은 자리보다 작게 둔다. */
         static constexpr uint32 kMaxNamedPassCBParams = 16;

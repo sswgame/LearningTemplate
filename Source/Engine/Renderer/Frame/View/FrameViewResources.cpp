@@ -483,7 +483,7 @@ namespace sw
                 const RenderPassInputRole role   = resolveRenderPassInputRole( attachment._name, bDepth, attachment._role );
                 // 그림자 맵(방향광 · 점광 스폿 아틀라스 둘)은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
                 const bool bShadowAtlas = role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap;
-                const bool bCompute     = FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name );
+                const bool bCompute     = isUnorderedAccessAttachment( _pipeline.getGraphPass(), attachment._name, _pDevice->supportsNativeBindlessSampling() );
                 const bool bLeased      = name != attachmentNames()._sceneDepth; // 장면 깊이는 다음 프레임의 깊이 기록이 읽는다
                 bool       bMade        = false;
                 if ( bShadowAtlas )
