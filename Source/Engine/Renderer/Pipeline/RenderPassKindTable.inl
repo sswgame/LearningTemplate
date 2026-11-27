@@ -60,6 +60,11 @@ namespace sw
             return contract;
         }
 
+// case 하나가 표 한 줄이다. break 가 빠지면 앞 줄이 다음 case 의 값으로 덮이고(Present 가 MeshOutline 줄이 된 결함) 덮인 줄도 표 검사에는 맞는 줄이라, 빠진 break 를 이 함수에서 컴파일 오류로 세운다(엔진 전체는 -Wimplicit-fallthrough 를 켜지 않았다).
+#if defined( SW_COMPILER_CLANG ) || defined( SW_COMPILER_GCC )
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic error "-Wimplicit-fallthrough"
+#endif
         /**
          * @brief 패스 종류 하나의 줄입니다. 열거자를 더하고 case 를 빠뜨리면 -Wswitch-enum 이 알립니다(default 는 Invalid 줄이다). 경우마다 표 한 줄인 디스패처라 길어도 나누지 않는다.
          */
@@ -211,7 +216,8 @@ namespace sw
                     // 후처리 체인(post_chain.hlsl)을 겸하면 깊이를 읽는다.
                     info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
                     info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth } );
-                    info._flags          = Flag::kHasInputContract | Flag::kOutputPass | Flag::kGPUMessageTarget; // PresentOutput::write 의 SW_GPU_PRINT(고른 픽셀의 화면 색 — 어느 Present 셰이더든) break;
+                    info._flags          = Flag::kHasInputContract | Flag::kOutputPass | Flag::kGPUMessageTarget; // PresentOutput::write 의 SW_GPU_PRINT(고른 픽셀의 화면 색 — 어느 Present 셰이더든)
+                    break;
                 }
                 case RenderPassKind::MeshOutline:
                 {
@@ -753,6 +759,9 @@ namespace sw
             }
             return info;
         }
+#if defined( SW_COMPILER_CLANG ) || defined( SW_COMPILER_GCC )
+    #pragma GCC diagnostic pop
+#endif
 
         struct InfoTable
         {

@@ -889,6 +889,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeExecutionComesFromTheKindTable )
     SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::BloomDownsample ).isComputePass() );
     static_assert( isViewPassType( RenderPassKind::Fullscreen ) && isRepeatablePassType( RenderPassKind::Shadow ), "표의 범위 칸은 컴파일 때 답한다" );
     static_assert( isFramePassType( RenderPassKind::GPUCull ) && isPipelinePassType( RenderPassKind::InstanceSort ) == false, "컬링 안의 정렬 디스패치는 XML 에 적지 않는다" );
+    static_assert( getRenderPassKindInfo( RenderPassKind::Present ).hasFlag( RenderPassTraitFlag::kOutputPass ) && getRenderPassKindInfo( RenderPassKind::Present ).shouldDrawSceneMeshes() == false,
+                   "Present 는 출력 패스이고 씬 메시를 그리지 않는다(빠진 break 로 MeshOutline 줄이 되면 진다)" );
 
     vector<RenderGraphPassDesc> listPass( 1 );
     RenderGraphPassDesc&        pass = listPass[0];
