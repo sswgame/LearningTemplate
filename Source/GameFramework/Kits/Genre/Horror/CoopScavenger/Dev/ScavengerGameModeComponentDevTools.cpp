@@ -20,8 +20,8 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( scavengerResult, "Scavenger.Result", "Expedition result (0 ongoing, 1 win, 2 lose)", ScavengerGameModeComponent, &ScavengerGameModeComponent::getResult );
-    SW_AUTOMATION_GETTER_WATCH( scavengerPhase, "Scavenger.Phase", "Expedition phase (0 in orbit, 1 landed, 2 game over)", ScavengerGameModeComponent, &ScavengerGameModeComponent::getPhase );
+    SW_AUTOMATION_GETTER_WATCH( scavengerResult, "Scavenger.Result", "ScavengerResult name of the expedition", ScavengerGameModeComponent, &ScavengerGameModeComponent::getResult );
+    SW_AUTOMATION_GETTER_WATCH( scavengerPhase, "Scavenger.Phase", "ScavengerPhase name of the expedition", ScavengerGameModeComponent, &ScavengerGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( scavengerQuota, "Scavenger.Quota", "Quota of this cycle", ScavengerGameModeComponent, &ScavengerGameModeComponent::getQuota );
     SW_AUTOMATION_GETTER_WATCH( scavengerFulfilled, "Scavenger.Fulfilled", "Credits sold towards the quota", ScavengerGameModeComponent, &ScavengerGameModeComponent::getFulfilled );
     SW_AUTOMATION_GETTER_WATCH( scavengerDaysLeft, "Scavenger.DaysLeft", "Days before the deadline day", ScavengerGameModeComponent, &ScavengerGameModeComponent::getDaysLeft );

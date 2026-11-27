@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( kartRacingPhase, "KartRacing.Phase", "Race phase (0 waiting, 1 countdown, 2 racing, 3 ended)", KartGameModeComponent, &KartGameModeComponent::getPhase );
+    SW_AUTOMATION_GETTER_WATCH( kartRacingPhase, "KartRacing.Phase", "MatchPhase name of the race (Warmup is the countdown)", KartGameModeComponent, &KartGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( kartRacingFinishPlace, "KartRacing.PlayerFinishPlace", "Final place of the player kart (0 = not decided)", KartGameModeComponent,
                                 &KartGameModeComponent::getPlayerFinishPlace );
     SW_AUTOMATION_GETTER_WATCH( kartRacingSpeed, "KartRacing.PlayerSpeed", "Forward speed of the player kart (m/s)", KartGameModeComponent, &KartGameModeComponent::getPlayerSpeed );

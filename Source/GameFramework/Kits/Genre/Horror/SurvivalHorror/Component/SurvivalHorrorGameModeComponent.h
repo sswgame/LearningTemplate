@@ -116,7 +116,7 @@ namespace sw
         bool                 isLinkOpen( const AreaLink& link ) const { return _graph.canTraverse( link._from, link._to, _flags ); }
         bool                 isInDarkness() const;
         SurvivalHorrorResult getGameResult() const { return _result; }
-        int32                getResult() const { return static_cast<int32>( _result ); }
+        SurvivalHorrorResult getResult() const { return _result; }
         float32              getHealth() const { return _session.getHealth(); }
         float32              getHealthRatio() const;
         float32              getSanity() const { return _session.getSanity().getValue(); }

@@ -10,11 +10,11 @@
 <Scenario name="game.playground.kitdemo_actioncombat" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="kitdemo_actioncombat"/>
 	<WaitUntil watch="ActionCombat.Alive" equals="2" timeoutFrames="120"/>
-	<Expect watch="ActionCombat.Phase" equals="0"/>
+	<Expect watch="ActionCombat.Phase" is="Hall"/>
 	<Expect watch="ActionCombat.PlayerHP" equals="100"/>
 	<!-- 룸 이벤트가 HUD 에 닿는다 — 싸우는 동안 문이 잠겼다 -->
 	<WaitUntil watch="ActionCombat.HUDGateLocked" equals="1" timeoutFrames="30"/>
-	<Expect watch="ActionCombat.HUDNotification" equals="0"/>
+	<Expect watch="ActionCombat.HUDNotification" is="None"/>
 	<!-- 게임 기능 ActionCombat 가 받는 이름 Combatant 의 허수아비에 어빌리티 시스템을 붙이고 전투 세트를 줬다 — 체력이 차 있고 쓰러지지 않았다 -->
 	<Expect watch="GameFeature.AddedComponents" equals="1"/>
 	<Expect watch="Ability.Attribute" target="TrainingDummy" key="Health" equals="100"/>
@@ -31,11 +31,11 @@
 	<Action name="KitDemo.Attack"/>
 	<AdvanceSimulation frames="24"/>
 	<Action name="KitDemo.Attack"/>
-	<WaitUntil watch="ActionCombat.Phase" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="ActionCombat.Phase" is="BossWait" timeoutFrames="60"/>
 	<ExpectLog id="ActionCombat.HallCleared" count="1"/>
-	<WaitUntil watch="ActionCombat.HUDNotification" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="ActionCombat.HUDNotification" is="Cleared" timeoutFrames="30"/>
 	<!-- 보스 룸이 열린다(1 초) -->
-	<WaitUntil watch="ActionCombat.Phase" equals="2" timeoutFrames="120"/>
+	<WaitUntil watch="ActionCombat.Phase" is="Boss" timeoutFrames="120"/>
 	<Expect watch="ActionCombat.Alive" equals="1"/>
 	<!-- 오른쪽으로 돌아서 보스를 네 번 친다 -->
 	<ActionAxis name="Move" x="1" seconds="0.1"/>
@@ -47,11 +47,11 @@
 	<Action name="KitDemo.Attack"/>
 	<AdvanceSimulation frames="24"/>
 	<Action name="KitDemo.Attack"/>
-	<WaitUntil watch="ActionCombat.Phase" equals="3" timeoutFrames="60"/>
+	<WaitUntil watch="ActionCombat.Phase" is="Victory" timeoutFrames="60"/>
 	<Expect watch="ActionCombat.Alive" equals="0"/>
 	<Expect watch="ActionCombat.PlayerHP" equals="100"/>
 	<ExpectLog id="ActionCombat.Victory" count="1"/>
-	<WaitUntil watch="ActionCombat.HUDNotification" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="ActionCombat.HUDNotification" is="Cleared" timeoutFrames="30"/>
 	<Record watch="ActionCombat.PlayerX"/>
 	<Pass/>
 </Scenario>

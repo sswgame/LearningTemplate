@@ -30,7 +30,7 @@ SW_TEST_CASE( ActionCombatGameModeTest, InputAfterTheRunOpensIsAccepted )
     SW_REQUIRE_NOT_NULL( pGameMode );
     manager.beginPlay();
     SW_REQUIRE_TRUE( pGameMode->isStarted() );
-    SW_EXPECT_EQUAL( static_cast<int32>( ActionCombatPhase::Hall ), pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( ActionCombatPhase::Hall, pGameMode->getPhase() );
     SW_EXPECT_TRUE( pGameMode->isAcceptingInput() );
     SW_EXPECT_TRUE( pGameMode->submitPlayerInput( float2{ 1.0f, 0.0f }, true, true ) );
     SW_EXPECT_EQUAL( 0.0f, pGameMode->getPlayerX() );

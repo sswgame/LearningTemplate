@@ -12,7 +12,7 @@
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Minigame.Active" is="mecharena" timeoutWallSeconds="60"/>
 	<Expect watch="Save.Blocked" equals="1"/>
-	<WaitUntil watch="MechArena.PlayerState" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="MechArena.PlayerState" is="Active" timeoutFrames="120"/>
 	<Expect watch="MechArena.Ended" equals="0"/>
 	<Expect watch="MechArena.EnemyGauge" equals="800"/>
 	<Expect watch="MechArena.PlayerAmmo" equals="8"/>

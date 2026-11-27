@@ -287,11 +287,11 @@ namespace sw
         return pPlayer != nullptr && pPlayer->isDowned();
     }
 
-    int32 BattleRoyaleGameModeComponent::getPlayerDropStage() const
+    BattleRoyaleDropStage BattleRoyaleGameModeComponent::getPlayerDropStage() const
     {
         if ( _listPerson.empty() || _listPerson[kPlayer]._bJumped == SW_FALSE )
-            return 0;
-        return _listPerson[kPlayer]._skydiver.isLanded() ? 2 : 1;
+            return BattleRoyaleDropStage::OnPlane;
+        return _listPerson[kPlayer]._skydiver.isLanded() ? BattleRoyaleDropStage::Landed : BattleRoyaleDropStage::Falling;
     }
 
     bool BattleRoyaleGameModeComponent::readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const

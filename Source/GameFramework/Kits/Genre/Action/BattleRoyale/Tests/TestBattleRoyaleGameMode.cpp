@@ -165,7 +165,7 @@ SW_TEST_CASE( BattleRoyaleGameModeTest, DropThenZoneEndsTheMatch )
     game::ScopedGameScope scopedScope( test._scope );
     test._manager.beginPlay();
     SW_REQUIRE_TRUE( test._pGameMode->isStarted() );
-    SW_EXPECT_EQUAL( 0, test._pGameMode->getPlayerDropStage() );
+    SW_EXPECT_EQUAL( BattleRoyaleDropStage::OnPlane, test._pGameMode->getPlayerDropStage() );
     SW_EXPECT_TRUE( test._pGameMode->getPersonPosition( BattleRoyaleGameModeComponent::kPlayer )._value._y > 0.0f );
     test._manager.update( kBattleRoyaleGameModeFrame );
     SW_REQUIRE_TRUE( test._pGameMode->submitPlayerInput( float2{ 0.0f, 0.0f }, false, false, true ) );
@@ -173,21 +173,21 @@ SW_TEST_CASE( BattleRoyaleGameModeTest, DropThenZoneEndsTheMatch )
     {
         test._manager.update( kBattleRoyaleGameModeFrame );
     }
-    SW_EXPECT_EQUAL( 1, test._pGameMode->getPlayerDropStage() );
+    SW_EXPECT_EQUAL( BattleRoyaleDropStage::Falling, test._pGameMode->getPlayerDropStage() );
 
     // 낙하 도중의 상태 바이트가 같은 판으로 되살아난다.
     Archive written;
     test._pGameMode->writeState( written );
     vector<uint8> bytes( written.getData(), written.getData() + written.getSize() );
     test._pGameMode->restoreState( std::move( bytes ) );
-    SW_EXPECT_EQUAL( 1, test._pGameMode->getPlayerDropStage() );
+    SW_EXPECT_EQUAL( BattleRoyaleDropStage::Falling, test._pGameMode->getPlayerDropStage() );
     SW_EXPECT_EQUAL( 2, test._pGameMode->getRemaining() );
     Archive rewritten;
     test._pGameMode->writeState( rewritten );
     SW_EXPECT_EQUAL( written.getSize(), rewritten.getSize() );
 
     SW_REQUIRE_TRUE( test.runUntil( BattleRoyalePhase::Battle ) );
-    SW_EXPECT_EQUAL( 2, test._pGameMode->getPlayerDropStage() );
+    SW_EXPECT_EQUAL( BattleRoyaleDropStage::Landed, test._pGameMode->getPlayerDropStage() );
     SW_EXPECT_EQUAL( 0.0f, test._pGameMode->getPersonPosition( BattleRoyaleGameModeComponent::kPlayer )._value._y );
     SW_REQUIRE_TRUE( test.runUntil( BattleRoyalePhase::Ended ) );
     SW_EXPECT_FALSE( test._pGameMode->isAcceptingInput() );

@@ -73,7 +73,7 @@ namespace sw
         RhythmClock              getClock() const { return _clock; }
         float32                  getMusicTime() const { return _musicTime; }
         float32                  getMaxLife() const { return _playSettings._maxLife; }
-        int32                    getState() const { return static_cast<int32>( _session.getState() ); }
+        RhythmPlayState          getState() const { return _session.getState(); }
         int32                    getJudged() const { return _session.getJudgedCount(); }
         int32                    getMissed() const { return _session.getMissCount(); }
         int32                    getMaxCombo() const { return _session.getMaxCombo(); }

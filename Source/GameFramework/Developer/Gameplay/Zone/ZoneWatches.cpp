@@ -19,7 +19,6 @@
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Gameplay/Zone/Reaction/RemoveStacksOnJumpComponent.h"
@@ -214,13 +213,13 @@ namespace sw
                 const CharacterController2DComponent* pController2D = pTarget != nullptr ? pTarget->getComponent<CharacterController2DComponent>() : nullptr;
                 if ( pController2D != nullptr )
                 {
-                    outValue.setText( getEnumName( pController2D->getMovementMode() ) );
+                    outValue.setEnum( pController2D->getMovementMode() );
                     return true;
                 }
                 const CharacterControllerComponent* pController = query.findTargetComponent<CharacterControllerComponent>( "CharacterControllerComponent", outValue );
                 if ( pController == nullptr )
                     return false;
-                outValue.setText( getEnumName( pController->getMovementMode() ) );
+                outValue.setEnum( pController->getMovementMode() );
                 return true;
             }
 

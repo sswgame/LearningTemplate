@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorResult, "AsymmetricHorror.Result", "Match result for the survivors (0 ongoing, 1 win, 2 draw, 3 lose)", AsymmetricHorrorGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorResult, "AsymmetricHorror.Result", "AsymmetricHorrorResult name of the match for the survivors", AsymmetricHorrorGameModeComponent,
                                 &AsymmetricHorrorGameModeComponent::getResult );
     SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorGenerators, "AsymmetricHorror.Generators", "Generators repaired", AsymmetricHorrorGameModeComponent,
                                 &AsymmetricHorrorGameModeComponent::getCompletedGenerators );
@@ -28,6 +28,6 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorSacrificed, "AsymmetricHorror.Sacrificed", "Survivors who were sacrificed", AsymmetricHorrorGameModeComponent,
                                 &AsymmetricHorrorGameModeComponent::countSacrificed );
     SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorPlayerX, "AsymmetricHorror.PlayerX", "Absolute X of survivor 0 (m)", AsymmetricHorrorGameModeComponent, &AsymmetricHorrorGameModeComponent::getPlayerX );
-    SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorActivity, "AsymmetricHorror.PlayerActivity", "What survivor 0 does (0 nothing, 1 repair, 2 heal, 3 open a gate, 4 vault, 5 in a locker)",
+    SW_AUTOMATION_GETTER_WATCH( asymmetricHorrorActivity, "AsymmetricHorror.PlayerActivity", "SurvivorActivity name of what the first survivor does",
                                 AsymmetricHorrorGameModeComponent, &AsymmetricHorrorGameModeComponent::getPlayerActivity );
 } // namespace sw

@@ -29,7 +29,7 @@
 	<WaitUntil watch="GhostHunt.LitRooms" equals="2" timeoutSeconds="20"/>
 	<ActionRelease name="GhostHunt.Vacuum"/>
 	<ActionRelease name="GhostHunt.Light"/>
-	<Expect watch="GhostHunt.Result" equals="1"/>
+	<Expect watch="GhostHunt.Result" is="Win"/>
 	<Expect watch="GhostHunt.Coins" equals="20"/>
 	<Expect watch="GhostHunt.Health" equals="100"/>
 	<ExpectLog id="GhostHunt.Ended" contains="every room is lit" count="1"/>

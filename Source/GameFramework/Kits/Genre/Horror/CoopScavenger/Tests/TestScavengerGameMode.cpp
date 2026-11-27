@@ -127,7 +127,7 @@ SW_TEST_CASE( ScavengerGameModeTest, CrewLandsAndWalksToNeighbours )
     SW_EXPECT_TRUE( pDirector->submitCrewCommand( 0, lever ) );
     SW_EXPECT_FALSE( pDirector->submitCrewCommand( 1, lever ) ); // 승무원은 하나다
     manager.update( kScavengerGameModeStep );
-    SW_EXPECT_EQUAL( static_cast<int32>( ScavengerPhase::Landed ), pDirector->getPhase() );
+    SW_EXPECT_EQUAL( ScavengerPhase::Landed, pDirector->getPhase() );
     SW_EXPECT_EQUAL( 3, pDirector->getGroundScrapCount() );
     SW_EXPECT_TRUE( pDirector->isPlayerInShip() );
     SW_EXPECT_TRUE( pDirector->findNeighborToward( 0, float2{ -1.0f, 0.0f } ).empty() );
@@ -152,11 +152,11 @@ SW_TEST_CASE( ScavengerGameModeTest, BotFillsTheQuota )
     manager.beginPlay();
     SW_REQUIRE_TRUE( pDirector->isStarted() );
     constexpr int32 kMaxSteps = 3000;
-    for ( int32 step = 0; step < kMaxSteps && pDirector->getResult() == 0; ++step )
+    for ( int32 step = 0; step < kMaxSteps && pDirector->getResult() == ScavengerResult::Ongoing; ++step )
     {
         manager.update( kScavengerGameModeStep );
     }
-    SW_EXPECT_EQUAL( static_cast<int32>( ScavengerResult::Win ), pDirector->getResult() );
+    SW_EXPECT_EQUAL( ScavengerResult::Win, pDirector->getResult() );
     vector<MinigameResultValue> listValue;
     pDirector->collectMinigameResult( listValue );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() );
@@ -189,14 +189,14 @@ SW_TEST_CASE( ScavengerGameModeTest, StateRoundTripsMidExpedition )
     SW_REQUIRE_NOT_NULL( pRestored );
     restoredManager.beginPlay();
     pRestored->restoreState( vector<uint8>( written.getData(), written.getData() + written.getSize() ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( ScavengerPhase::Landed ), pRestored->getPhase() );
+    SW_EXPECT_EQUAL( ScavengerPhase::Landed, pRestored->getPhase() );
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( *pDirector, *pRestored ) );
     constexpr int32 kMaxSteps = 3000;
-    for ( int32 step = 0; step < kMaxSteps && pRestored->getResult() == 0; ++step )
+    for ( int32 step = 0; step < kMaxSteps && pRestored->getResult() == ScavengerResult::Ongoing; ++step )
     {
         restoredManager.update( kScavengerGameModeStep );
     }
-    SW_EXPECT_EQUAL( static_cast<int32>( ScavengerResult::Win ), pRestored->getResult() );
+    SW_EXPECT_EQUAL( ScavengerResult::Win, pRestored->getResult() );
     restoredManager.endPlay();
     manager.endPlay();
 }
@@ -263,7 +263,7 @@ SW_TEST_CASE( ScavengerGameModeTest, ClockRunsOnlyOnTheMoonAndWeatherScalesTheSc
     SW_EXPECT_TRUE( pState->getClock().getHour() > 6.0f );
     SW_EXPECT_TRUE( pDirector->submitCrewCommand( 0, lever ) ); // 우주선을 떠나지 않았다
     manager.update( kScavengerGameModeStep );
-    SW_EXPECT_EQUAL( static_cast<int32>( ScavengerPhase::InOrbit ), pDirector->getPhase() );
+    SW_EXPECT_EQUAL( ScavengerPhase::InOrbit, pDirector->getPhase() );
     SW_EXPECT_EQUAL( 1, pState->getClock().getDay() );
     SW_EXPECT_NEAR( 6.0f, pState->getClock().getHour(), 1.0e-2f );
     manager.endPlay();

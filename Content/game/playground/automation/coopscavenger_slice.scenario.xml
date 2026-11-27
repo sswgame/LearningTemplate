@@ -10,7 +10,7 @@
 	<Launch variable="gv_firstMinigame" value="coopscavenger"/>
 	<Launch variable="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Scavenger.Quota" equals="30" timeoutFrames="120"/>
-	<Expect watch="Scavenger.Phase" equals="0"/>
+	<Expect watch="Scavenger.Phase" is="InOrbit"/>
 	<Expect watch="Scavenger.Credits" equals="60"/>
 	<Expect watch="Scavenger.DaysLeft" equals="1"/>
 	<!-- 터미널 — 자물쇠 따개(15)를 산다. 하나뿐이라 다시 누르면 거절한다 -->
@@ -26,7 +26,7 @@
 	<Expect watch="Scavenger.Credits" equals="45"/>
 	<!-- 착륙 — 한 칸 나갔다 돌아온다 -->
 	<Action name="CoopScavenger.Lever"/>
-	<WaitUntil watch="Scavenger.Phase" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="Scavenger.Phase" is="Landed" timeoutFrames="10"/>
 	<Expect watch="Scavenger.GroundScrap" atLeast="1"/>
 	<Expect watch="Scavenger.PlayerInShip" equals="1"/>
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
@@ -43,19 +43,19 @@
 	<Expect watch="Clock.Hour" atLeast="6.1"/>
 	<!-- 이륙 → 회사 착륙 → 매입 → 이륙 -->
 	<Action name="CoopScavenger.Lever"/>
-	<WaitUntil watch="Scavenger.Phase" equals="0" timeoutFrames="10"/>
+	<WaitUntil watch="Scavenger.Phase" is="InOrbit" timeoutFrames="10"/>
 	<Expect watch="Scavenger.DaysLeft" equals="0"/>
 	<Expect watch="Clock.Day" equals="1"/>
 	<Expect watch="Clock.Hour" near="6" tolerance="0.01"/>
 	<AdvanceSimulation frames="4"/> <!-- 레버 누름이 놓인 뒤에 다시 누른다(프레임 경계) -->
 	<Action name="CoopScavenger.Lever"/>
-	<WaitUntil watch="Scavenger.Phase" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="Scavenger.Phase" is="Landed" timeoutFrames="10"/>
 	<Action name="CoopScavenger.Use"/>
 	<WaitUntil watch="Scavenger.ShipValue" equals="0" timeoutFrames="10"/>
 	<Expect watch="Scavenger.Fulfilled" atLeast="40"/>
 	<ExpectLog id="Scavenger.Sold" count="1"/>
 	<Action name="CoopScavenger.Lever"/>
-	<WaitUntil watch="Scavenger.Result" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="Scavenger.Result" is="Win" timeoutFrames="10"/>
 	<Expect watch="Scavenger.Credits" atLeast="85"/>
 	<ExpectLog id="Scavenger.Ended" contains="quota met" count="1"/>
 	<!-- 결과를 보인 뒤 미니게임이 스스로 끝난다 -->

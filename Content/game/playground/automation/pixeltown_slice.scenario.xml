@@ -17,7 +17,7 @@
 	<Tap slot="Key.W" hold="2"/>
 	<WaitUntil watch="Overworld.HeroWalking" equals="0" timeoutFrames="40"/>
 	<Expect watch="Overworld.HeroTileY" equals="5"/>
-	<Expect watch="Overworld.HeroFacing" equals="3"/>
+	<Expect watch="Overworld.HeroFacing" is="Up"/>
 	<!-- 길로 내려와 오른쪽 다섯 칸. -->
 	<Tap slot="Key.S" hold="2"/>
 	<WaitUntil watch="Overworld.HeroWalking" equals="0" timeoutFrames="40"/>
@@ -39,7 +39,7 @@
 	<Tap slot="Key.W" hold="2"/>
 	<WaitUntil watch="Overworld.HeroWalking" equals="0" timeoutFrames="40"/>
 	<Expect watch="Overworld.HeroTileY" equals="7"/>
-	<Expect watch="Overworld.HeroFacing" equals="3"/>
+	<Expect watch="Overworld.HeroFacing" is="Up"/>
 	<Expect watch="Overworld.Talking" equals="0"/>
 	<!-- 말을 건다 — 첫 줄. -->
 	<Tap slot="Key.Space" hold="1"/>

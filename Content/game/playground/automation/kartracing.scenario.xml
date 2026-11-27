@@ -9,7 +9,7 @@
 <Scenario name="game.playground.kartracing" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="kartracing"/>
 	<Launch variable="gv_playgroundAutoPlay" value="0"/>
-	<WaitUntil watch="KartRacing.Phase" equals="2" timeoutFrames="600"/>
+	<WaitUntil watch="KartRacing.Phase" is="InProgress" timeoutFrames="600"/>
 	<Expect watch="KartRacing.PlayerFinishPlace" equals="0"/>
 	<ExpectLog id="KartRacing.Go" count="1"/>
 	<Press slot="Key.W"/>
@@ -17,7 +17,7 @@
 	<Release slot="Key.W"/>
 	<WaitUntil watch="KartRacing.FinishedCount" atLeast="1" timeoutFrames="5400"/>
 	<Expect watch="KartRacing.PlayerFinishPlace" equals="0"/>
-	<WaitUntil watch="KartRacing.Phase" equals="3" timeoutFrames="900"/>
+	<WaitUntil watch="KartRacing.Phase" is="Ended" timeoutFrames="900"/>
 	<Expect watch="KartRacing.PlayerFinishPlace" equals="4"/>
 	<ExpectLog id="KartRacing.Ended" count="1"/>
 	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->

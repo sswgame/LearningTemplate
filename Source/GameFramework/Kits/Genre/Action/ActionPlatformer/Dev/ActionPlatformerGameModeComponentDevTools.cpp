@@ -46,6 +46,16 @@ namespace sw
                 return pGameMode;
             }
 
+            /** @brief 감시 값 `ActionPlatformer.LastRespawnPolicy` 입니다. 아직 부활하지 않았으면 값이 없습니다. */
+            [[nodiscard]] static bool readLastRespawnPolicy( const ActionPlatformerGameModeComponent& gameMode, AutomationWatchValue& outValue )
+            {
+                RespawnPolicyKind policy = RespawnPolicyKind::LastCheckpoint;
+                if ( gameMode.findLastRespawnPolicy( policy ) == false )
+                    return false;
+                outValue.setEnum( policy );
+                return true;
+            }
+
             static bool runKill( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
@@ -64,7 +74,7 @@ namespace sw
 
     SW_DEV_SCENE_COMMAND( ActionPlatformerKill, "actionplatformer.kill", "actionplatformer.kill", "Kill the action platformer player where it stands (one life, then the stage's respawn rules)",
                           &ActionPlatformerGameModeComponentDevInternal::runKill );
-    SW_AUTOMATION_GETTER_WATCH( actionPlatformerState, "ActionPlatformer.State", "Action platformer run state (0 not started, 1 playing, 2 cleared, 3 game over)",
+    SW_AUTOMATION_GETTER_WATCH( actionPlatformerState, "ActionPlatformer.State", "ActionStageState name of the action platformer run",
                                 ActionPlatformerGameModeComponent, &ActionPlatformerGameModeComponent::getRunState );
     SW_AUTOMATION_GETTER_WATCH( actionPlatformerCheckpoint, "ActionPlatformer.Checkpoint", "Last checkpoint index passed (-1 = the stage start)", ActionPlatformerGameModeComponent,
                                 &ActionPlatformerGameModeComponent::getCheckpointIndex );
@@ -75,12 +85,11 @@ namespace sw
                                 &ActionPlatformerGameModeComponent::getScore );
     SW_AUTOMATION_GETTER_WATCH( actionPlatformerPlayerX, "ActionPlatformer.PlayerX", "Player body world X", ActionPlatformerGameModeComponent, &ActionPlatformerGameModeComponent::getPlayerX );
     SW_AUTOMATION_GETTER_WATCH( actionPlatformerPlayerY, "ActionPlatformer.PlayerY", "Player body world Y", ActionPlatformerGameModeComponent, &ActionPlatformerGameModeComponent::getPlayerY );
-    SW_AUTOMATION_GETTER_WATCH( actionPlatformerRespawnPhase, "ActionPlatformer.RespawnPhase", "Respawn flow phase (0 alive, 1 waiting, 2 selection, 3 search)", ActionPlatformerGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( actionPlatformerRespawnPhase, "ActionPlatformer.RespawnPhase", "RespawnPhase name of the respawn flow", ActionPlatformerGameModeComponent,
                                 &ActionPlatformerGameModeComponent::getRespawnPhase );
     SW_AUTOMATION_GETTER_WATCH( actionPlatformerRespawns, "ActionPlatformer.Respawns", "Times the player stood up again", ActionPlatformerGameModeComponent, &ActionPlatformerGameModeComponent::getRespawnCount );
-    SW_AUTOMATION_GETTER_WATCH( actionPlatformerLastRespawnPolicy, "ActionPlatformer.LastRespawnPolicy",
-                                "Policy of the last respawn (0 last checkpoint, 1 in place, 2 nearest spawn point, 3 team base, 4 player choice, -1 none)", ActionPlatformerGameModeComponent,
-                                &ActionPlatformerGameModeComponent::getLastRespawnPolicy );
+    SW_AUTOMATION_COMPONENT_WATCH( actionPlatformerLastRespawnPolicy, "ActionPlatformer.LastRespawnPolicy", "RespawnPolicyKind name of the last respawn (no value before the first one)",
+                                   ActionPlatformerGameModeComponent, &ActionPlatformerGameModeComponentDevInternal::readLastRespawnPolicy );
     SW_AUTOMATION_GETTER_WATCH( actionPlatformerLastRespawnShift, "ActionPlatformer.LastRespawnShift", "Distance between where the player died and where it stood up last time (m)",
                                 ActionPlatformerGameModeComponent, &ActionPlatformerGameModeComponent::getLastRespawnShift );
     SW_AUTOMATION_GETTER_WATCH( actionPlatformerInPlaceUses, "ActionPlatformer.InPlaceUses", "Respawns used by the in-place policy", ActionPlatformerGameModeComponent,

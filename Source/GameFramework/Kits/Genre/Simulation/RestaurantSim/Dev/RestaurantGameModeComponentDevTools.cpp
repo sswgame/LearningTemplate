@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( restaurantPhase, "Restaurant.Phase", "Restaurant phase (0 prepare, 1 open, 2 closed, 3 victory, 4 defeat)", RestaurantGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( restaurantPhase, "Restaurant.Phase", "RestaurantPhase name of the restaurant", RestaurantGameModeComponent,
                                 &RestaurantGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( restaurantDay, "Restaurant.Day", "Business day (1 = first)", RestaurantGameModeComponent, &RestaurantGameModeComponent::getDay );
     SW_AUTOMATION_GETTER_WATCH( restaurantGold, "Restaurant.Gold", "Gold of the restaurant", RestaurantGameModeComponent, &RestaurantGameModeComponent::getGold );

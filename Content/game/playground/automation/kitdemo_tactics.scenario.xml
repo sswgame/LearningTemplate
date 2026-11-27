@@ -12,7 +12,7 @@
 	<Launch variable="gv_firstMinigame" value="kitdemo_tactics"/>
 	<WaitUntil watch="SRPG.EnemiesAlive" equals="2" timeoutFrames="120"/>
 	<Expect watch="SRPG.Turn" equals="1"/>
-	<Expect watch="SRPG.PhaseTeam" equals="0"/>
+	<Expect watch="SRPG.PhaseTeam" is="Player"/>
 	<Expect watch="SRPG.CursorX" equals="0"/>
 	<Expect watch="SRPG.CursorY" equals="1"/>
 	<!-- 1 턴: 기사를 고른다 -->
@@ -33,7 +33,7 @@
 	<Action name="KitDemo.Confirm"/>
 	<WaitUntil watch="SRPG.EnemiesAlive" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="SRPG.Turn" equals="2" timeoutFrames="60"/>
-	<WaitUntil watch="SRPG.PhaseTeam" equals="0" timeoutFrames="60"/>
+	<WaitUntil watch="SRPG.PhaseTeam" is="Player" timeoutFrames="60"/>
 	<Expect watch="SRPG.PlayersAlive" equals="1"/>
 	<!-- 2 턴: 커서를 기사(2,1)로 돌려 고르고, 두 칸 가서 둘째 경비병을 친다 -->
 	<ActionAxis name="Move" x="-1" seconds="0.05"/>
@@ -50,7 +50,7 @@
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
 	<AdvanceSimulation frames="4"/>
 	<Action name="KitDemo.Confirm"/>
-	<WaitUntil watch="SRPG.Result" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="SRPG.Result" is="Victory" timeoutFrames="30"/>
 	<Expect watch="SRPG.EnemiesAlive" equals="0"/>
 	<Expect watch="SRPG.Turn" equals="2"/>
 	<ExpectLog id="SRPG.Destroyed" count="2"/>

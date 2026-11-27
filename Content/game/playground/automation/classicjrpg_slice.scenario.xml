@@ -13,14 +13,14 @@
 	<Launch variable="gv_firstMinigame" value="classicjrpg"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="JRPG.Gold" equals="10" timeoutFrames="120"/>
-	<Expect watch="JRPG.Phase" equals="0"/>
+	<Expect watch="JRPG.Phase" is="Explore"/>
 	<!-- 가방의 장비를 낀다 — 검은 맨 앞 멤버의 무기 칸으로 간다 -->
 	<Expect watch="JRPG.LeaderAttack" equals="80"/>
 	<Action name="JRPG.Equip"/>
 	<WaitUntil watch="JRPG.LeaderAttack" equals="100" timeoutFrames="30"/>
 	<!-- 첫 전투(x 4) — 멤버마다 명령 하나, 마지막 명령이 라운드를 돌린다 -->
 	<ActionAxis name="Move" x="1" seconds="1.2"/>
-	<WaitUntil watch="JRPG.Phase" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="JRPG.Phase" is="Battle" timeoutFrames="120"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간 — 전투가 끝난 뒤 이어 걷지 않게(시간이 내용) -->
 	<Expect watch="JRPG.EnemiesAlive" equals="2"/>
 	<Expect watch="JRPG.CommandMember" equals="0"/>
@@ -28,8 +28,8 @@
 	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
 	<Expect watch="JRPG.BattleRound" equals="0"/>
 	<Action name="JRPG.Attack"/>
-	<WaitUntil watch="JRPG.Phase" equals="4" timeoutFrames="30"/>
-	<WaitUntil watch="JRPG.Phase" equals="0" timeoutFrames="240"/>
+	<WaitUntil watch="JRPG.Phase" is="Timing" timeoutFrames="30"/>
+	<WaitUntil watch="JRPG.Phase" is="Explore" timeoutFrames="240"/>
 	<Expect watch="JRPG.TimedCount" equals="0"/>
 	<Expect watch="JRPG.BattleCount" equals="1"/>
 	<Expect watch="JRPG.Gold" equals="17"/>
@@ -49,13 +49,13 @@
 	<Expect watch="JRPG.BattleCount" equals="1"/>
 	<!-- 둘째 전투(x 8) -->
 	<ActionAxis name="Move" x="1" seconds="1.2"/>
-	<WaitUntil watch="JRPG.Phase" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="JRPG.Phase" is="Battle" timeoutFrames="120"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Action name="JRPG.Attack"/>
 	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
 	<Action name="JRPG.Spell"/>
-	<WaitUntil watch="JRPG.Phase" equals="4" timeoutFrames="30"/>
-	<WaitUntil watch="JRPG.Phase" equals="0" timeoutFrames="240"/>
+	<WaitUntil watch="JRPG.Phase" is="Timing" timeoutFrames="30"/>
+	<WaitUntil watch="JRPG.Phase" is="Explore" timeoutFrames="240"/>
 	<Expect watch="JRPG.Gold" equals="24"/>
 	<!-- 쉼터(8, 0.8) — 여관 값 4 × 2 -->
 	<Action name="JRPG.Rest"/>
@@ -66,7 +66,7 @@
 	<WaitUntil watch="JRPG.ClassChanges" equals="1" timeoutFrames="30"/>
 	<!-- 길 끝 — 보스전: 타이밍 공격 + 방어(막기도 누른다), 공격 둘 -->
 	<ActionAxis name="Move" x="1" seconds="1"/>
-	<WaitUntil watch="JRPG.Phase" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="JRPG.Phase" is="Battle" timeoutFrames="120"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Expect watch="JRPG.EnemiesAlive" equals="1"/>
 	<Action name="JRPG.Flee"/>
@@ -82,12 +82,12 @@
 	<WaitUntil watch="JRPG.TimingElapsed" atLeast="0.3" timeoutFrames="60"/>
 	<Action name="JRPG.Attack"/>
 	<WaitUntil watch="JRPG.BattleRound" equals="1" timeoutFrames="30"/>
-	<Expect watch="JRPG.Phase" equals="1"/>
+	<Expect watch="JRPG.Phase" is="Battle"/>
 	<Expect watch="JRPG.TimedCount" equals="2"/>
 	<Action name="JRPG.Attack"/>
 	<WaitUntil watch="JRPG.CommandMember" equals="1" timeoutFrames="30"/>
 	<Action name="JRPG.Attack"/>
-	<WaitUntil watch="JRPG.Phase" equals="2" timeoutFrames="240"/>
+	<WaitUntil watch="JRPG.Phase" is="Victory" timeoutFrames="240"/>
 	<ExpectLog id="JRPG.Victory" count="1"/>
 	<Expect watch="JRPG.Gold" equals="46"/>
 	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->

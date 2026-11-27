@@ -12,17 +12,17 @@
 	<Launch variable="gv_firstMinigame" value="monstercollector"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="MonsterCollector.BallCount" equals="3" timeoutFrames="120"/>
-	<Expect watch="MonsterCollector.Phase" equals="0"/>
+	<Expect watch="MonsterCollector.Phase" is="Explore"/>
 	<Expect watch="MonsterCollector.PartySize" equals="1"/>
 	<Expect watch="MonsterCollector.LeaderXP" equals="1000"/>
 	<!-- 첫 조우(x 4) — 볼로 잡는다 -->
 	<ActionAxis name="Move" x="1" seconds="1.2"/>
-	<WaitUntil watch="MonsterCollector.Phase" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="MonsterCollector.Phase" is="Battle" timeoutFrames="120"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간 — 전투가 끝난 뒤 이어 걷지 않게(시간이 내용) -->
 	<Expect watch="MonsterCollector.FoeHP" atLeast="1"/>
 	<Action name="MonsterCollector.Ball"/>
 	<WaitUntil watch="MonsterCollector.CaptureCount" equals="1" timeoutFrames="30"/>
-	<Expect watch="MonsterCollector.Phase" equals="0"/>
+	<Expect watch="MonsterCollector.Phase" is="Explore"/>
 	<Expect watch="MonsterCollector.PartySize" equals="2"/>
 	<Expect watch="MonsterCollector.BallCount" equals="2"/>
 	<!-- 저장하고 되돌아 걸은 뒤 불러온다 -->
@@ -37,10 +37,10 @@
 	<Expect watch="MonsterCollector.BallCount" equals="2"/>
 	<!-- 둘째 조우(되돌아 걸어 x 0) — 기술로 이긴다. 시작 자리는 쉼터다 -->
 	<ActionAxis name="Move" x="-1" seconds="1.2"/>
-	<WaitUntil watch="MonsterCollector.Phase" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="MonsterCollector.Phase" is="Battle" timeoutFrames="120"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Action name="MonsterCollector.Attack"/>
-	<WaitUntil watch="MonsterCollector.Phase" equals="0" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterCollector.Phase" is="Explore" timeoutFrames="30"/>
 	<Expect watch="MonsterCollector.LeaderXP" equals="1024"/>
 	<Expect watch="MonsterCollector.BattleCount" equals="2"/>
 	<Action name="MonsterCollector.Rest"/>
@@ -48,10 +48,10 @@
 	<ExpectLog id="MonsterCollector.Rested" count="1"/>
 	<!-- 셋째 조우(x 4) — 둘째를 잡아 목표를 채운다 -->
 	<ActionAxis name="Move" x="1" seconds="1.2"/>
-	<WaitUntil watch="MonsterCollector.Phase" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="MonsterCollector.Phase" is="Battle" timeoutFrames="120"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
 	<Action name="MonsterCollector.Ball"/>
-	<WaitUntil watch="MonsterCollector.Phase" equals="2" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterCollector.Phase" is="Victory" timeoutFrames="30"/>
 	<Expect watch="MonsterCollector.CaptureCount" equals="2"/>
 	<ExpectLog id="MonsterCollector.Victory" count="1"/>
 	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->

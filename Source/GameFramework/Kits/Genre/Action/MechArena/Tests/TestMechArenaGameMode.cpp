@@ -84,7 +84,7 @@ SW_TEST_CASE( MechArenaGameModeTest, CommandsBeforeTheMatchOpensAreRefused )
     SW_EXPECT_FALSE( pGameMode->isAcceptingInput() );
     SW_EXPECT_FALSE( pGameMode->submitPlayerInput( MechInput{} ) );
     SW_EXPECT_FALSE( pGameMode->requestNextMech() );
-    SW_EXPECT_EQUAL( 0, pGameMode->getPlayerState() );
+    SW_EXPECT_EQUAL( MechPilotState::Waiting, pGameMode->getPlayerState() );
 }
 
 /** @brief [MechArenaGameModeTest] 기체 카탈로그가 범위에 없으면 오류를 남기고 판을 열지 않는다 */

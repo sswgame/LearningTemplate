@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorResult, "SurvivalHorror.Result", "Result (0 ongoing, 1 win, 2 lose)", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getResult );
+    SW_AUTOMATION_GETTER_WATCH( survivalHorrorResult, "SurvivalHorror.Result", "SurvivalHorrorResult name of the game", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getResult );
     SW_AUTOMATION_GETTER_WATCH( survivalHorrorPlayerX, "SurvivalHorror.PlayerX", "Absolute X of the player (m)", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getPlayerX );
     SW_AUTOMATION_GETTER_WATCH( survivalHorrorItems, "SurvivalHorror.Items", "Stacks in the bag", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getItemCount );
     SW_AUTOMATION_GETTER_WATCH( survivalHorrorSanity, "SurvivalHorror.Sanity", "Sanity of the player", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getSanity );

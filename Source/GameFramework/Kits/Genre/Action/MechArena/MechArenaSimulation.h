@@ -113,6 +113,7 @@ namespace sw
 namespace sw
 {
     /** @brief 조종사의 상태입니다. */
+    ENUM()
     enum class MechPilotState : uint8
     {
         Waiting = 0, ///< `start` 전

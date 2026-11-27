@@ -10,7 +10,6 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
@@ -73,7 +72,10 @@ namespace sw
                 if ( pInteractor == nullptr )
                     return false;
                 const InteractionStepDef* pStep = pInteractor->getSession().getStep();
-                outValue.setText( pStep != nullptr ? string_view{ getEnumName( pStep->_mode ) } : string_view{ "none" } );
+                if ( pStep == nullptr )
+                    outValue.setText( "none" );
+                else
+                    outValue.setEnum( pStep->_mode );
                 return true;
             }
 

@@ -25,6 +25,15 @@ namespace sw
     class ActionCombatRoomHUDViewModel;
     class GameObjectManager;
 
+    /** @brief 방 HUD 에 지금 보이는 알림입니다(시나리오 감시 값 `ActionCombat.HUDNotification` 이 이름을 읽는다). */
+    ENUM()
+    enum class ActionCombatRoomNotification : uint8
+    {
+        None = 0,
+        Cleared,
+        Defeated
+    };
+
     /** @class ActionCombatRoomHUDComponent @brief 파일 머리말 참고. 이벤트는 게임 스레드에서 받고 HUD 는 틱 뒤 게임 스레드에서 쓴다. */
     REFLECT( TickMode = Main, Category = "ActionCombat", DisplayName = "Action Room HUD", Tooltip = "Shows room events (gate locked, cleared, defeated) on the HUD of this object and shakes the camera" )
     class SW_KIT_CLIENT_API ActionCombatRoomHUDComponent : public Component
@@ -33,13 +42,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( ActionCombatRoomHUDComponent );
 
-        /** @brief 지금 보이는 알림입니다(시나리오 감시 값 `ActionCombat.HUDNotification`). */
-        enum class Notification : uint8
-        {
-            None = 0,
-            Cleared,
-            Defeated
-        };
+        using Notification = ActionCombatRoomNotification;
 
         ActionCombatRoomHUDComponent();
         ~ActionCombatRoomHUDComponent() override;
@@ -50,8 +53,8 @@ namespace sw
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
 
-        int32 getNotificationValue() const { return static_cast<int32>( _notification ); }
-        int32 getGateLockedValue() const { return _bGateLocked != SW_FALSE ? 1 : 0; }
+        Notification getNotification() const { return _notification; }
+        int32        getGateLockedValue() const { return _bGateLocked != SW_FALSE ? 1 : 0; }
         /** @brief 걸어 둔 뷰모델입니다. 시작하지 않았으면 nullptr 입니다. */
         const ActionCombatRoomHUDViewModel* findViewModel() const { return _viewModel.get(); }
 

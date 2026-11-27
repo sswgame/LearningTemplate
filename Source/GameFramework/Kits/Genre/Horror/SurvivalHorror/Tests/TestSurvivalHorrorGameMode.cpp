@@ -184,7 +184,7 @@ SW_TEST_CASE( SurvivalHorrorGameModeTest, KeyFightAndExit )
     }
     SW_EXPECT_EQUAL( 0, pDirector->countMonsters() );
     SurvivalGameModeBench::walkEast( manager, *pDirector, 2.0f );
-    SW_EXPECT_EQUAL( static_cast<int32>( SurvivalHorrorResult::Win ), pDirector->getResult() );
+    SW_EXPECT_EQUAL( SurvivalHorrorResult::Win, pDirector->getResult() );
     vector<MinigameResultValue> listValue;
     pDirector->collectMinigameResult( listValue );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() );

@@ -10,7 +10,7 @@
 	<Launch variable="gv_firstMinigame" value="rhythm"/>
 	<Launch variable="gv_playgroundAutoPlay" value="1"/>
 	<WaitUntil watch="Rhythm.MusicTime" atLeast="0.1" timeoutWallSeconds="60"/> <!-- 음악이 흐르기 시작했다 -->
-	<Expect watch="Rhythm.State" equals="0"/>
+	<Expect watch="Rhythm.State" is="Playing"/>
 	<WaitUntil watch="Rhythm.Judged" atLeast="1" timeoutWallSeconds="60"/>
 	<Expect watch="Rhythm.Missed" equals="0"/>
 
@@ -24,12 +24,12 @@
 	<Store watch="Rhythm.MusicTime" as="pausedMusicTime"/>
 	<WaitUntil watch="Audio.RenderedSeconds" increaseFrom="renderedAtPause" increaseBy="1.25" timeoutWallSeconds="30"/>
 	<Expect watch="Rhythm.MusicTime" sameAs="pausedMusicTime" tolerance="0.0001"/>
-	<Expect watch="Rhythm.State" equals="0"/>
+	<Expect watch="Rhythm.State" is="Playing"/>
 	<Tap slot="Key.Enter" hold="1"/>
 	<WaitUntil watch="Time.Paused" equals="0" timeoutFrames="60"/>
 	<WaitUntil watch="Rhythm.MusicTime" increaseFrom="pausedMusicTime" increaseBy="0.1" timeoutWallSeconds="60"/>
 
-	<WaitUntil watch="Rhythm.State" equals="1" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Rhythm.State" is="Cleared" timeoutWallSeconds="120"/>
 	<Expect watch="Rhythm.Judged" equals="34"/>
 	<Expect watch="Rhythm.Missed" equals="0"/>
 	<Expect watch="Rhythm.MaxCombo" equals="34"/>

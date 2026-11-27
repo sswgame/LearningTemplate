@@ -14,7 +14,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
@@ -89,7 +88,10 @@ namespace sw
                 const InventoryScreen* pScreen = findTopInventory( outValue );
                 if ( pScreen == nullptr )
                     return false;
-                outValue.setText( pScreen->getCommandCount().get() == 0 ? "none" : getEnumName( pScreen->getLastResult() ) );
+                if ( pScreen->getCommandCount().get() == 0 )
+                    outValue.setText( "none" );
+                else
+                    outValue.setEnum( pScreen->getLastResult() );
                 return true;
             }
 

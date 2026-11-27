@@ -10,7 +10,7 @@
 -->
 <Scenario name="game.playground.kitdemo_actionplatformer" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="kitdemo_actionplatformer"/>
-	<WaitUntil watch="ActionPlatformer.State" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="ActionPlatformer.State" is="Playing" timeoutFrames="120"/>
 	<!-- 바닥에 내려앉는다(몸 가운데 y = 1 + 0.45) -->
 	<WaitUntil watch="ActionPlatformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
 	<Expect watch="ActionPlatformer.Lives" equals="3"/>
@@ -27,7 +27,7 @@
 	<WaitUntil watch="ActionPlatformer.Checkpoint" equals="0" timeoutFrames="180"/>
 	<Expect watch="ActionPlatformer.Lives" equals="3"/>
 	<!-- 골 -->
-	<WaitUntil watch="ActionPlatformer.State" equals="2" timeoutFrames="300"/>
+	<WaitUntil watch="ActionPlatformer.State" is="Cleared" timeoutFrames="300"/>
 	<Release slot="Key.D"/>
 	<Expect watch="ActionPlatformer.Lives" equals="3"/>
 	<Expect watch="ActionPlatformer.Secrets" equals="1"/>

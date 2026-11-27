@@ -21,6 +21,6 @@ namespace sw
                                 &FightingGameModeComponent::getMatchWinner );
     SW_AUTOMATION_GETTER_WATCH( fightingRound, "Fighting.Round", "Fighting round number (1 = first)", FightingGameModeComponent, &FightingGameModeComponent::getRound );
     SW_AUTOMATION_GETTER_WATCH( fightingOpponentHealth, "Fighting.OpponentHealth", "Health of the opponent fighter", FightingGameModeComponent, &FightingGameModeComponent::getOpponentHealth );
-    SW_AUTOMATION_GETTER_WATCH( fightingPlayerState, "Fighting.PlayerState", "State of the player fighter (FighterState: 0 neutral, 1 attacking, 2 sidestep, 3 jump ...)", FightingGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( fightingPlayerState, "Fighting.PlayerState", "FighterState name of the player fighter", FightingGameModeComponent,
                                 &FightingGameModeComponent::getPlayerState );
 } // namespace sw

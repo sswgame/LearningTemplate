@@ -71,14 +71,14 @@ namespace sw
         const GrowthLog&   getGrowthLog() const { return _growthLog; }
         SRPGBattleResult   getBattleResult() const { return _result; }
         /** @brief 판이 열렸고 진행 중이며 아군 페이즈라 명령을 받으면 true 입니다. */
-        bool  isAwaitingCommand() const;
-        bool  isAcceptingInput() const override { return isAwaitingCommand(); }
-        int32 getPhaseTeam() const { return static_cast<int32>( _field.getPhaseTeam() ); }
-        int32 getTurn() const { return _field.getTurn(); }
-        int32 getResult() const { return static_cast<int32>( _result ); }
-        int32 getSelectedUnit() const { return _selectedUnit; }
-        int32 getEnemiesAlive() const { return _field.countAlive( SRPGTeam::Enemy ); }
-        int32 getPlayersAlive() const { return _field.countAlive( SRPGTeam::Player ); }
+        bool             isAwaitingCommand() const;
+        bool             isAcceptingInput() const override { return isAwaitingCommand(); }
+        SRPGTeam         getPhaseTeam() const { return _field.getPhaseTeam(); }
+        int32            getTurn() const { return _field.getTurn(); }
+        SRPGBattleResult getResult() const { return _result; }
+        int32            getSelectedUnit() const { return _selectedUnit; }
+        int32            getEnemiesAlive() const { return _field.countAlive( SRPGTeam::Enemy ); }
+        int32            getPlayersAlive() const { return _field.countAlive( SRPGTeam::Player ); }
         /** @brief 성장 기록에 남은 레벨 오름 수입니다(감시 값 `SRPG.LevelUps`). */
         int32 getLevelUps() const { return static_cast<int32>( _growthLog.countKind( GrowthEventKind::LevelUp ) ); }
 

@@ -70,8 +70,8 @@ namespace sw
         int32   getOpponentRounds() const { return _match.getRoundWins( kOpponent ); }
         int32   getRound() const { return _match.getRound(); }
         /** @brief 대전 결과입니다(0 플레이어, 1 상대, 2 무승부, −1 끝나지 않음). */
-        int32 getMatchWinner() const { return _match.getMatchWinner(); }
-        int32 getPlayerState() const { return static_cast<int32>( _match.getFighter( kPlayer )._state ); }
+        int32        getMatchWinner() const { return _match.getMatchWinner(); }
+        FighterState getPlayerState() const { return _match.getFighter( kPlayer )._state; }
 
     protected:
         [[nodiscard]] bool startGame() override;

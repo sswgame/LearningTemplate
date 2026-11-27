@@ -72,9 +72,9 @@ namespace sw
         /** @brief 플레이어가 지금 든 주무기의 탄창입니다. 주무기가 없으면 0 입니다. */
         int32 getPlayerAmmo() const;
         /** @brief 플레이어 조종사의 상태입니다(`MechPilotState` — 0 출격 전, 1 움직임, 2 다운, 3 격추, 4 판 끝). */
-        int32 getPlayerState() const;
-        int32 getPlayerGauge() const { return _world.getTeamGauge( kPlayerTeam ); }
-        int32 getEnemyGauge() const { return _world.getTeamGauge( kEnemyTeam ); }
+        MechPilotState getPlayerState() const;
+        int32          getPlayerGauge() const { return _world.getTeamGauge( kPlayerTeam ); }
+        int32          getEnemyGauge() const { return _world.getTeamGauge( kEnemyTeam ); }
         /** @brief 판이 끝났으면 1 입니다. */
         int32 getEnded() const { return _world.isEnded() ? 1 : 0; }
         /** @brief 플레이어 팀이 이겼으면 true 입니다(끝난 뒤). */

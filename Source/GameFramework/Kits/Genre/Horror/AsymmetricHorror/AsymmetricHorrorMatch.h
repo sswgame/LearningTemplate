@@ -57,6 +57,7 @@ namespace sw
     };
 
     /** @brief 생존자가 하고 있는 일입니다. */
+    ENUM()
     enum class SurvivorActivity : uint8
     {
         None = 0,

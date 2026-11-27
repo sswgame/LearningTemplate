@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( monsterHuntPhase, "MonsterHunt.Phase", "Monster hunt phase (0 haggle, 1 investigate, 2 hunt, 3 victory, 4 defeat)", MonsterHuntGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( monsterHuntPhase, "MonsterHunt.Phase", "MonsterHuntPhase name of the monster hunt", MonsterHuntGameModeComponent,
                                 &MonsterHuntGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntReward, "MonsterHunt.Reward", "Current offer, or the settled reward once the haggling closed", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getReward );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntClues, "MonsterHunt.FoundClues", "Clues investigated", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getFoundClueCount );

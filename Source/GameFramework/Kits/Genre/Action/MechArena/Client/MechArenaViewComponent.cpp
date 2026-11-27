@@ -170,7 +170,7 @@ namespace sw
         input._bHover   = toMechInputFlag( view.isActionDown( _jumpAction ) );
         input._bLockOn  = toMechInputFlag( view.wasActionTriggered( _lockAction ) );
         // 판이 끝났거나 덱이 하나면 디렉터가 거절한다 — 거절은 할 일이 없다는 뜻이라 버린다.
-        const bool bDestroyed = director.getPlayerState() == static_cast<int32>( MechPilotState::Destroyed );
+        const bool bDestroyed = director.getPlayerState() == MechPilotState::Destroyed;
         if ( bDestroyed && input._bSpecial == SW_TRUE )
             (void)director.requestNextMech();
         (void)director.submitPlayerInput( input );

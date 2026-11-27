@@ -25,7 +25,7 @@
 	<Expect watch="Farm.FarmerX" near="8" tolerance="0.2"/>
 	<!-- 2 한 번 = 물뿌리개(도구 1). -->
 	<Tap slot="Key.Digit2" hold="1"/>
-	<WaitUntil watch="Farm.FarmerTool" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Farm.FarmerTool" is="WateringCan" timeoutFrames="30"/>
 	<!-- 자동 플레이를 켜면 자동 농부 AI 가 농부를 쥐고 밭을 갈고 심는다. -->
 	<Variable name="gv_playgroundAutoPlay" value="1"/>
 	<WaitUntil watch="Farm.FarmerControllerKind" equals="1" timeoutFrames="60"/>

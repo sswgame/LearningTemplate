@@ -63,7 +63,7 @@ namespace sw
         const KartTrack& getTrack() const { return _track; }
         /** @brief 차 @p racer 의 절대 자리입니다. 없는 번호면 원점입니다. */
         AbsolutePosition getRacerPosition( int32 racer ) const;
-        int32            getPhase() const { return static_cast<int32>( _race.getPhase() ); }
+        MatchPhase       getPhase() const { return _race.getPhase(); }
         int32            getPlayerPlace() const;
         int32            getPlayerFinishPlace() const;
         float32          getPlayerSpeed() const;

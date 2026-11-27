@@ -136,9 +136,9 @@ SW_TEST_CASE( JRPGGameModeTest, StepEncounterRunsOneRoundPerPartyAndPaysRewards 
     SW_REQUIRE_TRUE( fixture._pGameMode->isStarted() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitCommand( JRPGCommand::makeAttack( 0 ) ) ); // 걷는 동안은 전투 명령이 없다
     fixture.walkEast( 6 );                                                                // 유예 세 걸음
-    SW_EXPECT_EQUAL( 0, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Explore, fixture._pGameMode->getPhase() );
     fixture.walkEast( 2 );
-    SW_REQUIRE_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Battle, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getEnemiesAlive() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitMove( float2{ 1.0f, 0.0f } ) );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getCommandMember() );
@@ -146,7 +146,7 @@ SW_TEST_CASE( JRPGGameModeTest, StepEncounterRunsOneRoundPerPartyAndPaysRewards 
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getCommandMember() );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getBattleRound() ); // 라운드는 마지막 멤버의 명령이 돌린다
     SW_REQUIRE_TRUE( fixture._pGameMode->submitCommand( JRPGCommand::makeAttack( 1 ) ) );
-    SW_EXPECT_EQUAL( 0, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Explore, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 11, fixture._pGameMode->getGold() );      // 시작 5 + 3 × 2
     SW_EXPECT_EQUAL( 12, fixture._pGameMode->getLeaderXP() );  // 24 를 둘이 나눈다
     SW_EXPECT_EQUAL( 100, fixture._pGameMode->getLeaderHP() ); // 적은 움직이기 전에 쓰러졌다
@@ -165,13 +165,13 @@ SW_TEST_CASE( JRPGGameModeTest, ReachingTheGoalOpensTheBossBattleToVictory )
     fixture.walkEast( 8 ); // 4 m — 첫 조우
     SW_REQUIRE_TRUE( fixture.attackWithAll() );
     fixture.walkEast( 6 ); // 7 m — 목표(8 m)의 반지름 안
-    SW_REQUIRE_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Battle, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getEnemiesAlive() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitFlee() );
     SW_REQUIRE_TRUE( fixture.attackWithAll() );
-    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Battle, fixture._pGameMode->getPhase() );
     SW_REQUIRE_TRUE( fixture.attackWithAll() );
-    SW_EXPECT_EQUAL( 2, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Victory, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 31, fixture._pGameMode->getGold() );
     fixture._manager.endPlay();
 }
@@ -194,14 +194,14 @@ SW_TEST_CASE( JRPGGameModeTest, BattleStateSurvivesARoundTrip )
     restored.beginPlay();
     vector<uint8> truncated( bytes.begin(), bytes.end() - 4 );
     restored._pGameMode->restoreState( std::move( truncated ) );
-    SW_EXPECT_EQUAL( 0, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Explore, restored._pGameMode->getPhase() );
     restored._pGameMode->restoreState( std::move( bytes ) );
-    SW_REQUIRE_EQUAL( 1, restored._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Battle, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 1, restored._pGameMode->getCommandMember() );
     SW_EXPECT_EQUAL( 2, restored._pGameMode->getEnemiesAlive() );
     SW_EXPECT_EQUAL( source._pGameMode->getPlayerX(), restored._pGameMode->getPlayerX() );
     SW_REQUIRE_TRUE( restored._pGameMode->submitCommand( JRPGCommand::makeAttack( 1 ) ) );
-    SW_EXPECT_EQUAL( 0, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Explore, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 11, restored._pGameMode->getGold() );
     restored._manager.endPlay();
     source._manager.endPlay();
@@ -216,18 +216,18 @@ SW_TEST_CASE( JRPGGameModeTest, TimedPressStrikesTwiceAndAMissedPressDoesNot )
     fixture.beginPlay();
     fixture.walkEast( 8 );
     SW_REQUIRE_TRUE( fixture.attackWithAll() );
-    SW_REQUIRE_EQUAL( 4, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Timing, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getTimingStep() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitCommand( JRPGCommand::makeDefend() ) ); // 타이밍 단계에는 명령이 없다
     for ( int32 frame = 0; frame < 12; ++frame )                                       // 누르지 않으면 0.5 초(네 프레임)씩 세 차례가 지난다
     {
         fixture._manager.update( kJRPGFrame );
     }
-    SW_REQUIRE_EQUAL( 0, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Explore, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getTimedCount() );
 
     fixture.walkEast( 6 ); // 보스
-    SW_REQUIRE_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Battle, fixture._pGameMode->getPhase() );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitCommand( JRPGCommand::makeAttack( 0 ) ) );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitCommand( JRPGCommand::makeDefend() ) );
     fixture._manager.update( kJRPGFrame );
@@ -235,7 +235,7 @@ SW_TEST_CASE( JRPGGameModeTest, TimedPressStrikesTwiceAndAMissedPressDoesNot )
     SW_REQUIRE_TRUE( fixture._pGameMode->submitTiming() );
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getTimingStep() ); // 방어한 멤버는 건너뛰고 막기
     SW_REQUIRE_TRUE( fixture._pGameMode->submitTiming() );     // 너무 이르다 — 막지 못한다
-    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Battle, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getBattleRound() );
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getTimedCount() );
     fixture._manager.endPlay();
@@ -283,7 +283,7 @@ SW_TEST_CASE( JRPGGameModeTest, GearAndTimingSurviveARoundTrip )
     SW_REQUIRE_TRUE( restored.initialize( kJRPGFullSceneXML ) );
     restored.beginPlay();
     restored._pGameMode->restoreState( vector<uint8>( state.getData(), state.getData() + state.getSize() ) );
-    SW_REQUIRE_EQUAL( 4, restored._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( JRPGGamePhase::Timing, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 1, restored._pGameMode->getTimingStep() );
     SW_EXPECT_EQUAL( 100, restored._pGameMode->getLeaderAttack() );
     restored._manager.endPlay();
@@ -298,11 +298,11 @@ SW_TEST_CASE( JRPGGameModeTest, AutoPlayWinsTheTrail )
     game::ScopedGameScope scopedScope( fixture._scope );
     SW_REQUIRE_TRUE( XMLSerializer::deserialize( fixture._pGameMode, *JRPGGameModeComponent::StaticType(), R"(<JRPGGameModeComponent _bAutoPlay="true"/>)" ) );
     fixture.beginPlay();
-    for ( int32 frame = 0; frame < 200 && fixture._pGameMode->getPhase() != 2; ++frame )
+    for ( int32 frame = 0; frame < 200 && fixture._pGameMode->getPhase() != JRPGGamePhase::Victory; ++frame )
     {
         fixture._manager.update( kJRPGFrame );
     }
-    SW_EXPECT_EQUAL( 2, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( JRPGGamePhase::Victory, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 100, fixture._pGameMode->getLeaderAttack() );
     SW_EXPECT_TRUE( fixture._pGameMode->getTimedCount() > 0 );
     SW_EXPECT_FALSE( fixture._pGameMode->isAcceptingInput() );

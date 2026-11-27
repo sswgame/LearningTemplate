@@ -70,7 +70,7 @@ namespace sw
         /** @brief 사람 @p player 의 절대 자리입니다. 없는 번호면 원점입니다. */
         AbsolutePosition getPlayerPosition( int32 player ) const;
         PartyGamePhase   getGamePhase() const { return _phase; }
-        int32            getPhase() const { return static_cast<int32>( _phase ); }
+        PartyGamePhase   getPhase() const { return _phase; }
         int32            getRound() const { return _series.getRoundNumber(); }
         int32            getWinner() const { return _winner; }
         int32            getPlayerRoundScore() const;

@@ -27,5 +27,5 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( killcamPlaying, "Killcam.Playing", "1 while the first killcam replays a shot", KillcamComponent, &KillcamComponent::isPlaying );
     SW_AUTOMATION_GETTER_WATCH( killcamShotCount, "Killcam.ShotCount", "Shots the first killcam keeps", KillcamComponent, &KillcamComponent::getShotCount );
     SW_AUTOMATION_GETTER_WATCH( killcamLastHitCount, "Killcam.LastHitCount", "Hits of the most recent recorded shot (2 or more for a piercing shot)", KillcamComponent, &KillcamComponent::getLastHitCount );
-    SW_AUTOMATION_GETTER_WATCH( killcamPhase, "Killcam.Phase", "Phase of the first killcam replay: 0 follow, 1 hit hold, 2 done", KillcamComponent, &KillcamComponent::getPhase );
+    SW_AUTOMATION_GETTER_WATCH( killcamPhase, "Killcam.Phase", "KillcamPhase name of the first killcam replay", KillcamComponent, &KillcamComponent::getPhase );
 } // namespace sw

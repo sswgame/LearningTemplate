@@ -105,7 +105,7 @@ namespace sw
         const MonsterHuntCombat&        getCombat() const { return _combat; }
         const MonsterHuntAlchemy&       getAlchemy() const { return _alchemy; }
         MonsterHuntPhase                getGamePhase() const { return _phase; }
-        int32                           getPhase() const { return static_cast<int32>( _phase ); }
+        MonsterHuntPhase                getPhase() const { return _phase; }
         /** @brief 지금 제안(흥정이 끝났으면 받을 보상)입니다. */
         int32 getReward() const { return _haggle.isClosed() ? _haggle.getFinalReward() : _haggle.getOffer(); }
         /** @brief 사냥하는 괴물의 도감 지식 단계입니다. */

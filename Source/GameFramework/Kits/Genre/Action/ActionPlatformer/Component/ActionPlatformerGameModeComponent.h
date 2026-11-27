@@ -64,18 +64,25 @@ namespace sw
         const vector<float2>& getSecretPositions() const { return _listSecretPosition; }
         float32               getGoalX() const { return _goalX; }
         float2                getPlayerPosition() const { return _body.getPosition(); }
-        int32                 getRunState() const { return static_cast<int32>( _run.getState() ); }
+        ActionStageState      getRunState() const { return _run.getState(); }
         int32                 getCheckpointIndex() const { return _run.getCheckpointIndex(); }
         int32                 getSecretCount() const { return _run.getSecretCommittedCount() + _run.getSecretPendingCount(); }
         int32                 getLives() const { return _run.getLives(); }
         float32               getScore() const { return _run.computeResult()._score; }
         float32               getPlayerX() const { return _body.getPosition()._x; }
         float32               getPlayerY() const { return _body.getPosition()._y; }
-        int32                 getRespawnPhase() const { return static_cast<int32>( _respawn.getPhase() ); }
+        RespawnPhase          getRespawnPhase() const { return _respawn.getPhase(); }
         int32                 getRespawnCount() const { return _respawnCount; }
-        int32                 getLastRespawnPolicy() const { return _lastRespawnPolicy; }
-        float32               getLastRespawnShift() const { return _lastRespawnShift; }
-        int32                 getInPlaceUses() const { return _respawn.getPolicyUses( RespawnPolicyKind::InPlace ); }
+        /** @brief 마지막 부활의 정책입니다. 아직 부활하지 않았으면 false 입니다. */
+        [[nodiscard]] bool findLastRespawnPolicy( RespawnPolicyKind& outPolicy ) const
+        {
+            if ( _lastRespawnPolicy < 0 )
+                return false;
+            outPolicy = static_cast<RespawnPolicyKind>( _lastRespawnPolicy );
+            return true;
+        }
+        float32 getLastRespawnShift() const { return _lastRespawnShift; }
+        int32   getInPlaceUses() const { return _respawn.getPolicyUses( RespawnPolicyKind::InPlace ); }
 
     protected:
         [[nodiscard]] bool startGame() override;

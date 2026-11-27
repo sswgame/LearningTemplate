@@ -13,24 +13,24 @@
 	<WaitUntil watch="Minigame.Active" is="battleroyale" timeoutWallSeconds="60"/>
 	<Expect watch="Save.Blocked" equals="1"/>
 	<WaitUntil watch="BattleRoyale.Remaining" equals="6" timeoutFrames="120"/>
-	<Expect watch="BattleRoyale.Phase" equals="0"/>
+	<Expect watch="BattleRoyale.Phase" is="Drop"/>
 	<Expect watch="BattleRoyale.PlayerMagazine" equals="12"/>
 	<!-- 건물(정적 바디)이 내비메시를 막아 곧은 6 m 를 돌아간다 -->
 	<WaitUntil watch="Nav.PathLength" target="RouteSouth" key="RouteNorth" atLeast="10" timeoutFrames="120"/>
 	<Expect watch="BattleRoyale.ZoneRadius" near="70.71" tolerance="0.1"/>
 	<AdvanceSimulation frames="96"/> <!-- 뛰어내릴 수 있는 구간(비행 1.6 초 — 시간이 내용) -->
-	<Expect watch="BattleRoyale.PlayerDropStage" equals="0"/>
+	<Expect watch="BattleRoyale.PlayerDropStage" is="OnPlane"/>
 	<Action name="BattleRoyale.Use"/>
-	<WaitUntil watch="BattleRoyale.PlayerDropStage" equals="1" timeoutFrames="10"/>
-	<WaitUntil watch="BattleRoyale.PlayerDropStage" equals="2" timeoutFrames="600"/>
-	<WaitUntil watch="BattleRoyale.Phase" equals="1" timeoutFrames="900"/>
+	<WaitUntil watch="BattleRoyale.PlayerDropStage" is="Falling" timeoutFrames="10"/>
+	<WaitUntil watch="BattleRoyale.PlayerDropStage" is="Landed" timeoutFrames="600"/>
+	<WaitUntil watch="BattleRoyale.Phase" is="Battle" timeoutFrames="900"/>
 	<ExpectLog id="BattleRoyale.BattleStarted" count="1"/>
 	<!-- 구역은 1 초 기다린 뒤 줄기 시작한다 -->
 	<WaitUntil watch="BattleRoyale.ZoneRadius" atMost="70" timeoutFrames="180"/>
 	<ExpectLog id="BattleRoyale.ZoneShrinks" atLeast="1"/>
 	<!-- 자동 플레이로 끝까지 — 구역은 44 초 안에 점이 되어 남은 사람도 구역 피해로 끝난다 -->
 	<Variable name="gv_playgroundAutoPlay" value="1"/>
-	<WaitUntil watch="BattleRoyale.Phase" equals="2" timeoutFrames="5400"/>
+	<WaitUntil watch="BattleRoyale.Phase" is="Ended" timeoutFrames="5400"/>
 	<ExpectLog id="BattleRoyale.Downed" atLeast="1"/>
 	<!-- 컴퓨터는 바닥의 더 나은 총을 가지러 간다 -->
 	<ExpectLog id="BattleRoyale.WeaponTaken" atLeast="1"/>

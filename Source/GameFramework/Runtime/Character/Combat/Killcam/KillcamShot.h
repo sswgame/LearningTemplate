@@ -114,6 +114,7 @@ namespace sw
     };
 
     /** @brief 킬캠 시간표의 단계입니다. */
+    ENUM()
     enum class KillcamPhase : uint8
     {
         Follow = 0, ///< 탄을 따라간다
