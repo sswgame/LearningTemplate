@@ -3,6 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/FileWritePolicy.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Process/Process.h"
@@ -24,7 +25,7 @@
 
 namespace
 {
-    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::bindWriteFilter`). */
+    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileWritePolicy::bindWriteFilter`). */
     sw::expected<void> refuseEveryWrite( sw::string_view path )
     {
         return sw::unexpected( sw::Error{ sw::ErrorKind::Unsupported, "test gate refuses every write", path } );
@@ -615,7 +616,7 @@ SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
 
 /**
  * @brief [FileTest] 체크아웃 규칙 안의 읽기 전용 파일은 지우기 · 옮기기 · 덮는 복사가 모두 거절하고 남긴다 — 폴더는 그 아래 파일 하나로 막힌다. 규칙 밖의 읽기 전용은 정리가 지운다
- * @details POSIX 는 폴더 권한만으로, Windows 지우기는 속성을 풀고 지워 잠금(git LFS lockable)이 뚫렸다. 규칙은 케이스 동안만 바꾸고 앞 규칙으로 되돌린다.
+ * @details POSIX 는 폴더 권한만으로, Windows 지우기는 속성을 풀고 지워 잠금(git LFS lockable)이 뚫렸다. 호스트 규칙은 케이스 동안 떼어 두고 끝에 되돌린다.
  */
 SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
 {
@@ -628,18 +629,20 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( loose, false ) );
 
-    const sw::FileUtil::CheckoutRule     previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
+    const sw::FileWritePolicy::CheckoutRuleSuspension hostRule = sw::FileWritePolicy::suspendCheckoutRule(); // 엔진 호스트가 건 규칙(`AssetPaths`)은 케이스 동안 떼어 둔다
+    sw::FileWritePolicy::CheckoutRuleSubscription     rule     = sw::FileWritePolicy::bindCheckoutRule( []( sw::string_view path )
     { return path.find( "/controlled/" ) != sw::string_view::npos; } );
-    const sw::optional<sw::AbsolutePath> found        = sw::FileUtil::findNotOpenForEdit( controlled );
+    SW_REQUIRE_TRUE( rule.isActive() );
+    const sw::optional<sw::AbsolutePath> found = sw::FileWritePolicy::findNotOpenForEdit( controlled );
     SW_EXPECT_TRUE( found.has_value() && *found == locked );
     SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
     SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled.join( "moved.txt" ) ) );
     SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
-    SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );       // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
-    (void)sw::FileUtil::setCheckoutRule( previousRule );
+    SW_EXPECT_FALSE( sw::FileWritePolicy::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );              // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
+    rule.reset();                                                     // 떼어 둔 호스트 규칙은 범위가 끝날 때 빈 칸에 돌아온다
 
     sw::string text;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( locked, text ) );
@@ -784,7 +787,7 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
     bool bRemoved  = true;
     {
         SW_EXPECT_LOG( "File.WriteRefused" ); // 게이트가 거절한 쓰기는 오류로 남는다
-        sw::FileUtil::WriteFilterSubscription filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
+        sw::FileWritePolicy::RuleSubscription filter = sw::FileWritePolicy::bindWriteFilter( &refuseEveryWrite );
         bWritten                                     = sw::FileUtil::writeTextFile( path, "changed" );
         bAppended                                    = sw::FileUtil::appendTextFile( path, "more" );
         bTrashed                                     = sw::FileUtil::moveToRecycleBin( sw::vector<sw::AbsolutePath>{ path } );
@@ -969,12 +972,12 @@ SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
     {
         const sw::PlatformFileUtil::ReadObserverSubscription  read   = sw::PlatformFileUtil::bindReadObserver( &firstRead );
         const sw::PlatformFileUtil::WriteObserverSubscription write  = sw::PlatformFileUtil::bindWriteObserver( &firstWrite );
-        const sw::FileUtil::WriteFilterSubscription           filter = sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest );
+        const sw::FileWritePolicy::RuleSubscription           filter = sw::FileWritePolicy::bindWriteFilter( &allowEveryWriteForTest );
         SW_EXPECT_TRUE( read.isActive() && write.isActive() && filter.isActive() );
 
         SW_EXPECT_FALSE( sw::PlatformFileUtil::bindReadObserver( &secondRead ).isActive() );
         SW_EXPECT_FALSE( sw::PlatformFileUtil::bindWriteObserver( &secondWrite ).isActive() );
-        SW_EXPECT_FALSE( sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest ).isActive() );
+        SW_EXPECT_FALSE( sw::FileWritePolicy::bindWriteFilter( &allowEveryWriteForTest ).isActive() );
         if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 3u, capture.getCount() );
     }
@@ -983,4 +986,55 @@ SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
     SW_EXPECT_TRUE( again.isActive() );
     if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 3u, capture.getCount() );
+}
+
+namespace
+{
+    /** @brief 모든 자리를 버전 관리 트리로 보는 체크아웃 규칙입니다. */
+    bool lockEveryPathForTest( sw::string_view )
+    {
+        return true;
+    }
+
+    /** @brief 어떤 자리도 버전 관리 트리로 보지 않는 체크아웃 규칙입니다. */
+    bool lockNoPathForTest( sw::string_view )
+    {
+        return false;
+    }
+} // namespace
+
+/**
+ * @brief 체크아웃 규칙은 칸 하나다 — 걸린 동안 둘째 등록은 단언하고 앞 규칙을 덮지 않으며, 토큰이 사라지면 규칙이 걷힌다
+ */
+SW_TEST_CASE( FileTest, SecondCheckoutRuleBindAssertsAndTokenReleasesRule )
+{
+    const sw::FileWritePolicy::CheckoutRuleSuspension hostRule = sw::FileWritePolicy::suspendCheckoutRule();
+    const sw::AbsolutePath                            locked   = sw::test::makeScratchPath( "rule/locked.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( locked, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
+
+    sw::test::ScopedAssertCapture capture;
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
+    {
+        const sw::FileWritePolicy::CheckoutRuleSubscription first = sw::FileWritePolicy::bindCheckoutRule( &lockEveryPathForTest );
+        SW_EXPECT_TRUE( first.isActive() );
+        SW_EXPECT_FALSE( sw::FileWritePolicy::bindCheckoutRule( &lockNoPathForTest ).isActive() );
+        SW_EXPECT_TRUE( sw::FileWritePolicy::findNotOpenForEdit( locked ).has_value() ); // 거절된 둘째 토큰이 사라져도 앞 규칙은 그대로다
+        if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, capture.getCount() );
+    }
+    SW_EXPECT_FALSE( sw::FileWritePolicy::findNotOpenForEdit( locked ).has_value() );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, true ) );
+}
+
+/**
+ * @brief 바깥 프로세스가 끝났다는 알림은 만들기 · 지우기 세대를 모두 올린다 — 경로 캐시가 옛 "없음" 도 옛 "있음" 도 믿지 않게 한다
+ */
+SW_TEST_CASE( FileTest, ExternalChangesAdvanceBothEpochs )
+{
+    const sw::uint64 creationEpoch = sw::FileUtil::getCreationEpoch();
+    const sw::uint64 removalEpoch  = sw::FileUtil::getRemovalEpoch();
+    sw::FileUtil::recordExternalChanges();
+    SW_EXPECT_TRUE( sw::FileUtil::getCreationEpoch() > creationEpoch );
+    SW_EXPECT_TRUE( sw::FileUtil::getRemovalEpoch() > removalEpoch );
 }

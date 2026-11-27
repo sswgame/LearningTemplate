@@ -8,6 +8,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/File/FileWritePolicy.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/Subsystem.h"
@@ -59,12 +60,12 @@ namespace sw
          */
         [[nodiscard]] static uint64 getPrepareCount();
         /**
-         * @brief 쓰기 입구 게이트를 세우고 그 토큰을 돌려줍니다 — 실행기가 시나리오를 시작할 때 받아 쥐고, 토큰이 사라지면 게이트가 걷힌다(`FileUtil::bindWriteFilter`).
+         * @brief 쓰기 입구 게이트를 세우고 그 토큰을 돌려줍니다 — 실행기가 시나리오를 시작할 때 받아 쥐고, 토큰이 사라지면 게이트가 걷힌다(`FileWritePolicy::bindWriteFilter`).
          *        시나리오는 한 프로세스에서 차례로 돌므로 게이트는 하나다 — 쥔 채 또 부르면 이중 등록 단언이다.
          * @details 게이트가 서 있는 동안 콘텐츠 루트(`Content/`) 아래로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
          *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길). 사본(작업 도메인)은 콘텐츠 루트 밖이라 열려 있다.
          */
-        [[nodiscard]] static FileUtil::WriteFilterSubscription acquireWriteFilter();
+        [[nodiscard]] static FileWritePolicy::RuleSubscription acquireWriteFilter();
         /** @brief 글 @p text 안의 GUID 글 표기(앞뒤가 글자 · 숫자가 아닌 소문자 16진 32 자) 가운데 @p mapGUID 에 있는 것을 바꿉니다. */
         static string rebaseIdentities( string_view text, const unordered_map<AssetGUID, AssetGUID>& mapGUID );
     };

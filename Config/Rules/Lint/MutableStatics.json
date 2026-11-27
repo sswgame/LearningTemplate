@@ -44,6 +44,7 @@
         "Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp|s_reportingThreadID": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다.",
         "Source/Core/File/ContentFileSource.cpp|s_pContentFileSource": "파일 IO 바닥 — 콘텐츠 파일 원천 칸은 FileUtil 의 문맥 없는 읽기 입구가 읽는다(엔진이 팩을 걸고 내린다). 범위 아래 층(Core)이라 서비스로 둘 수 없다.",
         "Source/Core/File/FileUtil.cpp|s_writeCounters": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 가드는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리).",
+        "Source/Core/File/FileWritePolicy.cpp|s_policySlots": "파일 IO 바닥 — 쓰기 정책(게이트 · 새 이름 규칙 · 체크아웃 규칙)은 FileUtil 의 문맥 없는 바꾸는 입구가 모든 층(정적 초기화 · 도구 · 테스트)에서 읽는 ObserverSlot 칸 셋이다(언리얼 IPlatformFile 체인 자리).",
         "Source/Core/File/PlatformFileUtil.cpp|s_fileOpenCount": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 가드는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리).",
         "Source/Core/File/PlatformFileUtil.cpp|s_readObserverSlot": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 가드는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리).",
         "Source/Core/File/PlatformFileUtil.cpp|s_writeObserverSlot": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 가드는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리).",

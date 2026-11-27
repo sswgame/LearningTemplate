@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/File/FileWritePolicy.h"
 #include "Core/File/PlatformFileSystem.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -29,12 +30,6 @@ namespace sw
             atomic<uint64> _creationEpoch{ 0 };
             /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
             atomic<uint64> _removalEpoch{ 0 };
-            /** @brief 쓰기 입구 게이트입니다(`FileUtil::bindWriteFilter` — 하나, 둘째 등록은 단언). 상수 초기화된다. */
-            ObserverSlot<FileUtil::WriteFilterSignature> _writeFilterSlot{};
-            /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
-            atomic<FileUtil::WriteFilter> _createRule{ nullptr };
-            /** @brief 읽기 전용이 "체크아웃 안 함" 인 자리의 규칙입니다(`FileUtil::setCheckoutRule`). 함수 포인터 하나라 상수 초기화된다. */
-            atomic<FileUtil::CheckoutRule> _checkoutRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -61,15 +56,10 @@ namespace sw
                 return outName.empty() == false;
             }
 
-            /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
-            [[nodiscard]] static bool refuseNotOpenForEdit( const AbsolutePath& path, const utf8* pAction )
-            {
-                const optional<AbsolutePath> lockedPath = FileUtil::findNotOpenForEdit( path );
-                if ( lockedPath.has_value() == false )
-                    return false;
-                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path.str(), lockedPath->str() );
-                return true;
-            }
+            /** @brief 파일 · 폴더를 만들었음을 세대에 올립니다. 이 파일의 입구만 부른다(바깥은 `recordExternalChanges`). */
+            static void bumpCreationEpoch() { s_writeCounters._creationEpoch.fetch_add( 1, std::memory_order_release ); }
+            /** @brief 파일 · 폴더를 지웠음을 세대에 올립니다. 이 파일의 입구만 부른다. */
+            static void bumpRemovalEpoch() { s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release ); }
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
             static void discardTempFile( const AbsolutePath& tempPath )
@@ -102,7 +92,7 @@ namespace sw
                 SW_LOG_ASSERT( DiskIOForbiddenScope::isActive() == false, "Disk IO inside a section that forbids it (render thread packet): %#", path );
             }
 
-            /** @brief `writeAtomically` 의 본체입니다 — 실패를 로그 없이 결과로 돌려준다(게이트 거절은 `isWriteAllowed` 가 남긴다). 설명은 `writeAtomically`. */
+            /** @brief `writeAtomically` 의 본체입니다 — 실패를 로그 없이 결과로 돌려준다(게이트 거절은 `FileWritePolicy::isWriteAllowed` 가 남긴다). 설명은 `writeAtomically`. */
             [[nodiscard]] static FileWriteResult writeAtomicallyQuiet( const AbsolutePath& fileName, const void* pData, size_t size, FileSyncMode durability )
             {
                 requireDiskIOAllowed( fileName.str() );
@@ -129,7 +119,7 @@ namespace sw
             /** @brief 거절 · 교체 실패를 오류로 남깁니다(로그 있는 입구 `writeAtomically` · `AtomicFileWriter` · `FileUtil::replaceFile` 이 함께 쓴다). 쓰기 실패는 부르는 쪽이 크기와 함께 남긴다. */
             static void logWriteResult( FileWriteResult result, const AbsolutePath& fileName )
             {
-                // 읽기 전용이 아닌 거절은 쓰기 게이트(`isWriteAllowed`)가 이미 남겼다
+                // 읽기 전용이 아닌 거절은 쓰기 게이트(`FileWritePolicy::isWriteAllowed`)가 이미 남겼다
                 if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( fileName ) )
                     SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName.str() );
                 else if ( result == FileWriteResult::ReplaceFailed )
@@ -138,11 +128,11 @@ namespace sw
 
             /**
              * @brief 원자적 쓰기의 앞 절반입니다. 쓰기 게이트 · 읽기 전용을 보고 같은 폴더의 임시 경로를 정합니다(로그는 `beginAtomicWrite` 가 남긴다).
-             * @return 쓸 수 없는 대상이면 false 입니다(게이트 거절은 `isWriteAllowed` 가 남긴다).
+             * @return 쓸 수 없는 대상이면 false 입니다(게이트 거절은 `FileWritePolicy::isWriteAllowed` 가 남긴다).
              */
             [[nodiscard]] static bool prepareAtomicWrite( const AbsolutePath& filePath, AbsolutePath& outTempPath )
             {
-                if ( FileUtil::isWriteAllowed( filePath ) == false )
+                if ( FileWritePolicy::isWriteAllowed( filePath ) == false )
                     return false;
                 // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
@@ -175,7 +165,7 @@ namespace sw
                     {
                         if ( durability == FileSyncMode::Durable && PlatformFileUtil::flushDirectoryToStorage( filePath.getParent().c_str() ) == false )
                             SW_LOG_WARNING_ID( "File.DirectoryFlushFailed", "Replaced %# but could not flush its folder entry to storage", filePath.c_str() );
-                        FileUtil::recordFileCreated();
+                        bumpCreationEpoch();
                         PlatformFileUtil::recordFileWritten( filePath.str() );
                         return FileWriteResult::Written;
                     }
@@ -836,87 +826,15 @@ namespace sw
         return FileUtilInternal::s_writeCounters._creationEpoch.load( std::memory_order_acquire );
     }
 
-    void FileUtil::recordFileCreated()
-    {
-        FileUtilInternal::s_writeCounters._creationEpoch.fetch_add( 1, std::memory_order_release );
-    }
-
     uint64 FileUtil::getRemovalEpoch()
     {
         return FileUtilInternal::s_writeCounters._removalEpoch.load( std::memory_order_acquire );
     }
 
-    void FileUtil::recordFileRemoved()
+    void FileUtil::recordExternalChanges()
     {
-        FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
-    }
-
-    FileUtil::WriteFilterSubscription FileUtil::bindWriteFilter( WriteFilter filter )
-    {
-        return FileUtilInternal::s_writeCounters._writeFilterSlot.bind( filter );
-    }
-
-    void FileUtil::setCreateRule( WriteFilter rule )
-    {
-        FileUtilInternal::s_writeCounters._createRule.store( rule, std::memory_order_release );
-    }
-
-    bool FileUtil::isWriteAllowed( const AbsolutePath& path )
-    {
-        if ( const WriteFilter filter = FileUtilInternal::s_writeCounters._writeFilterSlot.get(); filter != nullptr )
-        {
-            const expected<void> evaluation = filter( path.str() );
-            if ( evaluation.has_value() == false )
-            {
-                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path.str(), evaluation.error().message(), evaluation.error().detail() );
-                return false;
-            }
-        }
-        // 체크아웃하지 않은 파일(버전 관리 트리의 읽기 전용, 폴더면 그 아래)은 바꾸지 않는다 — FileUtil 의 쓰기 · 지우기 · 옮기기 입구와, 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 모두 이 함수를 지난다.
-        if ( FileUtilInternal::refuseNotOpenForEdit( path, "change" ) )
-            return false;
-        return isCreateAllowed( path );
-    }
-
-    FileUtil::CheckoutRule FileUtil::setCheckoutRule( CheckoutRule rule )
-    {
-        return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
-    }
-
-    optional<AbsolutePath> FileUtil::findNotOpenForEdit( const AbsolutePath& path )
-    {
-        const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
-        PlatformFileSystem::FileStatus status;
-        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path.str(), status ) == false )
-            return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
-        if ( status._kind == PlatformFileSystem::FileKind::File )
-            return status._bReadOnly && rule( path.str() ) ? optional<AbsolutePath>{ path } : nullopt;
-        if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
-            return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
-        optional<AbsolutePath> found;
-        (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
-        {
-            if ( entry._bDirectory == false && isReadOnlyFile( entry.makePath() ) && rule( entry._path ) )
-            {
-                found = entry.makePath();
-                return false;
-            }
-            return true;
-        } ); // 폴더를 끝까지 읽지 못하면 본 데까지다 — 지우기 자체가 못 지운 항목을 알린다
-        return found;
-    }
-
-    bool FileUtil::isCreateAllowed( const AbsolutePath& path )
-    {
-        // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
-        const WriteFilter rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
-        if ( rule == nullptr || exists( path ) )
-            return true;
-        const expected<void> evaluation = rule( path.str() );
-        if ( evaluation.has_value() )
-            return true;
-        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path.str(), evaluation.error().message(), evaluation.error().detail() );
-        return false;
+        FileUtilInternal::bumpCreationEpoch();
+        FileUtilInternal::bumpRemovalEpoch();
     }
 
     bool FileUtil::writeFile( const AbsolutePath& fileName, const uint8* pData, const uint64 size )
@@ -1010,7 +928,7 @@ namespace sw
 
     bool FileUtil::appendTextFile( const AbsolutePath& fileName, string_view text )
     {
-        if ( isWriteAllowed( fileName ) == false )
+        if ( FileWritePolicy::isWriteAllowed( fileName ) == false )
             return false;
         FileUtilInternal::requireDiskIOAllowed( fileName.str() );
         if ( ensureParentDirectoryExists( fileName ) == false )
@@ -1023,7 +941,7 @@ namespace sw
         PlatformFileUtil::recordFileWritten( fileName.str() ); // 끊긴 덧붙이기도 내용을 바꿨다
         if ( written != text.size() || bClosed == false )
             return false;
-        recordFileCreated();
+        FileUtilInternal::bumpCreationEpoch();
         return true;
     }
 
@@ -1033,12 +951,12 @@ namespace sw
         listText.reserve( listPath.size() );
         for ( const AbsolutePath& path : listPath )
         {
-            if ( exists( path ) && isWriteAllowed( path ) == false )
+            if ( exists( path ) && FileWritePolicy::isWriteAllowed( path ) == false )
                 return false;
             listText.push_back( path.str() );
         }
         const bool bMoved = PlatformFileUtil::moveToRecycleBin( listText );
-        recordFileRemoved(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
+        FileUtilInternal::bumpRemovalEpoch(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
         for ( const string& path : listText )
         {
             PlatformFileUtil::recordFileWritten( path );
@@ -1279,11 +1197,11 @@ namespace sw
             return true;
 
         const AbsolutePath directory = directoryPath.join( {} );
-        // 새 폴더도 새 자리라 이름 규칙(콘텐츠 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`bindWriteFilter`).
-        if ( isCreateAllowed( directory ) == false )
+        // 새 폴더도 새 자리라 이름 규칙(콘텐츠 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다. 이미 있는 폴더에 흔히 부르는 입구다(`FileWritePolicy::bindWriteFilter`).
+        if ( FileWritePolicy::isCreateAllowed( directory ) == false )
             return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )
-            recordFileCreated(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
+            FileUtilInternal::bumpCreationEpoch(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
         // 성공은 "폴더가 있는가" 로만 가른다. 병렬 쿠킹 · 임포트가 같은 폴더를 동시에 만들 때 다른 스레드가 먼저 만든 경쟁은 실패가 아니다.
         // 같은 이름의 파일이 막고 있으면 여전히 실패다.
         if ( isDirectory( directory ) == false )
@@ -1308,14 +1226,14 @@ namespace sw
                 path = path.appendSuffix( arrNumber );
             }
             path = path.appendSuffix( extension );
-            if ( isWriteAllowed( path ) == false )
+            if ( FileWritePolicy::isWriteAllowed( path ) == false )
                 return {};
             if ( bDirectory )
             {
                 // createDirectory 는 이 호출이 만들었을 때만 true 다 - 이미 있으면(다른 프로세스가 먼저 잡았으면) 다음 번호로.
                 if ( PlatformFileSystem::createDirectory( path.str() ) )
                 {
-                    recordFileCreated();
+                    FileUtilInternal::bumpCreationEpoch();
                     return path;
                 }
                 if ( exists( path ) == false )
@@ -1330,7 +1248,7 @@ namespace sw
             if ( pFile != nullptr )
             {
                 std::fclose( pFile );
-                recordFileCreated();
+                FileUtilInternal::bumpCreationEpoch();
                 PlatformFileUtil::recordFileWritten( path.str() );
                 return path;
             }
@@ -1452,14 +1370,14 @@ namespace sw
 
     bool FileUtil::copyFile( const DiskPath& source, const AbsolutePath& destination )
     {
-        if ( isWriteAllowed( destination ) == false )
+        if ( FileWritePolicy::isWriteAllowed( destination ) == false )
             return false;
         if ( PlatformFileSystem::copyFileOverwrite( source.str(), destination.str() ) == false )
         {
             SW_LOG_ERROR_ID( "FileUtil.CopyFileFailed", "copyFile '%#' -> '%#' failed: %#", source.str(), destination.str(), PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
-        recordFileCreated();                                      // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
+        FileUtilInternal::bumpCreationEpoch();                    // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
         PlatformFileUtil::recordFileWritten( destination.str() ); // 복사는 원본의 쓰기 시각을 옮길 수 있다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
     }
@@ -1510,11 +1428,11 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
+        if ( exists( path ) && FileWritePolicy::isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
             return false;
         if ( PlatformFileSystem::removeEntry( path.str() ) )
         {
-            recordFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
+            FileUtilInternal::bumpRemovalEpoch(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
             PlatformFileUtil::recordFileWritten( path.str() );
         }
         if ( exists( path ) == false )
@@ -1527,11 +1445,11 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && isWriteAllowed( path ) == false )
+        if ( exists( path ) && FileWritePolicy::isWriteAllowed( path ) == false )
             return false;
         if ( PlatformFileSystem::removeEntry( path.str() ) )
         {
-            recordFileRemoved();
+            FileUtilInternal::bumpRemovalEpoch();
             PlatformFileUtil::recordFileWritten( path.str() );
         }
         return exists( path ) == false;
@@ -1539,11 +1457,11 @@ namespace sw
 
     bool FileUtil::renamePath( const AbsolutePath& from, const AbsolutePath& to )
     {
-        if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false )
+        if ( from.empty() || to.empty() || exists( to ) || FileWritePolicy::isWriteAllowed( from ) == false || FileWritePolicy::isWriteAllowed( to ) == false )
             return false;
         if ( PlatformFileUtil::replaceFile( from.c_str(), to.c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
             return false;
-        recordFileRemoved(); // 옛 경로는 낡았다
+        FileUtilInternal::bumpRemovalEpoch(); // 옛 경로는 낡았다
         PlatformFileUtil::recordFileWritten( from.str() );
         PlatformFileUtil::recordFileWritten( to.str() ); // 이름 바꾸기는 쓰기 시각을 그대로 옮긴다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
@@ -1553,7 +1471,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && isWriteAllowed( path ) == false )
+        if ( exists( path ) && FileWritePolicy::isWriteAllowed( path ) == false )
             return false;
 
         PlatformFileSystem::FileStatus status;
@@ -1564,7 +1482,7 @@ namespace sw
             const size_t removedCount   = bRealDirectory ? FileUtilInternal::removeTree( directory ) : ( PlatformFileSystem::removeEntry( directory ) ? 1 : 0 );
             if ( removedCount > 0 )
             {
-                recordFileRemoved(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다
+                FileUtilInternal::bumpRemovalEpoch(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다
                 PlatformFileUtil::recordFileWritten( directory );
             }
         }
