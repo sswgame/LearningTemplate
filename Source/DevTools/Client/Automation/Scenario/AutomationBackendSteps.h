@@ -2,7 +2,7 @@
  * @file AutomationBackendSteps.h
  * @brief 시나리오 단계 `SwapBackend` 의 속성 읽기와 검사 함수를 정의합니다. 단계 자체(교체 요청 · 준비)는 교체기가 등록하고(`DevTools/Client/Render/RHIBackendSwitcher.cpp`), 이 부분은 속성만 읽습니다.
  * @details 교체기의 단계 등록(`SW_AUTOMATION_STEP`)이 이 검사 함수를 받는다. Shipping 에는 단계도 검사도 없다.
->>> */
+ */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"

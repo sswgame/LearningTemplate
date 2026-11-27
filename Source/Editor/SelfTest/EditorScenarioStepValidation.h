@@ -5,7 +5,7 @@
  * @details 검사 함수는 순수 함수라 창 · GPU 없이 부를 수 있다. 그래서 단계를 그리는 `EditorScenarioSteps.cpp` 와 따로 두고,
  *          그쪽은 이 파일의 읽기를 불러 ImGui 입력으로 옮기기만 한다(수정자는 비트 마스크로 읽고 ImGui 값으로의 바꿈은 그쪽이 한다).
  *          검사 함수는 단계 등록(`SW_AUTOMATION_STEP`)에만 적는다. 실행기 없는 검사도 그 등록을 찾는다(`AutomationStepValidation::findValidator`).
->>> *          `EditorKey` 의 키 이름이 ImGui 가 아는 이름인지는 ImGui 의 이름표가 있어야 알 수 있어, 이 파일은 낱말 모양만 보고 이름은 단계의 준비 함수가 본다.
+ *          `EditorKey` 의 키 이름이 ImGui 가 아는 이름인지는 ImGui 의 이름표가 있어야 알 수 있어, 이 파일은 낱말 모양만 보고 이름은 단계의 준비 함수가 본다.
  */
 #pragma once
 #include "Core/Container/string.h"

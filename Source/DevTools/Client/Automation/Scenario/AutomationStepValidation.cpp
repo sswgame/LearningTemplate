@@ -25,7 +25,6 @@ namespace sw
             return AutomationValidatorResult::Unknown;
         outValidate = pStep->_pValidate;
         return outValidate != nullptr ? AutomationValidatorResult::Found : AutomationValidatorResult::NoValidator;
-        >>>
     }
 
     AutomationStepDependency AutomationStepValidation::findUnresolvedDependency( const AutomationStep& step, string& outName )

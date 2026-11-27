@@ -191,9 +191,9 @@ namespace sw
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationStepRegistration* find( string_view kind );
 
-        >>> /** @brief 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
-            [[nodiscard]] static bool registerBlocker( const AutomationBlocker* pBlocker );
-        static void                   unregisterBlocker( const AutomationBlocker* pBlocker );
+        /** @brief 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
+        [[nodiscard]] static bool registerBlocker( const AutomationBlocker* pBlocker );
+        static void               unregisterBlocker( const AutomationBlocker* pBlocker );
         /** @brief 시작을 미루는 조건(`Start` · `Clock`) 중 하나라도 진행 중이면 true 입니다. */
         static bool isStartBlocked();
         /** @brief 지금 화면 캡처를 미루는 조건(`Capture` · `Start` · `Clock`)의 첫 진행 중인 것입니다. */

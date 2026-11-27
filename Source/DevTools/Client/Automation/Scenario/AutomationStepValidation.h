@@ -86,4 +86,3 @@ namespace sw
         [[nodiscard]] static const utf8* getDependencyLabel( AutomationStepDependency dependency );
     };
 } // namespace sw
->>>

@@ -73,7 +73,7 @@ namespace sw
         return AutomationStepRegistryInternal::getRegistrations().findByName( kind );
     }
 
-    >>> bool AutomationStepRegistry::registerBlocker( const AutomationBlocker* pBlocker )
+    bool AutomationStepRegistry::registerBlocker( const AutomationBlocker* pBlocker )
     {
         const bool bInvalidBlockerRegistration = pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pReadiness == nullptr;
         if ( bInvalidBlockerRegistration )

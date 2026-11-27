@@ -137,5 +137,4 @@ namespace sw::editor
             return {};
         return unexpected( Error{ ErrorKind::InvalidArgument, "needs file=\"….png\"", params._file } );
     }
-    >>>
 } // namespace sw::editor

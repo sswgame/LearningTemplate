@@ -265,7 +265,7 @@ namespace sw
 #if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
             // 다시 불려도(호스트 모듈을 다시 세움) 이미 건 주인이면 다시 걸지 않는다 — 대화상자 칸은 하나라 둘째 등록은 단언이다.
             if ( s_assertDialogRegistration.isActive() == false && commandLine.isAutomatedRun() == false )
-                >>> s_assertDialogRegistration = internal::bindAssertDialog( &AssertDialogInternal::showAssertDialog );
+                s_assertDialogRegistration = internal::bindAssertDialog( &AssertDialogInternal::showAssertDialog );
 #endif
         }
     } // namespace
