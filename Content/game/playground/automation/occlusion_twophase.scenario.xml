@@ -17,7 +17,8 @@
 	<!-- ① 뒤 단계는 2 단계를 쓸 수 있는 프레임에만 돈다 -->
 	<Store watch="Render.OcclusionTwoPhase" as="twoPhase"/>
 	<Expect watch="Render.OcclusionLatePhase" sameAs="twoPhase"/>
-	<Screenshot file="occlusion_on.ppm" stability="Assets"/>
+	<DevCommand line="camera.cut"/> <!-- 두 사진을 같은 조건으로 찍는다 — 컷 뒤 같은 프레임 수만큼 쌓은 TAA 기록. 한쪽만 컷하면 TAA 차이가 가림 차이로 잡힌다 -->
+	<Screenshot file="occlusion_on.ppm"/>
 	<!-- ② 끈 그림과 같다 -->
 	<Variable name="gv_occlusionCulling" value="false"/>
 	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
