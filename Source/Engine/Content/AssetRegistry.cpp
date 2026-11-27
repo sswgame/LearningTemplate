@@ -19,18 +19,16 @@ namespace sw
     {
         struct AssetRegistryInternal
         {
-            static string toLowerID( string_view assetID ) { return StringUtil::toLower( assetID ); }
-
             /** @brief 한 층 안에 GUID · 경로(대소문자 무시)가 겹치지 않으면 빈 결과, 겹치면 그 까닭입니다. */
             [[nodiscard]] static expected<void> validateLayer( const AssetRegistryLayer& layer )
             {
-                unordered_set<AssetGUID> setGUID;
-                unordered_set<string>    setPath;
+                unordered_set<AssetGUID>  setGUID;
+                unordered_set<AssetIDKey> setPath;
                 for ( const AssetRegistryEntry& entry : layer._listEntry )
                 {
                     if ( setGUID.insert( entry._guid ).second == false )
                         return unexpected( Error{ ErrorKind::AlreadyExists, "two assets of one index layer carry the same GUID", entry._assetID } );
-                    if ( entry._assetID.empty() || setPath.insert( toLowerID( entry._assetID ) ).second == false )
+                    if ( entry._assetID.empty() || setPath.insert( AssetIDKey( entry._assetID ) ).second == false )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "an index layer has an empty or repeated asset id", entry._assetID } );
                 }
                 return {};
@@ -136,18 +134,18 @@ namespace sw
 
     void AssetRegistry::put( const AssetGUID& guid, string_view assetID )
     {
-        const string lowerID = AssetRegistryInternal::toLowerID( assetID );
+        const AssetIDKey key{ assetID };
         // 이 GUID 의 옛 자리를 비운다 — 옮긴 에셋의 옛 경로로 찾으면 없어야 한다.
         const auto oldPath = _mapGUIDToPath.find( guid );
         if ( oldPath != _mapGUIDToPath.end() )
-            _mapPathToGUID.erase( AssetRegistryInternal::toLowerID( oldPath->second ) );
+            _mapPathToGUID.erase( AssetIDKey( oldPath->second ) );
         // 이 자리를 쓰던 다른 GUID 는 풀리지 않게 한다 — 그 파일은 이제 이 에셋이다.
-        const auto previousOwner = _mapPathToGUID.find( lowerID );
+        const auto previousOwner = _mapPathToGUID.find( key );
         if ( previousOwner != _mapPathToGUID.end() && previousOwner->second != guid )
             _mapGUIDToPath.erase( previousOwner->second );
         _mapGUIDToPath[guid] = string( assetID );
-        _mapPathToGUID.erase( lowerID );
-        _mapPathToGUID.emplace( lowerID, guid );
+        _mapPathToGUID.erase( key );
+        _mapPathToGUID.emplace( key, guid );
     }
 
     optional<string> AssetRegistry::findPath( const AssetGUID& guid ) const
@@ -166,7 +164,7 @@ namespace sw
 
     optional<AssetGUID> AssetRegistry::findGUID( string_view assetID ) const
     {
-        const auto found = _mapPathToGUID.find( AssetRegistryInternal::toLowerID( assetID ) );
+        const auto found = _mapPathToGUID.find( AssetIDKey( assetID ) );
         if ( found == _mapPathToGUID.end() )
             return nullopt;
         return found->second;

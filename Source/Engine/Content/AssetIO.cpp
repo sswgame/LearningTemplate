@@ -11,6 +11,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetIDKey.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Content/Pack/PackManager.h"
@@ -387,16 +388,16 @@ namespace sw
         if ( bFolderFound == false )
             return AssetFolderListing::FolderMissing;
 
-        // (소문자 키, 표기) — 키로 안정 정렬해 같은 키의 첫 표기(디스크 · 높은 우선순위 팩)를 남긴다.
-        vector<pair<string, string>> listKeyed;
+        // (접은 열쇠, 표기) — 열쇠로 안정 정렬해 같은 열쇠의 첫 표기(디스크 · 높은 우선순위 팩)를 남긴다.
+        vector<pair<AssetIDKey, string>> listKeyed;
         listKeyed.reserve( listCandidate.size() );
         for ( string& path : listCandidate )
         {
             const bool bSkip = ( extension.empty() == false && StringUtil::endsWith( path, extension, true ) == false ) || engine::getSubsystem<AssetPaths>().isExcludedForHost( path );
             if ( bSkip == false )
-                listKeyed.emplace_back( StringUtil::toLower( path.c_str() ), std::move( path ) );
+                listKeyed.emplace_back( AssetIDKey( path ), std::move( path ) );
         }
-        VectorUtil::stableSort( listKeyed, []( const pair<string, string>& lhs, const pair<string, string>& rhs )
+        VectorUtil::stableSort( listKeyed, []( const pair<AssetIDKey, string>& lhs, const pair<AssetIDKey, string>& rhs )
         { return lhs.first < rhs.first; } );
         for ( size_t index = 0; index < listKeyed.size(); ++index )
         {
