@@ -258,10 +258,10 @@ namespace sw
         return 0;
     }
 
-    int32 MechArenaGameModeComponent::getPlayerState() const
+    MechPilotState MechArenaGameModeComponent::getPlayerState() const
     {
         const MechPilot* const pPilot = _world.findPilot( kPlayer );
-        return pPilot != nullptr ? static_cast<int32>( pPilot->_state ) : 0;
+        return pPilot != nullptr ? pPilot->_state : MechPilotState::Waiting;
     }
 
     bool MechArenaGameModeComponent::readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const

@@ -9,29 +9,29 @@
 -->
 <Scenario name="game.playground.netpair.match_roundtrip" fixedDelta="0.0166667" realTime="true" timeoutFrames="60000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
-	<Expect watch="Hub.NetRole" equals="0"/>
+	<Expect watch="Hub.NetRole" is="Alone"/>
 	<!-- ① 허브 접속 -->
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
-	<Expect watch="Playground.MatchState" equals="0"/>
+	<Expect watch="Playground.MatchState" is="None"/>
 	<!-- ② 줄 → 배정 → 매치 서버 -->
 	<Variable name="gv_playgroundAutoPlay" value="1"/>
 	<DevCommand line="minigame.enter shooter3d_match"/>
 	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutSeconds="30"/>
-	<WaitUntil watch="Playground.MatchState" equals="4" timeoutSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" is="Playing" timeoutSeconds="60"/>
 	<WaitUntil watch="Minigame.Active" is="shooter3d_match" timeoutSeconds="30"/>
 	<WaitUntil watch="Shooter.ServerKillCount" atLeast="1" timeoutSeconds="90"/>
 	<!-- ③ 나감 → 허브 -->
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="minigame.quit"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutSeconds="60"/>
-	<WaitUntil watch="Playground.MatchState" equals="0" timeoutSeconds="30"/>
+	<WaitUntil watch="Playground.MatchState" is="None" timeoutSeconds="30"/>
 	<Expect watch="Minigame.Active" is="none"/>
-	<WaitUntil watch="Hub.NetRole" equals="2" timeoutSeconds="30"/>
+	<WaitUntil watch="Hub.NetRole" is="Client" timeoutSeconds="30"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<!-- ④ 순위표는 서버의 값이다 -->
 	<DevCommand line="playground.online.submitkills 999"/>

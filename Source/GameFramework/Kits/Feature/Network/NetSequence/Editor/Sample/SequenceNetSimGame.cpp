@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -99,37 +100,37 @@ namespace sw
                 }
             }
 
-            bool readValue( string_view key, float64& outValue ) const override
+            bool readValue( string_view key, AutomationWatchValue& outValue ) const override
             {
                 const SequencePlayerComponent* pEveryone = SequenceNetSimGame::findDirector( *_pWorld, SequenceNetSimGame::kEveryoneDirector );
                 const SequencePlayerComponent* pPlayer   = SequenceNetSimGame::findDirector( *_pWorld, SequenceNetSimGame::kPlayerDirector );
                 if ( key == "EveryonePlaying" && pEveryone != nullptr )
-                    outValue = pEveryone->isPlaying() ? 1.0 : 0.0;
+                    outValue.setNumber( pEveryone->isPlaying() ? 1.0 : 0.0 );
                 else if ( key == "PlayerPlaying" && pPlayer != nullptr )
-                    outValue = pPlayer->isPlaying() ? 1.0 : 0.0;
+                    outValue.setNumber( pPlayer->isPlaying() ? 1.0 : 0.0 );
                 else if ( key == "EveryoneFrame" && pEveryone != nullptr )
-                    outValue = static_cast<float64>( pEveryone->getCurrentFrame() );
+                    outValue.setNumber( static_cast<float64>( pEveryone->getCurrentFrame() ) );
                 else if ( key == "PlayerStarts" && pPlayer != nullptr )
-                    outValue = static_cast<float64>( pPlayer->getHistory().countKind( SequenceHistoryKind::Started ) );
+                    outValue.setNumber( static_cast<float64>( pPlayer->getHistory().countKind( SequenceHistoryKind::Started ) ) );
                 else
                     return readServerValue( key, outValue );
                 return true;
             }
 
         private:
-            bool readServerValue( string_view key, float64& outValue ) const
+            bool readServerValue( string_view key, AutomationWatchValue& outValue ) const
             {
                 if ( _pWorld->isServer() == false )
                     return false;
                 const SequenceNetSessionComponent* pNet = SequenceNetSimGame::findNetSession( *_pWorld );
                 if ( key == "SkipRejected" && pNet != nullptr )
                 {
-                    outValue = static_cast<float64>( pNet->getServer().getStats()._skipRejectedCount );
+                    outValue.setNumber( static_cast<float64>( pNet->getServer().getStats()._skipRejectedCount ) );
                     return true;
                 }
                 if ( key == "SkipAccepted" && pNet != nullptr )
                 {
-                    outValue = static_cast<float64>( pNet->getServer().getStats()._skipAcceptedCount );
+                    outValue.setNumber( static_cast<float64>( pNet->getServer().getStats()._skipAcceptedCount ) );
                     return true;
                 }
                 if ( key == "EveryoneSeen" )
@@ -138,7 +139,7 @@ namespace sw
                     const GameStateComponent* pSession       = pSessionObject != nullptr ? pSessionObject->getComponent<GameStateComponent>() : nullptr;
                     if ( pSession == nullptr )
                         return false;
-                    outValue = static_cast<float64>( pSession->getFlags().getFlag( hashed_string( SequenceNetSimGame::kEveryoneFlag ) ) );
+                    outValue.setNumber( static_cast<float64>( pSession->getFlags().getFlag( hashed_string( SequenceNetSimGame::kEveryoneFlag ) ) ) );
                     return true;
                 }
                 for ( int32 playerNumber = 1; playerNumber <= SequenceNetSimGame::kMaxPlayerCount; ++playerNumber )
@@ -150,7 +151,7 @@ namespace sw
                     const PlayerStateComponent* pState = SequenceNetSimGame::findPlayerState( *_pWorld, playerNumber );
                     if ( pState == nullptr )
                         return false;
-                    outValue = static_cast<float64>( pState->getProgressFlags().getFlag( hashed_string( SequenceNetSimGame::kPlayerFlag ) ) );
+                    outValue.setNumber( static_cast<float64>( pState->getProgressFlags().getFlag( hashed_string( SequenceNetSimGame::kPlayerFlag ) ) ) );
                     return true;
                 }
                 return false;

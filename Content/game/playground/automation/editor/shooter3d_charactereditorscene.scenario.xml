@@ -88,13 +88,13 @@
 	<!-- ④ 플레이 — 조립 결과 -->
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<WaitUntil watch="Appearance.Preset" target="Dummy" is="EditorKnight" timeoutFrames="40"/>
 	<WaitUntil watch="Appearance.SlotItem" target="Dummy" key="Head" is="helmet_knight" timeoutFrames="40"/>
 	<CaptureEditorUI file="play.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<DevCommand line="asset.removeImportFolder scratch/import/shooter3d.charactereditorscene"/>
 	<Variable name="gv_editorUiScale" value="0"/>

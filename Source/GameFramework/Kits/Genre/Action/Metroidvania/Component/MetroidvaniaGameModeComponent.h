@@ -117,7 +117,7 @@ namespace sw
         bool                 isPickupLeft( size_t index ) const { return index < _listPickup.size() && _mapState.isCollected( _listPickup[index].key() ) == false; }
         const hashed_string& getArea() const { return _area; }
         MetroidvaniaPhase    getExplorePhase() const { return _phase; }
-        int32                getPhase() const { return static_cast<int32>( _phase ); }
+        MetroidvaniaPhase    getPhase() const { return _phase; }
         float32              getPlayerX() const { return _motor.getPosition()._x; }
         int32                getAbilityCount() const { return static_cast<int32>( _abilities.getAbilities().size() ); }
         /** @brief 가진 통화입니다. */

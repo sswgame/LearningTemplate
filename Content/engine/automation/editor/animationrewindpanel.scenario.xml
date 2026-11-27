@@ -23,7 +23,7 @@
 	<EditorClick mark="toolbar.play"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.AnimationRewindTrackCount" equals="0"/>
 	<!-- Record — 트랙이 생기고 기록이 쌓인다 -->
@@ -41,19 +41,19 @@
 	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.AnimationRewindScrubbing" equals="1" timeoutFrames="30"/>
-	<Expect watch="Editor.PlayState" equals="2"/>
+	<Expect watch="Editor.PlayState" is="Paused"/>
 	<EditorWaitStable/>
 	<!-- Resume — 되감기를 풀고 다시 돈다 -->
 	<EditorClick mark="animationRewind.resume"/>
 	<WaitUntil watch="Editor.AnimationRewindScrubbing" equals="0" timeoutFrames="30"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<EditorWaitStable/>
 	<!-- Record 끄기 — 기록을 비운다 -->
 	<EditorClick mark="animationRewind.record"/>
 	<WaitUntil watch="Editor.AnimationRewindTrackCount" equals="0" timeoutFrames="30"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

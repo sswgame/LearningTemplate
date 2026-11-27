@@ -32,14 +32,14 @@
 	<WaitUntil watch="DebugHUD.Shown" equals="1" timeoutFrames="84"/>
 	<Expect watch="DebugHUD.SectionCount" atLeast="1"/>
 	<Expect watch="DebugHUD.SectionShown" equals="0"/>
-	<Expect watch="DebugHUD.Corner" equals="0"/>
+	<Expect watch="DebugHUD.Corner" is="TopLeft"/>
 	<!-- 섹션 켜기 · 모서리 -->
 	<DevCommand line="hud physics on"/>
 	<WaitUntil watch="DebugHUD.SectionShown" equals="1" timeoutFrames="60"/>
 	<DevCommand line="hud corner bottomRight"/>
-	<WaitUntil watch="DebugHUD.Corner" equals="3" timeoutFrames="60"/>
+	<WaitUntil watch="DebugHUD.Corner" is="BottomRight" timeoutFrames="60"/>
 	<DevCommand line="hud corner topRight"/>
-	<WaitUntil watch="DebugHUD.Corner" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="DebugHUD.Corner" is="TopRight" timeoutFrames="60"/>
 	<!-- 섹션 끄기 -->
 	<DevCommand line="hud physics off"/>
 	<WaitUntil watch="DebugHUD.SectionShown" equals="0" timeoutFrames="60"/>

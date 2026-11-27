@@ -96,7 +96,7 @@ SW_TEST_CASE( AsymmetricHorrorGameModeTest, CommandsBeforeTheMatchOpensAreRefuse
     SW_REQUIRE_NOT_NULL( pDirector );
     SW_EXPECT_FALSE( pDirector->isAcceptingInput() );
     SW_EXPECT_FALSE( pDirector->submitSurvivorInput( 0, AsymmetricHorrorCommand{} ) );
-    SW_EXPECT_EQUAL( 0, pDirector->getResult() );
+    SW_EXPECT_EQUAL( AsymmetricHorrorResult::Ongoing, pDirector->getResult() );
 }
 
 /** @brief [AsymmetricHorrorGameModeTest] 무대가 비었으면 오류를 남기고 판을 열지 않는다 */
@@ -128,19 +128,19 @@ SW_TEST_CASE( AsymmetricHorrorGameModeTest, SurvivorRepairsOpensTheGateAndEscape
     SW_EXPECT_FALSE( pDirector->submitSurvivorInput( 1, AsymmetricHorrorCommand{} ) ); // 생존자는 하나다
 
     SW_EXPECT_TRUE( AsymmetricGameModeBench::pressUse( manager, *pDirector ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( SurvivorActivity::Repairing ), pDirector->getPlayerActivity() );
+    SW_EXPECT_EQUAL( SurvivorActivity::Repairing, pDirector->getPlayerActivity() );
     AsymmetricGameModeBench::advance( manager, 1.5f );
     SW_EXPECT_EQUAL( 1, pDirector->getCompletedGenerators() );
     SW_EXPECT_TRUE( pDirector->areGatesPowered() );
 
     SW_EXPECT_TRUE( AsymmetricGameModeBench::pressUse( manager, *pDirector ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( SurvivorActivity::OpeningGate ), pDirector->getPlayerActivity() );
+    SW_EXPECT_EQUAL( SurvivorActivity::OpeningGate, pDirector->getPlayerActivity() );
     AsymmetricGameModeBench::advance( manager, 1.5f );
     SW_EXPECT_EQUAL( 1, pDirector->countOpenGates() );
 
     SW_EXPECT_TRUE( AsymmetricGameModeBench::pressUse( manager, *pDirector ) );
     SW_EXPECT_EQUAL( 1, pDirector->countEscaped() );
-    SW_EXPECT_EQUAL( static_cast<int32>( AsymmetricHorrorResult::Win ), pDirector->getResult() );
+    SW_EXPECT_EQUAL( AsymmetricHorrorResult::Win, pDirector->getResult() );
     SW_EXPECT_FALSE( pDirector->isAcceptingInput() );
     vector<MinigameResultValue> listValue;
     pDirector->collectMinigameResult( listValue );
@@ -162,7 +162,7 @@ SW_TEST_CASE( AsymmetricHorrorGameModeTest, KillerBotHooksAStandingSurvivor )
     SW_REQUIRE_TRUE( pDirector->isStarted() );
     AsymmetricGameModeBench::advance( manager, 20.0f );
     SW_EXPECT_EQUAL( 1, pDirector->countSacrificed() );
-    SW_EXPECT_EQUAL( static_cast<int32>( AsymmetricHorrorResult::Lose ), pDirector->getResult() );
+    SW_EXPECT_EQUAL( AsymmetricHorrorResult::Lose, pDirector->getResult() );
     vector<MinigameResultValue> listValue;
     pDirector->collectMinigameResult( listValue );
     SW_EXPECT_TRUE( listValue.empty() );
@@ -191,7 +191,7 @@ SW_TEST_CASE( AsymmetricHorrorGameModeTest, StateRoundTrips )
     SW_REQUIRE_NOT_NULL( pRestored );
     restoredManager.beginPlay();
     pRestored->restoreState( vector<uint8>( written.getData(), written.getData() + written.getSize() ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( SurvivorActivity::Repairing ), pRestored->getPlayerActivity() );
+    SW_EXPECT_EQUAL( SurvivorActivity::Repairing, pRestored->getPlayerActivity() );
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( *pDirector, *pRestored ) );
     restoredManager.endPlay();
     manager.endPlay();

@@ -133,8 +133,8 @@ namespace sw
         /** @brief 곳 @p areaID 의 절대 자리입니다(지도 칸 × 간격). 지도에 없는 곳(착륙 전의 우주선)은 원점입니다. */
         AbsolutePosition computeAreaPosition( const hashed_string& areaID ) const;
         ScavengerResult  getExpeditionResult() const { return _result; }
-        int32            getResult() const { return static_cast<int32>( _result ); }
-        int32            getPhase() const { return static_cast<int32>( _expedition.getPhase() ); }
+        ScavengerResult  getResult() const { return _result; }
+        ScavengerPhase   getPhase() const { return _expedition.getPhase(); }
         int32            getQuota() const { return _expedition.getQuota().getQuota(); }
         int32            getFulfilled() const { return _expedition.getQuota().getFulfilled(); }
         int32            getDaysLeft() const { return _expedition.getQuota().getDaysLeft(); }

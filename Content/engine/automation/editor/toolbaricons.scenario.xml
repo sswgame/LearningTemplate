@@ -12,10 +12,10 @@
 	<DevCommand line="layout.reset"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.play"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="180"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="180"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="135"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="135"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<EditorWaitStable/>
 	<EditorClick mark="gizmo.rotate"/>

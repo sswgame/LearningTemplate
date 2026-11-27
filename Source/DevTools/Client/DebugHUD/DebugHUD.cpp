@@ -256,14 +256,14 @@ namespace sw
                 return pHUD != nullptr;
             }
 
-            [[nodiscard]] static bool readCorner( const GameObjectManager* pManager, float64& outValue )
+            [[nodiscard]] static bool readCorner( const GameObjectManager* pManager, AutomationWatchValue& outValue )
             {
                 (void)pManager;
                 const DebugHUD* pHUD   = DebugHUDInternal::findEngineHUD();
                 DebugHUDCorner  corner = DebugHUDCorner::TopLeft;
                 if ( pHUD == nullptr || pHUD->tryGetArrangedCorner( corner ) == false )
                     return false;
-                outValue = static_cast<float64>( corner );
+                outValue.setEnum( corner );
                 return true;
             }
 
@@ -681,7 +681,7 @@ namespace sw
 
     SW_AUTOMATION_WATCH( debugHUDShown, "DebugHUD.Shown", "1 while the debug HUD screen is open", &DebugHUDInternal::readShown );
     SW_AUTOMATION_WATCH( debugHUDWindowOpen, "DebugHUD.WindowOpen", "1 while the debug HUD settings window is open", &DebugHUDInternal::readWindowOpen );
-    SW_AUTOMATION_WATCH( debugHUDCorner, "DebugHUD.Corner", "Corner the HUD panel was laid out in (0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right)",
+    SW_AUTOMATION_WATCH( debugHUDCorner, "DebugHUD.Corner", "DebugHUDCorner name of the corner the HUD panel was laid out in",
                          &DebugHUDInternal::readCorner );
     SW_AUTOMATION_WATCH( debugHUDSectionCount, "DebugHUD.SectionCount", "Sections the debug HUD screen draws right now", &DebugHUDInternal::readSectionCount );
     SW_AUTOMATION_WATCH( debugHUDSectionShown, "DebugHUD.SectionShown", "1 while the debug HUD draws the section named by gv_debugHUDWatchSection",

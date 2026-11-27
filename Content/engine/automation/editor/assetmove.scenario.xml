@@ -128,13 +128,13 @@
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<DevCommand line="asset.expectScratchMoveRefused scratch/assetmove/target/kept.material scratch/assetmove/target/kept_again.material playing"/>
 	<EditorWaitStable/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

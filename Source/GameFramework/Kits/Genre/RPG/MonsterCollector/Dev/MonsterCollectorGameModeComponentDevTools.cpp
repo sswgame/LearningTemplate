@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( monsterCollectorPhase, "MonsterCollector.Phase", "Monster collector phase (0 explore, 1 battle, 2 victory, 3 defeat)", MonsterCollectorGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( monsterCollectorPhase, "MonsterCollector.Phase", "MonsterCollectorPhase name of the monster collector game", MonsterCollectorGameModeComponent,
                                 &MonsterCollectorGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( monsterCollectorFoeHP, "MonsterCollector.FoeHP", "HP of the wild monster (0 outside a battle)", MonsterCollectorGameModeComponent,
                                 &MonsterCollectorGameModeComponent::getFoeHP );

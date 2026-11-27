@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( velmoraPhase, "Velmora.Phase", "Velmora region fight phase (0 explore, 1 hall, 2 boss wait, 3 boss)", VelmoraEncounterGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( velmoraPhase, "Velmora.Phase", "VelmoraPhase name of the region fight", VelmoraEncounterGameModeComponent,
                                 &VelmoraEncounterGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( velmoraAlive, "Velmora.Alive", "Living enemies in the Velmora region fight", VelmoraEncounterGameModeComponent,
                                 &VelmoraEncounterGameModeComponent::getAliveEnemyCount );

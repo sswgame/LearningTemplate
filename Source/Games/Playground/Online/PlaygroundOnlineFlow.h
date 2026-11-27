@@ -21,6 +21,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Network/GameNetSession.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
@@ -40,6 +41,7 @@ namespace sw
     class OnlineSession;
 
     /** @brief 매치 세션 하나의 걸음입니다. 매치는 한 번에 하나다. */
+    ENUM()
     enum class PlaygroundMatchState : uint8
     {
         None = 0,     ///< 매치가 없다

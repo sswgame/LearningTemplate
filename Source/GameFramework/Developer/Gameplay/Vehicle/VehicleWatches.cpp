@@ -42,7 +42,7 @@ namespace sw
             const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
             if ( pMovement == nullptr )
                 return false;
-            outValue.setNumber( static_cast<float64>( pMovement->getGait() ) );
+            outValue.setEnum( pMovement->getGait() );
             return true;
         }
 
@@ -135,7 +135,7 @@ namespace sw
         }
     } // namespace
 
-    SW_AUTOMATION_QUERY_WATCH( mountGait, "Mount.Gait", "Gait of the mount on target (0 standing, 1 walk, 2 trot, 3 canter, 4 gallop)", &readGait, true, false );
+    SW_AUTOMATION_QUERY_WATCH( mountGait, "Mount.Gait", "MountGait name of the mount on target", &readGait, true, false );
     SW_AUTOMATION_QUERY_WATCH( mountSpeed, "Mount.Speed", "Forward speed (m/s) of the mount on target", &readSpeed, true, false );
     SW_AUTOMATION_QUERY_WATCH( vehicleForwardSpeed, "Vehicle.ForwardSpeed", "Forward speed (m/s) of the physics or kinematic car on target", &readVehicleForwardSpeed, true, false );
     SW_AUTOMATION_QUERY_WATCH( vehicleGroundedWheels, "Vehicle.GroundedWheels", "Wheels of the physics car on target that touch the ground", &readVehicleGroundedWheels, true, false );

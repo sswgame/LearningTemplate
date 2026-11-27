@@ -68,7 +68,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmGameModeComponent, &readFarmerX );
-    SW_AUTOMATION_GETTER_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &FarmGameModeComponent::getTool );
+    SW_AUTOMATION_GETTER_WATCH( farmFarmerTool, "Farm.FarmerTool", "FarmTool name of the tool in the farmer's hand", FarmGameModeComponent, &FarmGameModeComponent::getTool );
     SW_AUTOMATION_GETTER_WATCH( farmFarmerWalking, "Farm.FarmerWalking", "1 while the farmer walked last tick (0 once the move input ends)", FarmGameModeComponent, &FarmGameModeComponent::isFarmerWalking );
     SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmGameModeComponent, &readTilledCount );
     SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmGameModeComponent, &readCropCount );

@@ -15,7 +15,7 @@
 	<!-- 패드: 첫 입력은 기본 포커스, 다음부터 아래로 한 칸씩 -->
 	<Tap slot="Gamepad.DPadDown" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="StartGame" timeoutFrames="10"/>
-	<WaitUntil watch="Input.GlyphStyle" atLeast="1" timeoutFrames="10"/> <!-- 마지막 장치가 패드다 — 버튼 표시가 패드 글리프 -->
+	<WaitUntil watch="Input.GlyphStyle" isOneOf="GamepadXbox,GamepadPlayStation,GamepadSwitch" timeoutFrames="10"/> <!-- 마지막 장치가 패드다 — 버튼 표시가 패드 글리프 -->
 	<Store watch="UI.ActionGlyph" key="UI.Accept" as="padAccept"/>
 	<Tap slot="Gamepad.DPadDown" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
@@ -48,7 +48,7 @@
 	<!-- 키보드로 바꾸면 버튼 글리프가 키보드 것이 된다 -->
 	<Tap slot="Key.Up" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Options" timeoutFrames="10"/>
-	<WaitUntil watch="Input.GlyphStyle" equals="0" timeoutFrames="10"/>
+	<WaitUntil watch="Input.GlyphStyle" is="KeyboardMouse" timeoutFrames="10"/>
 	<Expect watch="UI.ActionGlyph" key="UI.Accept" differsFrom="padAccept"/>
 
 	<!-- 안전 영역 5 % · 글자 1.5 배 · 의사 현지화(글이 30~40 % 늘어난다)에서 메뉴와 대화 상자의 글이 제 칸을 넘지 않는다 -->

@@ -18,40 +18,40 @@
 	<DevCommand line="panel.focus game_view"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
-	<Expect watch="Editor.GameViewMode" equals="0"/>
+	<Expect watch="Editor.GameViewMode" is="Lit"/>
 	<Screenshot file="viewmodes_game_lit.ppm" stability="Assets"/>
 	<!-- ② 씬 뷰 Lit 과 보기 모드마다 -->
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
-	<Expect watch="Editor.SceneViewMode" equals="0"/>
+	<Expect watch="Editor.SceneViewMode" is="Lit"/>
 	<Screenshot file="viewmodes_scene_lit.ppm" stability="Assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.unlit"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Unlit" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_unlit.ppm" stability="Assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.wireframe"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="2" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Wireframe" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_wireframe.ppm" stability="Assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.depth"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="4" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Depth" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_depth.ppm" stability="Assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.overdraw"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="5" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Overdraw" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_overdraw.ppm" stability="Assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.normals"/>
-	<WaitUntil watch="Editor.SceneViewMode" equals="3" timeoutFrames="90"/>
-	<Expect watch="Editor.GameViewMode" equals="0"/>
+	<WaitUntil watch="Editor.SceneViewMode" is="Normals" timeoutFrames="90"/>
+	<Expect watch="Editor.GameViewMode" is="Lit"/>
 	<Screenshot file="viewmodes_scene_normals.ppm" stability="Assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="viewmodes_scene_unlit.ppm" golden="viewmodes_scene_unlit"/>
@@ -64,8 +64,8 @@
 	<DevCommand line="panel.focus game_view"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
-	<Expect watch="Editor.SceneViewMode" equals="3"/>
-	<Expect watch="Editor.GameViewMode" equals="0"/>
+	<Expect watch="Editor.SceneViewMode" is="Normals"/>
+	<Expect watch="Editor.GameViewMode" is="Lit"/>
 	<Screenshot file="viewmodes_game_after.ppm" stability="Assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="viewmodes_game_after.ppm" golden="viewmodes_game_after"/>

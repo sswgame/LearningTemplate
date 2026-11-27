@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( ghostHuntResult, "GhostHunt.Result", "Hunt result (0 ongoing, 1 win, 2 lose)", GhostHuntGameModeComponent, &GhostHuntGameModeComponent::getResult );
+    SW_AUTOMATION_GETTER_WATCH( ghostHuntResult, "GhostHunt.Result", "GhostHuntResult name of the hunt", GhostHuntGameModeComponent, &GhostHuntGameModeComponent::getResult );
     SW_AUTOMATION_GETTER_WATCH( ghostHuntLitRooms, "GhostHunt.LitRooms", "Rooms whose light is on", GhostHuntGameModeComponent, &GhostHuntGameModeComponent::countLitRooms );
     SW_AUTOMATION_GETTER_WATCH( ghostHuntRemaining, "GhostHunt.Remaining", "Ghosts left in the current room", GhostHuntGameModeComponent, &GhostHuntGameModeComponent::getRemainingGhosts );
     SW_AUTOMATION_GETTER_WATCH( ghostHuntCoins, "GhostHunt.Coins", "Coins collected", GhostHuntGameModeComponent, &GhostHuntGameModeComponent::getCoins );

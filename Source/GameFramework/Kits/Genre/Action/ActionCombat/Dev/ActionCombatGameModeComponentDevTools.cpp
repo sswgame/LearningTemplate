@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( actionCombatPhase, "ActionCombat.Phase", "Action combat phase (0 hall, 1 boss wait, 2 boss, 3 victory, 4 defeat)", ActionCombatGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( actionCombatPhase, "ActionCombat.Phase", "ActionCombatPhase name of the action combat game", ActionCombatGameModeComponent,
                                 &ActionCombatGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( actionCombatAlive, "ActionCombat.Alive", "Living enemies in the action combat room", ActionCombatGameModeComponent,
                                 &ActionCombatGameModeComponent::getAliveEnemyCount );

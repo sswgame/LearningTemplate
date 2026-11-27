@@ -19,6 +19,7 @@ namespace sw
     class GenericWindow;
 
     /** @brief 이번 프레임을 어떤 빠르기로 도는지입니다. 감시 값 `Engine.FramePacingState` 가 이 번호를 그대로 낸다(번호를 바꾸면 시나리오도 고친다). */
+    ENUM()
     enum class FramePacingState : uint8
     {
         Foreground = 0, ///< 포커스를 가진 창 — 따로 묶지 않는다(VSync 설정만).

@@ -11,11 +11,11 @@
 	<Launch variable="gv_firstMinigame" value="asymmetrichorror"/>
 	<Launch variable="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="AsymmetricHorror.PlayerX" near="-16" tolerance="0.01" timeoutFrames="120"/>
-	<Expect watch="AsymmetricHorror.Result" equals="0"/>
+	<Expect watch="AsymmetricHorror.Result" is="Ongoing"/>
 	<Expect watch="AsymmetricHorror.Generators" equals="0"/>
 	<!-- 곁의 발전기를 고친다 — 봇은 자기 곁의 발전기를 고친다 -->
 	<Action name="AsymmetricHorror.Use"/>
-	<WaitUntil watch="AsymmetricHorror.PlayerActivity" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="AsymmetricHorror.PlayerActivity" is="Repairing" timeoutFrames="10"/>
 	<WaitUntil watch="AsymmetricHorror.GatesPowered" equals="1" timeoutSeconds="14"/>
 	<Expect watch="AsymmetricHorror.Generators" equals="2"/>
 	<!-- 탈출구로 가서 연다(봇이 먼저 열고 있으면 봇이 연다) -->
@@ -26,7 +26,7 @@
 	<WaitUntil watch="AsymmetricHorror.OpenGates" atLeast="1" timeoutSeconds="8"/>
 	<Action name="AsymmetricHorror.Use"/>
 	<WaitUntil watch="AsymmetricHorror.Escaped" equals="2" timeoutSeconds="8"/>
-	<Expect watch="AsymmetricHorror.Result" equals="1"/>
+	<Expect watch="AsymmetricHorror.Result" is="Win"/>
 	<Expect watch="AsymmetricHorror.Sacrificed" equals="0"/>
 	<ExpectLog id="AsymmetricHorror.Ended" contains="win" count="1"/>
 	<!-- 결과를 보인 뒤 미니게임이 스스로 끝난다 -->

@@ -28,7 +28,7 @@
 	<Expect watch="Adventure.Region" is="tidecaves"/>
 	<Expect watch="Adventure.PlayerX" near="-11.5" tolerance="0.25"/>
 	<Expect watch="Quest.Status" target="tide_whispers" is="Active"/>
-	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
+	<WaitUntil watch="Velmora.Phase" is="Boss" timeoutFrames="120"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
@@ -39,6 +39,6 @@
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Quest.Status" target="tide_whispers" is="Completed" timeoutFrames="60"/>
 	<Expect watch="Session.Money" equals="130"/>
-	<Expect watch="Velmora.Phase" equals="0"/>
+	<Expect watch="Velmora.Phase" is="Explore"/>
 	<Pass/>
 </Scenario>

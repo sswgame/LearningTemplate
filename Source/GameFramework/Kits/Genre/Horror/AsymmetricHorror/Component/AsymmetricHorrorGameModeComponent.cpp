@@ -409,10 +409,10 @@ namespace sw
         return pPlayer != nullptr ? pPlayer->_position._x : 0.0f;
     }
 
-    int32 AsymmetricHorrorGameModeComponent::getPlayerActivity() const
+    SurvivorActivity AsymmetricHorrorGameModeComponent::getPlayerActivity() const
     {
         const AsymmetricHorrorSurvivor* pPlayer = _match.findSurvivor( AsymmetricHorrorGameModeComponentInternal::kPlayer );
-        return pPlayer != nullptr ? static_cast<int32>( pPlayer->_activity ) : 0;
+        return pPlayer != nullptr ? pPlayer->_activity : SurvivorActivity::None;
     }
 
     void AsymmetricHorrorGameModeComponent::serializeGameState( StateIO& io )

@@ -48,6 +48,7 @@ namespace sw
 {
     class GameObjectManager;
     class NetSimWorld;
+    struct AutomationWatchValue;
     class Scene;
 
     /** @brief 월드의 역할입니다. */
@@ -204,22 +205,13 @@ namespace sw
         virtual void onWorldStopping( NetSimWorld& world ) { (void)world; }
         /**
          * @brief 자동화가 읽을 이 월드의 값입니다(감시 값 `Editor.NetSimValue` — 월드가 여럿이라 게임의 전역 감시 값은 어느 월드인지 모른다). 이름은 게임이 정합니다.
+         * @details 수는 `setNumber`, 열거 결과는 `setEnum` 으로 이름을 낸다(시나리오는 `is="<이름>"` 로 비교한다).
          * @return 모르는 이름이면 false 입니다.
          */
-        virtual bool readValue( string_view key, float64& outValue ) const
+        virtual bool readValue( string_view key, AutomationWatchValue& outValue ) const
         {
             (void)key;
             (void)outValue;
-            return false;
-        }
-        /**
-         * @brief `readValue` 의 글 값입니다(열거 결과는 수 대신 이름 — 열거 값이 빠지거나 끼면 수가 밀린다). 감시 값은 이것을 먼저 묻고 시나리오는 `is="<이름>"` 로 비교한다.
-         * @return 모르는 이름이면 false 입니다.
-         */
-        virtual bool readText( string_view key, string& outText ) const
-        {
-            (void)key;
-            (void)outText;
             return false;
         }
     };

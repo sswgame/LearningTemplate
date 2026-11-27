@@ -232,7 +232,7 @@ namespace sw
         const ItemDef* const pWeaponItem = director.findPlayerWeaponItem();
         _hudViewModel->setWeapon( pWeaponItem != nullptr ? string_view( pWeaponItem->_name ) : string_view{}, director.getPlayerMagazine(), director.getPlayerSpareAmmo() );
         _hudViewModel->setZoneSeconds( director.getMatch().getZone().getStageRemaining() );
-        _hudViewModel->setHints( director.getMatchPhase() == BattleRoyalePhase::Drop && director.getPlayerDropStage() == 0, director.isPlayerDowned() && bEnded == false );
+        _hudViewModel->setHints( director.getMatchPhase() == BattleRoyalePhase::Drop && director.getPlayerDropStage() == BattleRoyaleDropStage::OnPlane, director.isPlayerDowned() && bEnded == false );
         _hudViewModel->setResult( director.hasWon(), bEnded && director.hasWon() == false );
     }
 } // namespace sw

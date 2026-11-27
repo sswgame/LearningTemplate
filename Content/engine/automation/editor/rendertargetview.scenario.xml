@@ -40,7 +40,7 @@
 	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutWallSeconds="10"/>
 	<EditorWaitStable/>
 	<EditorClick mark="renderTargets.channel.G"/>
-	<WaitUntil watch="Editor.RenderTargetChannel" equals="2" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.RenderTargetChannel" is="Green" timeoutFrames="60"/>
 	<Expect watch="Editor.RenderTargetPassUses" atLeast="1"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="rendertargetview/passes.png" everyBackend="true"/>

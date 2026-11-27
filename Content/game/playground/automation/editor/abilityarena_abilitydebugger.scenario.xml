@@ -21,7 +21,7 @@
 	<DevCommand line="panel.focus ability_debugger"/>
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<!-- ② 대상 고르기 — 어트리뷰트 · 어빌리티 줄 -->
 	<EditorClick mark="abilityDebug.target"/>
@@ -42,7 +42,7 @@
 	<EditorWaitStable/>
 	<!-- ③ 멈춤 -->
 	<DevCommand line="stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

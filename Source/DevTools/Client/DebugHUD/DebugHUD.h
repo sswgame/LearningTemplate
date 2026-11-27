@@ -15,6 +15,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIOwnedScreen.h"
 
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );                     ///< 디버그 HUD 표시(사용자 설정 debug.hud).
@@ -28,6 +29,7 @@ namespace sw
     class UserSettingsManager;
 
     /** @brief HUD 를 붙이는 화면 모서리입니다. 값은 설정 `debug.hudCorner` 의 선택지 순서와 `gv_debugHUDCorner` 를 따릅니다. */
+    ENUM()
     enum class DebugHUDCorner : uint8
     {
         TopLeft = 0,

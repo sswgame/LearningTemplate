@@ -136,7 +136,7 @@ SW_TEST_CASE( RestaurantGameModeTest, TwoDaysOfBusinessReachTheTarget )
     SW_REQUIRE_TRUE( fixture._pGameMode->submitOpen() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitPriceChange( 0, 1 ) ); // 영업 중에는 메뉴를 바꾸지 않는다
     fixture.runUntilClosed( 200 );
-    SW_REQUIRE_EQUAL( 2, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( RestaurantPhase::Closed, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 5, fixture._pGameMode->getServed() );
     SW_EXPECT_TRUE( fixture._soundPlayer.countPosted( "RestaurantOrder" ) >= 5 ); // 낸 손님은 모두 시켰다
     SW_EXPECT_EQUAL( 155, fixture._pGameMode->getTotalProfit() );                 // 5 × 40 - 5 × 5 - 급여 20
@@ -146,7 +146,7 @@ SW_TEST_CASE( RestaurantGameModeTest, TwoDaysOfBusinessReachTheTarget )
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getDay() );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitOpen() ); // 재료 없이 연다 — 손님은 시키지 않고 나간다
     fixture.runUntilClosed( 200 );
-    SW_EXPECT_EQUAL( 3, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( RestaurantPhase::Victory, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getServed() );
     SW_EXPECT_EQUAL( 135, fixture._pGameMode->getTotalProfit() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitBuy( 0 ) );
@@ -163,7 +163,7 @@ SW_TEST_CASE( RestaurantGameModeTest, MissingTheTargetIsADefeat )
     fixture.beginPlay();
     SW_REQUIRE_TRUE( fixture._pGameMode->submitOpen() );
     fixture.runUntilClosed( 200 );
-    SW_EXPECT_EQUAL( 4, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( RestaurantPhase::Defeat, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( -20, fixture._pGameMode->getTotalProfit() );
     fixture._manager.endPlay();
 }
@@ -182,7 +182,7 @@ SW_TEST_CASE( RestaurantGameModeTest, OpenDaySurvivesARoundTrip )
     {
         source._manager.update( kRestaurantFrame );
     }
-    SW_REQUIRE_EQUAL( 1, source._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( RestaurantPhase::Open, source._pGameMode->getPhase() );
     Archive state;
     source._pGameMode->writeState( state );
     vector<uint8> bytes( state.getData(), state.getData() + state.getSize() );
@@ -193,11 +193,11 @@ SW_TEST_CASE( RestaurantGameModeTest, OpenDaySurvivesARoundTrip )
     restored.beginPlay();
     vector<uint8> truncated( bytes.begin(), bytes.end() - 4 );
     restored._pGameMode->restoreState( std::move( truncated ) );
-    SW_EXPECT_EQUAL( 0, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( RestaurantPhase::Prepare, restored._pGameMode->getPhase() );
     restored._pGameMode->restoreState( std::move( bytes ) );
-    SW_REQUIRE_EQUAL( 1, restored._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( RestaurantPhase::Open, restored._pGameMode->getPhase() );
     restored.runUntilClosed( 200 );
-    SW_EXPECT_EQUAL( 2, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( RestaurantPhase::Closed, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( source._pGameMode->getTotalProfit(), restored._pGameMode->getTotalProfit() );
     SW_EXPECT_EQUAL( source._pGameMode->getGold(), restored._pGameMode->getGold() );
     SW_EXPECT_EQUAL( source._pGameMode->getReputation(), restored._pGameMode->getReputation() );

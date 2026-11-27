@@ -26,10 +26,12 @@ namespace sw
         for ( const AutomationWatchRegistration* pWatch : listWatch )
         {
             AutomationWatchValue value;
-            if ( AutomationWatchRegistry::read( *pWatch, query, value ) )
-                writer.addLineFormat( pWatch->_pName, "%.2f", value._number );
-            else
+            if ( AutomationWatchRegistry::read( *pWatch, query, value ) == false )
                 writer.addLine( pWatch->_pName, "-" ); // 지금 낼 값이 없다(씬이 없음 등)
+            else if ( value._bText )
+                writer.addLine( pWatch->_pName, value._text ); // 열거자 이름
+            else
+                writer.addLineFormat( pWatch->_pName, "%.2f", value._number );
         }
     }
 

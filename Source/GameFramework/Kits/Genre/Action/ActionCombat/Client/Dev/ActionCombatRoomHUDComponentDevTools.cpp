@@ -26,6 +26,6 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( actionRoomHUDNotification, "ActionCombat.HUDNotification", "Room notification on the HUD: 0 none, 1 cleared, 2 defeated", ActionCombatRoomHUDComponent, &ActionCombatRoomHUDComponent::getNotificationValue );
+    SW_AUTOMATION_GETTER_WATCH( actionRoomHUDNotification, "ActionCombat.HUDNotification", "ActionCombatRoomNotification name of the room notification on the HUD", ActionCombatRoomHUDComponent, &ActionCombatRoomHUDComponent::getNotification );
     SW_AUTOMATION_GETTER_WATCH( actionRoomHUDGate, "ActionCombat.HUDGateLocked", "1 while the HUD shows the locked clear gate", ActionCombatRoomHUDComponent, &ActionCombatRoomHUDComponent::getGateLockedValue );
 } // namespace sw

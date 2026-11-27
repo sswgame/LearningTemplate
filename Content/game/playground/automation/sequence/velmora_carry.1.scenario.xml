@@ -21,12 +21,12 @@
 	<WaitUntil watch="Adventure.PlayerZ" near="0" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" x="1" seconds="1.75"/>
 	<WaitUntil watch="Adventure.PlayerX" near="30.5" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
-	<Expect watch="Velmora.Phase" equals="1"/>
+	<Expect watch="Velmora.Phase" is="Hall"/>
 	<Expect watch="Adventure.PlayerX" near="30.5" tolerance="0.2"/>
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>
-	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="180"/>
+	<WaitUntil watch="Velmora.Phase" is="Boss" timeoutFrames="180"/>
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>

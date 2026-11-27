@@ -128,21 +128,13 @@ namespace sw::editor
                 NetSimHarness*             pHarness = pSession != nullptr ? pSession->getHarness() : nullptr;
                 NetSimWorld*               pWorld   = pHarness == nullptr ? nullptr : ( worldIndex == 0 ? &pHarness->getServer() : pHarness->findClient( worldIndex ) );
                 const INetSimSession*      pGame    = pWorld != nullptr ? pWorld->getSession() : nullptr;
-                string                     text;
-                if ( pGame != nullptr && pGame->readText( query._key, text ) )
-                {
-                    outValue.setText( text );
-                    return true;
-                }
-                float64 value = 0.0;
-                if ( pGame == nullptr || pGame->readValue( query._key, value ) == false )
+                if ( pGame == nullptr || pGame->readValue( query._key, outValue ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
                     textBuilder.appendFormat( "world %# has no value '%#'", worldIndex, string( query._key ) );
                     outValue.setText( textBuilder.view() );
                     return false;
                 }
-                outValue.setNumber( value );
                 return true;
             }
 

@@ -12,7 +12,7 @@
 	<WaitUntil watch="Minigame.Active" is="metroidvania" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Metroidvania.VisitedAreas" equals="1" timeoutFrames="120"/>
 	<Expect watch="Save.Blocked" equals="0"/>
-	<Expect watch="Metroidvania.Phase" equals="0"/>
+	<Expect watch="Metroidvania.Phase" is="Explore"/>
 	<!-- 쉬는 곳에서 쉰다 -->
 	<Action name="Metroidvania.Use"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름이 디렉터 걸음에 닿는다(프레임 경계) -->
@@ -67,7 +67,7 @@
 	<Action name="Metroidvania.Attack"/>
 	<AdvanceSimulation frames="30"/>
 	<Action name="Metroidvania.Attack"/>
-	<WaitUntil watch="Metroidvania.Phase" equals="2" timeoutFrames="60"/>
+	<WaitUntil watch="Metroidvania.Phase" is="Won" timeoutFrames="60"/>
 	<Expect watch="Metroidvania.Currency" equals="65"/>
 	<ExpectLog id="Metroidvania.Won" count="1"/>
 	<!-- 결과를 3 초 보인 뒤 스스로 끝나 허브(입구 씬)로 간다 -->

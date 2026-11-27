@@ -160,7 +160,7 @@ SW_TEST_CASE_F( RhythmGameModeTest, AutoPlayedSongIsClearedWithTheReward )
     SW_EXPECT_FALSE( _pGameMode->submitMusicTime( 3.0f ) ); // 이 판의 시계가 아니다
     SW_EXPECT_FALSE( _pGameMode->pressLane( 0 ) );
     advance( 60 * 5 );
-    SW_EXPECT_EQUAL( static_cast<int32>( RhythmPlayState::Cleared ), _pGameMode->getState() );
+    SW_EXPECT_EQUAL( RhythmPlayState::Cleared, _pGameMode->getState() );
     SW_EXPECT_EQUAL( 3, _pGameMode->getMaxCombo() );
     SW_EXPECT_EQUAL( 900, _pGameMode->getScore() ); // 기본 창의 가장 좁은 등급 300 점 셋
     vector<MinigameResultValue> listValue;

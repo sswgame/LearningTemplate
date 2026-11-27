@@ -42,11 +42,11 @@
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.SceneHash" sameAs="editedScene"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>

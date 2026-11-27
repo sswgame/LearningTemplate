@@ -12,21 +12,21 @@
 	<Expect watch="Minigame.Active" is="none"/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<Expect watch="Minigame.Active" is="voxelcraft"/>
 	<ExpectLog id="MinigameFlow.EnteredOfScene" contains="'voxelcraft'" count="1"/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.Depth" equals="0"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<DevCommand line="play"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="600"/>
 	<Expect watch="Minigame.Active" is="voxelcraft"/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="600"/>
 	<Pass/>
 </Scenario>

@@ -76,7 +76,7 @@ namespace sw
         /** @brief 무대의 자리(절대)를 형식으로 감쌉니다. */
         static AbsolutePosition toAbsolute( const float3& stagePosition ) { return AbsolutePosition{ stagePosition }; }
         AsymmetricHorrorResult  getMatchResult() const { return _result; }
-        int32                   getResult() const { return static_cast<int32>( _result ); }
+        AsymmetricHorrorResult  getResult() const { return _result; }
         int32                   getCompletedGenerators() const { return _match.getCompletedGeneratorCount(); }
         /** @brief 전원까지 남은 발전기 수입니다(전원이 들어왔거나 판이 열리지 않았으면 0). */
         int32   countRemainingGenerators() const;
@@ -86,7 +86,7 @@ namespace sw
         bool    areGatesPowered() const { return _match.areGatesPowered(); }
         float32 getPlayerX() const;
         /** @brief 생존자 0 이 하고 있는 일(`SurvivorActivity`)의 수입니다. */
-        int32 getPlayerActivity() const;
+        SurvivorActivity getPlayerActivity() const;
 
     protected:
         [[nodiscard]] bool startGame() override;

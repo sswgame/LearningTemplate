@@ -137,13 +137,13 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readCommittedBackend( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readCommittedBackend( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
             {
                 const RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 RHIBackend                backend{};
                 if ( pSwitcher == nullptr || pSwitcher->findCommittedBackend( backend ) == false )
                     return false;
-                outValue = static_cast<float64>( static_cast<uint32>( backend ) );
+                outValue.setEnum( backend );
                 return true;
             }
 
@@ -307,9 +307,9 @@ namespace sw
 #if SW_WITH_DYNAMIC_MODULES
     SW_AUTOMATION_STEP( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherInternal::runSwapBackend, &AutomationBackendSteps::validateSwapBackend, AutomationStepOptions{}.withPrepare( &RHIBackendSwitcherInternal::prepareSwapBackend ).withWallBudget( AutomationBackendSteps::kSwapBackendWallSeconds ) );
 #endif
-    // 설명의 백엔드 목록은 쿠킹 표에서 만든다(줄 순서 = 열거값) — 손으로 적은 목록이 WebGPU 를 빠뜨렸다.
+    // 설명의 백엔드 이름 목록은 쿠킹 표에서 만든다 — 손으로 적은 목록이 WebGPU 를 빠뜨렸다.
 #define SW_RHI_BACKEND_WATCH_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) " " #Backend
-    SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on, as the RHIBackend value counted from 0 in this order:" SW_RHI_BACKEND_TABLE( SW_RHI_BACKEND_WATCH_NAME_ROW ),
+    SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "RHIBackend name of the backend the device runs on, one of:" SW_RHI_BACKEND_TABLE( SW_RHI_BACKEND_WATCH_NAME_ROW ),
                          &RHIBackendSwitcherInternal::readCommittedBackend );
 #undef SW_RHI_BACKEND_WATCH_NAME_ROW
     SW_AUTOMATION_WATCH( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",

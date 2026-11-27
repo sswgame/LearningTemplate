@@ -53,10 +53,10 @@
 	<EditorWaitStable/>
 	<EditorClick mark="catalog.validate"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.CatalogValidation" equals="1" timeoutFrames="300"/>
+	<WaitUntil watch="Editor.CatalogValidation" is="Passed" timeoutFrames="300"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Catalog.ValidationPassed" count="1"/>
-	<Expect watch="Editor.CatalogValidation" equals="1"/>
+	<Expect watch="Editor.CatalogValidation" is="Passed"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

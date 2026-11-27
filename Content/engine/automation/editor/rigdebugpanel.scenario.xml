@@ -24,7 +24,7 @@
 	<EditorClick mark="toolbar.play"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="90"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.RigDebugNodeCount" equals="2" timeoutFrames="120"/>
 	<Expect watch="Editor.RigDebugEnabledNodeCount" equals="2"/>
@@ -48,7 +48,7 @@
 	<WaitUntil watch="Editor.RigDebugWeightSum" near="2" tolerance="0.001" timeoutFrames="30"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

@@ -12,7 +12,7 @@
 	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.local.start Config/Server/Online/Playground.json"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
 	<DevCommand line="playground.online.sendmail 250"/>
@@ -77,7 +77,7 @@
 
 	<!-- ⑷ 서버 오류 — 세션을 끊은 뒤 gem_from_gold: ServerError, 사본 잔액은 그대로(되돌리지도 깎지도 않는다) -->
 	<DevCommand line="online.disconnect"/>
-	<Expect watch="Online.SessionState" equals="0"/>
+	<Expect watch="Online.SessionState" is="Disconnected"/>
 	<Tap slot="Gamepad.DPadUp" hold="1"/>
 	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
 	<Tap slot="Gamepad.DPadUp" hold="1"/>

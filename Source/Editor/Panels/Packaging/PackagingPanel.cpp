@@ -114,12 +114,12 @@ namespace sw::editor
                 return pPanel != nullptr ? pPanel->getLiveLineCount() : 0u;
             }
 
-            [[nodiscard]] static bool readPackagingState( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readPackagingState( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
             {
                 const PackagingPanel* pPanel = findPanel();
                 if ( pPanel == nullptr )
                     return false;
-                outValue = static_cast<float64>( pPanel->getState() );
+                outValue.setEnum( pPanel->getState() );
                 return true;
             }
         };
@@ -129,7 +129,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( PackagingPanel, PackagingPanel::kPanelID, EditorPanelCategory::Tool, 2050 );
-    SW_AUTOMATION_WALL_WATCH( editorPackagingState, "Editor.PackagingState", "Packaging window: 0 idle, 1 running, 2 succeeded, 3 failed",
+    SW_AUTOMATION_WALL_WATCH( editorPackagingState, "Editor.PackagingState", "PackagingState name of the Packaging window",
                               &PackagingPanelInternal::readPackagingState, &PackagingPanelInternal::readPackagingActivity );
     SW_AUTOMATION_WALL_WATCH( editorPackagingLiveLineCount, "Editor.PackagingLiveLineCount", "Packaging window: output lines received this run before the packaging finished",
                               &PackagingPanelInternal::readPackagingLiveLineCount, &PackagingPanelInternal::readPackagingActivity );

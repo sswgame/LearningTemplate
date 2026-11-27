@@ -12,7 +12,7 @@
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitStable/>
 	<EditorExpectObject name="GameObject" count="0"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<Expect watch="Editor.PlayState" is="Stopped"/>
 	<!-- 1) 오브젝트 만들기 — 만든 오브젝트가 선택된다 -->
 	<EditorClick mark="hierarchy.create"/>
 	<EditorWaitStable/>
@@ -65,11 +65,11 @@
 	<!-- 6) 에디터 안 플레이 시작 · 정지 — 정지하면 편집 씬이 그대로다 -->
 	<EditorWaitStable/>
 	<DevCommand line="play"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="150"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="150"/>
 	<EditorWaitStable/>
 	<DevCommand line="stop"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<Expect watch="Editor.PlayState" is="Stopped"/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Pass/>

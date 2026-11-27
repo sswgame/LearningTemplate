@@ -81,7 +81,7 @@ namespace sw
         const MonsterStorage&          getStorage() const { return _storage; }
         const MonsterBattle&           getBattle() const { return _battle; }
         MonsterCollectorPhase          getGamePhase() const { return _phase; }
-        int32                          getPhase() const { return static_cast<int32>( _phase ); }
+        MonsterCollectorPhase          getPhase() const { return _phase; }
         /** @brief 지금 나선 개체입니다(걷는 동안은 파티 맨 앞). 판이 열리기 전이면 nullptr 입니다. */
         const MonsterInstance* findLead() const;
         /** @brief 쓰러진 개체 대신 나설 개체를 고르기를 기다리면 true 입니다. */

@@ -8,13 +8,13 @@
 <Scenario name="game.playground.netpair.match_floor_first" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.enter shooter3d_floormatch"/>
-	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Playground.MatchState" is="Playing" timeoutWallSeconds="120"/>
 	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Shooter.RemotePawnCount" equals="1" timeoutWallSeconds="180"/>
 	<!-- 바닥이 지나는 길로 걸어 들어가 서 있으면 바닥이 실어 간다(윗면이 올라설 높이 안이다) -->
@@ -31,7 +31,7 @@
 	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="30"/>
 	<DevCommand line="minigame.quit"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" is="None" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
 	<DevCommand line="online.disconnect"/>
 	<Pass/>

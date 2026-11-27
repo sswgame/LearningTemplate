@@ -81,7 +81,7 @@ namespace sw
         const RestaurantSettings&    getSettings() const { return _settings; }
         const vector<hashed_string>& getIngredients() const { return _listIngredient; }
         RestaurantPhase              getGamePhase() const { return _phase; }
-        int32                        getPhase() const { return static_cast<int32>( _phase ); }
+        RestaurantPhase              getPhase() const { return _phase; }
         /** @brief 오늘이 몇째 날인지입니다(1 부터). */
         int32 getDay() const { return _day; }
         int32 getDayCount() const { return _dayCount; }

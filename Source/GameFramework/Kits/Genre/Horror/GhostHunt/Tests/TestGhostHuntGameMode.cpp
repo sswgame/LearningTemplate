@@ -149,7 +149,7 @@ SW_TEST_CASE( GhostHuntGameModeTest, HunterLightsEveryRoom )
     restoredManager.endPlay();
 
     GhostHuntGameModeBench::hold( manager, *pDirector, tools, 8.0f );
-    SW_EXPECT_EQUAL( static_cast<int32>( GhostHuntResult::Win ), pDirector->getResult() );
+    SW_EXPECT_EQUAL( GhostHuntResult::Win, pDirector->getResult() );
     vector<MinigameResultValue> listValue;
     pDirector->collectMinigameResult( listValue );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() );
@@ -188,7 +188,7 @@ SW_TEST_CASE( GhostHuntGameModeTest, UnlitGhostDefeatsTheHunter )
     manager.beginPlay();
     SW_REQUIRE_TRUE( pDirector->isStarted() );
     GhostHuntGameModeBench::hold( manager, *pDirector, GhostHuntCommand{}, 10.0f );
-    SW_EXPECT_EQUAL( static_cast<int32>( GhostHuntResult::Lose ), pDirector->getResult() );
+    SW_EXPECT_EQUAL( GhostHuntResult::Lose, pDirector->getResult() );
     SW_EXPECT_EQUAL( 0.0f, pDirector->getHealth() );
     manager.endPlay();
 }

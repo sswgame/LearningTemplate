@@ -16,6 +16,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/ScenePlaySnapshot.h"
 
 namespace sw
@@ -53,6 +54,7 @@ namespace sw::editor
         friend struct EditorAutomationPlayReset;
     };
 
+    ENUM()
     enum class PlaySessionState : uint8
     {
         Stopped = 0,

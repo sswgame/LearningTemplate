@@ -115,7 +115,7 @@ namespace sw
         /** @brief 가구 @p furniture 의 지도 자리입니다 — 방의 안쪽 벽(+Z)을 따라 카탈로그 순서로 놓인다. 방이 없으면 원점입니다. */
         float2          computeFurniturePosition( const GhostFurnitureDef& furniture ) const;
         GhostHuntResult getHuntResult() const { return _result; }
-        int32           getResult() const { return static_cast<int32>( _result ); }
+        GhostHuntResult getResult() const { return _result; }
         int32           getRemainingGhosts() const { return _mansion.getEncounter().countRemaining(); }
         int32           getCaughtBoos() const { return _mansion.countCaughtBoos(); }
         /** @brief 유령이 정해진 방(카탈로그의 방) 가운데 불이 켜진 수입니다. */

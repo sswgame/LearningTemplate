@@ -91,8 +91,8 @@ namespace sw
         /** @brief 전투 중(명령 · 타이밍)이면 true 입니다. */
         bool isInBattle() const { return _phase == JRPGGamePhase::Battle || _phase == JRPGGamePhase::Timing; }
         /** @brief 판이 열렸고 자동 플레이가 아니라 플레이어의 명령을 받으면 true 입니다. */
-        bool  isAcceptingInput() const override { return isStarted() && isAutoPlayOn() == false; }
-        int32 getPhase() const { return static_cast<int32>( _phase ); }
+        bool          isAcceptingInput() const override { return isStarted() && isAutoPlayOn() == false; }
+        JRPGGamePhase getPhase() const { return _phase; }
         /** @brief 명령을 기다리는 멤버 번호입니다. 전투 중이 아니면 비어 있습니다. */
         [[nodiscard]] optional<int32> findCommandMember() const;
         /** @brief 명령을 기다리는 멤버 번호입니다(감시 값). 기다리지 않으면 -1 입니다. */

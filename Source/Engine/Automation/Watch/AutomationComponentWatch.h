@@ -1,6 +1,6 @@
 /**
  * @file AutomationComponentWatch.h
- * @brief 씬의 첫 컴포넌트 하나에서 수를 읽는 감시 값입니다(게임 디렉터의 탐침). "첫 컴포넌트 찾기 + 없으면 false + 값 읽기" 감싸기를 매크로 하나로 둡니다.
+ * @brief 씬의 첫 컴포넌트 하나에서 값을 읽는 감시 값입니다(게임 디렉터의 탐침). "첫 컴포넌트 찾기 + 없으면 false + 값 읽기" 감싸기를 매크로 하나로 둡니다.
  * @details 게임마다 `findProbeDirector` 와 그것을 부르는 `read*` 함수 대여섯을 손으로 적었다(다섯 게임). 찾기 규칙(첫 것 · 없으면 값 없음)을 한 곳에 둔다.
  */
 #pragma once
@@ -9,6 +9,8 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+
+#include <type_traits>
 
 namespace sw
 {
@@ -30,38 +32,54 @@ namespace sw
             return pFound;
         }
 
-        /** @brief 첫 @p TComponent 에서 @p TRead 로 읽습니다. 컴포넌트가 없거나 @p TRead 가 false 면 값이 없습니다. */
-        template <typename TComponent, bool ( *TRead )( const TComponent&, float64& )>
-        [[nodiscard]] static bool read( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue )
-        {
-            const TComponent* pComponent = findFirst<TComponent>( key, pManager );
-            return pComponent != nullptr && TRead( *pComponent, outValue );
-        }
-
-        /** @brief 게터 값(수 · bool · 열거)을 감시 값 수로 바꿉니다. */
-        template <typename TValue>
-        static float64 toNumber( const TValue& value )
-        {
-            return static_cast<float64>( value );
-        }
-        /** @brief 개발 전용 칸(`DevCounter`)을 내는 게터는 센 수를 읽습니다. */
-        static float64 toNumber( const DevCounter& counter ) { return static_cast<float64>( counter.get() ); }
-
-        /** @brief 첫 @p TComponent 의 인자 없는 const 게터(수 · bool · 열거 · `DevCounter`) @p TGetter 값입니다. 컴포넌트가 없으면 값이 없습니다. */
-        template <typename TComponent, auto TGetter>
-        [[nodiscard]] static bool readGetter( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue )
+        /** @brief 첫 @p TComponent 에서 @p TRead(`bool( const TComponent&, float64& )`, 열거를 내면 `AutomationWatchValue&`)로 읽습니다. 컴포넌트가 없거나 @p TRead 가 false 면 값이 없습니다. */
+        template <typename TComponent, auto TRead>
+        [[nodiscard]] static bool read( SceneIterationKey key, const GameObjectManager* pManager, AutomationWatchValue& outValue )
         {
             const TComponent* pComponent = findFirst<TComponent>( key, pManager );
             if ( pComponent == nullptr )
                 return false;
-            outValue = toNumber( ( pComponent->*TGetter )() );
+            if constexpr ( std::is_invocable_v<decltype( TRead ), const TComponent&, AutomationWatchValue&> )
+            {
+                return TRead( *pComponent, outValue );
+            }
+            else
+            {
+                float64 number = 0.0;
+                if ( TRead( *pComponent, number ) == false )
+                    return false;
+                outValue.setNumber( number );
+                return true;
+            }
+        }
+
+        /** @brief 게터 값을 감시 값으로 씁니다. 열거는 이름(`setEnum`), 수 · bool 은 수입니다. */
+        template <typename TValue>
+        static void write( const TValue& value, AutomationWatchValue& outValue )
+        {
+            if constexpr ( std::is_enum_v<TValue> )
+                outValue.setEnum( value );
+            else
+                outValue.setNumber( static_cast<float64>( value ) );
+        }
+        /** @brief 개발 전용 칸(`DevCounter`)을 내는 게터는 센 수를 읽습니다. */
+        static void write( const DevCounter& counter, AutomationWatchValue& outValue ) { outValue.setNumber( static_cast<float64>( counter.get() ) ); }
+
+        /** @brief 첫 @p TComponent 의 인자 없는 const 게터(수 · bool · 열거 · `DevCounter`) @p TGetter 값입니다. 컴포넌트가 없으면 값이 없습니다. */
+        template <typename TComponent, auto TGetter>
+        [[nodiscard]] static bool readGetter( SceneIterationKey key, const GameObjectManager* pManager, AutomationWatchValue& outValue )
+        {
+            const TComponent* pComponent = findFirst<TComponent>( key, pManager );
+            if ( pComponent == nullptr )
+                return false;
+            write( ( pComponent->*TGetter )(), outValue );
             return true;
         }
     };
 } // namespace sw
 
 /**
- * @brief 씬의 첫 @p TComponent 에서 수를 읽는 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p pRead 는 `bool ( const TComponent&, float64& )` 입니다.
+ * @brief 씬의 첫 @p TComponent 에서 값을 읽는 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p pRead 는 `bool ( const TComponent&, float64& )` 이고, 열거를 내면 `bool ( const TComponent&, AutomationWatchValue& )` 로 `setEnum` 을 부릅니다.
  * @code
  *     static bool readStrideScale( const ShooterAvatarComponent& avatar, float64& outValue ) { if ( avatar.getStrideAppliedCount() == 0 ) return false; outValue = avatar.getLastStrideScale(); return true; }
  *     SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter.StrideScale", "Stride scale; absent until the rig is bound", ShooterAvatarComponent, &readStrideScale );
@@ -70,7 +88,7 @@ namespace sw
 #define SW_AUTOMATION_COMPONENT_WATCH( id, pName, pTooltip, TComponent, pRead ) SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::read<TComponent, pRead>))
 
 /**
- * @brief 씬의 첫 @p TComponent 의 const 게터 하나를 그대로 읽는 감시 값을 등록합니다. 값을 가공하거나 "값 없음" 을 고르면 `SW_AUTOMATION_COMPONENT_WATCH` 를 씁니다.
+ * @brief 씬의 첫 @p TComponent 의 const 게터 하나를 그대로 읽는 감시 값을 등록합니다. 열거 게터는 열거자 이름을 냅니다(시나리오는 `is="Name"`). 값을 가공하거나 "값 없음" 을 고르면 `SW_AUTOMATION_COMPONENT_WATCH` 를 씁니다.
  * @code
  *     SW_AUTOMATION_GETTER_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponent::getKillCount );
  * @endcode

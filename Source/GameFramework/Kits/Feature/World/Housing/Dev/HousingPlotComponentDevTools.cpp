@@ -296,7 +296,7 @@ namespace sw
                 const HousingPlotComponent* pPlot = findTarget( query, outValue );
                 if ( pPlot == nullptr )
                     return false;
-                outValue.setText( getEnumName( pPlot->getLastResult() ) );
+                outValue.setEnum( pPlot->getLastResult() );
                 return true;
             }
 

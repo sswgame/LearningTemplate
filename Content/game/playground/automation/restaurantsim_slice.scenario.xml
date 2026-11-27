@@ -12,7 +12,7 @@
 	<Launch variable="gv_firstMinigame" value="restaurantsim"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Restaurant.Gold" equals="200" timeoutFrames="120"/>
-	<Expect watch="Restaurant.Phase" equals="0"/>
+	<Expect watch="Restaurant.Phase" is="Prepare"/>
 	<Expect watch="Restaurant.Day" equals="1"/>
 	<!-- 장보기 — 첫 줄 국수, 오른쪽 줄 생선. 가격은 첫 요리를 한 단계 올린다 -->
 	<Action name="Restaurant.Buy"/>
@@ -35,7 +35,7 @@
 	<Expect watch="Restaurant.BestCookLevel" equals="1"/>
 	<!-- 영업 — 첫 손님이 계산한 뒤 저장하고, 조금 더 돌린 뒤 불러온다 -->
 	<Action name="Restaurant.Open"/>
-	<WaitUntil watch="Restaurant.Phase" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Restaurant.Phase" is="Open" timeoutFrames="30"/>
 	<WaitUntil watch="Restaurant.Served" equals="1" timeoutFrames="600"/>
 	<DevCommand line="game.save restaurantsim/slice"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
@@ -43,9 +43,9 @@
 	<DevCommand line="game.load restaurantsim/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
 	<WaitUntil watch="Restaurant.Served" atMost="2" timeoutFrames="30"/>
-	<Expect watch="Restaurant.Phase" equals="1"/>
+	<Expect watch="Restaurant.Phase" is="Open"/>
 	<Expect watch="Restaurant.MenuPrice" equals="44"/>
-	<WaitUntil watch="Restaurant.Phase" equals="2" timeoutFrames="1500"/>
+	<WaitUntil watch="Restaurant.Phase" is="Closed" timeoutFrames="1500"/>
 	<Expect watch="Restaurant.Served" atLeast="5"/>
 	<Expect watch="Restaurant.TotalProfit" atLeast="75"/>
 	<Expect watch="Restaurant.Reputation" atLeast="51"/>
@@ -55,13 +55,13 @@
 	<!-- 다음 날 — 생선이 상하고, 재료 한 줄을 더 사서 연다 -->
 	<Action name="Restaurant.Open"/>
 	<WaitUntil watch="Restaurant.Day" equals="2" timeoutFrames="30"/>
-	<Expect watch="Restaurant.Phase" equals="0"/>
+	<Expect watch="Restaurant.Phase" is="Prepare"/>
 	<Action name="Restaurant.Buy"/>
 	<AdvanceSimulation frames="5"/> <!-- 산 것이 든 뒤에 연다 -->
 	<ExpectLog id="Restaurant.Bought" count="3"/>
 	<Action name="Restaurant.Open"/>
-	<WaitUntil watch="Restaurant.Phase" equals="1" timeoutFrames="30"/>
-	<WaitUntil watch="Restaurant.Phase" equals="3" timeoutFrames="1500"/>
+	<WaitUntil watch="Restaurant.Phase" is="Open" timeoutFrames="30"/>
+	<WaitUntil watch="Restaurant.Phase" is="Victory" timeoutFrames="1500"/>
 	<Expect watch="Restaurant.TotalProfit" atLeast="150"/>
 	<ExpectLog id="Restaurant.Victory" count="1"/>
 	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->

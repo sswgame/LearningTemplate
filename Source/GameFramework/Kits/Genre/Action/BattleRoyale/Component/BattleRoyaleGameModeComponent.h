@@ -38,13 +38,22 @@
 
 namespace sw
 {
-    /** @brief 판의 단계입니다(감시 값 `BattleRoyale.Phase` 의 수). */
+    /** @brief 판의 단계입니다(감시 값 `BattleRoyale.Phase` 가 이름을 읽는다). */
     ENUM()
     enum class BattleRoyalePhase : uint8
     {
         Drop = 0, ///< 비행기에서 내려 땅에 닿기까지(모두 닿으면 전투)
         Battle,   ///< 구역이 좁아지는 전투
         Ended     ///< 판이 끝났거나 플레이어 분대가 전멸했다
+    };
+
+    /** @brief 플레이어가 어디까지 내렸는지입니다(감시 값 `BattleRoyale.PlayerDropStage` 가 이름을 읽는다). */
+    ENUM()
+    enum class BattleRoyaleDropStage : uint8
+    {
+        OnPlane = 0, ///< 아직 비행기에서 내리지 않았다
+        Falling,     ///< 낙하 중이다
+        Landed       ///< 땅에 닿았다
     };
 } // namespace sw
 
@@ -98,13 +107,12 @@ namespace sw
         /** @brief 플레이어가 든 총에 더 넣을 탄(예비탄과 인벤토리)입니다. */
         int32 getPlayerSpareAmmo() const { return _listPerson.empty() ? 0 : countSpareAmmo( kPlayer ); }
         /** @brief 플레이어 분대가 이겼으면 true 입니다(끝난 뒤). */
-        bool              hasWon() const { return _phase == BattleRoyalePhase::Ended && _match.getMatchState().getWinningTeam() == kPlayerSquad; }
-        BattleRoyalePhase getMatchPhase() const { return _phase; }
-        int32             getPhase() const { return static_cast<int32>( _phase ); }
-        int32             getRemaining() const { return _match.countRemainingPlayers(); }
-        float32           getZoneRadius() const { return _match.getZone().getRadius(); }
-        /** @brief 아직 비행기에서 내리지 않았으면 0, 낙하 중이면 1, 땅에 닿았으면 2 입니다. */
-        int32 getPlayerDropStage() const;
+        bool                  hasWon() const { return _phase == BattleRoyalePhase::Ended && _match.getMatchState().getWinningTeam() == kPlayerSquad; }
+        BattleRoyalePhase     getMatchPhase() const { return _phase; }
+        BattleRoyalePhase     getPhase() const { return _phase; }
+        int32                 getRemaining() const { return _match.countRemainingPlayers(); }
+        float32               getZoneRadius() const { return _match.getZone().getRadius(); }
+        BattleRoyaleDropStage getPlayerDropStage() const;
 
     protected:
         [[nodiscard]] bool startGame() override;

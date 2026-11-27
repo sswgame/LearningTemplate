@@ -5,7 +5,7 @@
   서버는 앞 연결이 끝날 때 진행을 저장했고(`Hub.ProfileSaved`), 이 접속에서 그 진행을 읽어 아바타를 세운다 — 레벨 2 · 경험 135 · 동전 10 · 버섯 1 · 처치 2 가 그대로다.
 -->
 <Scenario name="game.playground.netpair.hub_return" fixedDelta="0.0166667" realTime="true" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900">
-	<Expect watch="Hub.NetRole" equals="0"/>
+	<Expect watch="Hub.NetRole" is="Alone"/>
 	<DevCommand line="net.ticketconnect {gv_onlineServerAddress} hub_netpair hub_netpair_pw_1 playground_hub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<Expect watch="Hub.Level" equals="2"/>

@@ -15,13 +15,13 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
-	<Expect watch="Render.FogVolumeState" equals="1"/>
+	<Expect watch="Render.FogVolumeState" is="Disabled"/>
 	<Screenshot file="fog_plain.ppm" stability="Assets"/>
 	<LoadScene path="guid:c8b55a066b522e9826b37e481a3191bc" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="fog_volume.ppm"/>
 	<ExpectImagesDiffer first="fog_plain.ppm" second="fog_volume.ppm" region="0.2,0.3,0.8,0.45" minDiffering="0.2"/>
-	<Expect watch="Render.FogVolumeState" equals="6"/>
+	<Expect watch="Render.FogVolumeState" is="Active"/>
 	<Variable name="gv_fogDebugView" value="Compare"/>
 	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<Screenshot file="fog_compare.ppm"/>

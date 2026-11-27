@@ -8,7 +8,7 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Hub.RulesValid" equals="1" timeoutFrames="30"/> <!-- 규칙 표를 읽었다 -->
-	<Expect watch="Hub.NetRole" equals="0"/>
+	<Expect watch="Hub.NetRole" is="Alone"/>
 	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
 	<DevCommand line="game.save hubserver/slice"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>

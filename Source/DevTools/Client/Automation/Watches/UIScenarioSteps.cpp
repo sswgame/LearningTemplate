@@ -175,7 +175,7 @@ namespace sw
                 const UISystem* pUISystem = findReadyUI( outValue );
                 if ( pUISystem == nullptr )
                     return false;
-                outValue.setNumber( static_cast<float64>( pUISystem->getActionGlyphs().getStyle() ) );
+                outValue.setEnum( pUISystem->getActionGlyphs().getStyle() );
                 return true;
             }
 
@@ -277,7 +277,7 @@ namespace sw
                                &UIScenarioStepsInternal::readFocusedComposition, false, false );
     SW_AUTOMATION_QUERY_WATCH( uiActionGlyph, "UI.ActionGlyph", "Glyph text of the action named by key for the device in use (the [action=] rich text)", &UIScenarioStepsInternal::readActionGlyph,
                                false, true );
-    SW_AUTOMATION_QUERY_WATCH( inputGlyphStyle, "Input.GlyphStyle", "Button glyph device kind: 0 keyboard and mouse, 1 Xbox, 2 PlayStation, 3 Switch (follows the last used device)",
+    SW_AUTOMATION_QUERY_WATCH( inputGlyphStyle, "Input.GlyphStyle", "InputGlyphStyle name of the button glyphs (follows the last used device)",
                                &UIScenarioStepsInternal::readGlyphStyle, false, false );
     SW_AUTOMATION_QUERY_WATCH( uiTextOverflowCount, "UI.TextOverflowCount", "Text widgets on game screens whose desired size is larger than their arranged size",
                                &UIScenarioStepsInternal::readTextOverflowCount, false, false );

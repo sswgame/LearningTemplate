@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/MeleeSweepHistory.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetID.h"
@@ -73,7 +74,7 @@ namespace sw
             }
 
             /** @brief 시나리오가 보는 이 월드의 값입니다(`Editor.NetSimValue`). */
-            bool readValue( string_view key, float64& outValue ) const override
+            bool readValue( string_view key, AutomationWatchValue& outValue ) const override
             {
                 const GameObject*              pPawn    = _pManager->resolveGameObject( _pawnObject );
                 const ShooterPlayerComponent*  pPlayer  = pPawn != nullptr ? pPawn->getComponent<ShooterPlayerComponent>() : nullptr;
@@ -81,27 +82,27 @@ namespace sw
                 if ( pPlayer == nullptr || pNetPawn == nullptr )
                     return false;
                 if ( key == "ShotCount" )
-                    outValue = static_cast<float64>( pPlayer->getShotCount() );
+                    outValue.setNumber( static_cast<float64>( pPlayer->getShotCount() ) );
                 else if ( key == "HitCount" )
-                    outValue = static_cast<float64>( pPlayer->getHitCount() );
+                    outValue.setNumber( static_cast<float64>( pPlayer->getHitCount() ) );
                 else if ( key == "RewoundShots" )
-                    outValue = static_cast<float64>( pNetPawn->getRewoundShotCount() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getRewoundShotCount() ) );
                 else if ( key == "RewoundHits" )
-                    outValue = static_cast<float64>( pNetPawn->getRewoundHitCount() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getRewoundHitCount() ) );
                 else if ( key == "RewindTicks" )
-                    outValue = static_cast<float64>( pNetPawn->getLastRewindTicks() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getLastRewindTicks() ) );
                 else if ( key == "Corrections" )
-                    outValue = static_cast<float64>( pNetPawn->getCorrectionCount() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getCorrectionCount() ) );
                 else if ( key == "ClaimsSent" )
-                    outValue = static_cast<float64>( pNetPawn->getSentClaimCount() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getSentClaimCount() ) );
                 else if ( key == "ClaimsConfirmed" )
-                    outValue = static_cast<float64>( pNetPawn->getConfirmedClaimCount() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getConfirmedClaimCount() ) );
                 else if ( key == "ClaimsRejected" )
-                    outValue = static_cast<float64>( pNetPawn->getRejectedClaimCount() );
+                    outValue.setNumber( static_cast<float64>( pNetPawn->getRejectedClaimCount() ) );
                 else if ( key == "MeleeSweeps" )
-                    outValue = static_cast<float64>( countMeleeSweeps() );
+                    outValue.setNumber( static_cast<float64>( countMeleeSweeps() ) );
                 else if ( key == "EnemyCount" )
-                    outValue = static_cast<float64>( countEnemies( *pPlayer ) );
+                    outValue.setNumber( static_cast<float64>( countEnemies( *pPlayer ) ) );
                 else
                     return false;
                 return true;

@@ -26,6 +26,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -40,6 +41,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -136,7 +138,7 @@ namespace sw
         bool                                     bOk       = true;
         string                                   rule;
         StringBuilder<constant::buffer::kMax256> text;
-        const bool                               bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
+        const bool                               bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "isOneOf" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
         if ( bNumberRule && value._bText )
         {
             text.appendFormat( "%# is text ('%#') - compare it with is=\"…\"", subject, value._text );
@@ -220,6 +222,18 @@ namespace sw
             bOk = valueText == *step.findAttribute( "is" );
             StringBuilder<constant::buffer::kMax256> ruleText;
             ruleText.appendFormat( "is '%#'", *step.findAttribute( "is" ) );
+            rule = string( ruleText.view() );
+        }
+        else if ( const string* pIsOneOf = step.findAttribute( "isOneOf" ); pIsOneOf != nullptr )
+        {
+            // 쉼표로 가른 글 가운데 하나다(앞뒤 공백을 뗀다) — 열거 감시가 여러 상태 중 어디로든 끝날 수 있을 때(준비됨 또는 실패) 번호 크기 비교 대신 쓴다.
+            bOk = false;
+            for ( const string_view choice : StringUtil::split( *pIsOneOf, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+            {
+                bOk = bOk || string_view{ valueText } == choice;
+            }
+            StringBuilder<constant::buffer::kMax256> ruleText;
+            ruleText.appendFormat( "is one of '%#'", *pIsOneOf );
             rule = string( ruleText.view() );
         }
         else
@@ -418,18 +432,19 @@ namespace sw
         // 골든은 백엔드마다 따로다(래스터 · 정밀도 차가 백엔드마다 다르다). 시나리오 안에서 백엔드를 바꿀 수 있어 단언하는 때의 백엔드를 쓴다.
         // 백엔드는 감시 값 `RHI.Backend`(App 의 교체기가 올린다)로 읽는다 — 판정이 RHI 를 직접 알지 않는다. 없으면(RHI 없는 호스트) 이미지 단언을 할 수 없다.
         const AutomationWatchRegistration* pBackendWatch = AutomationWatchRegistry::find( "RHI.Backend" );
-        float64                            backendValue  = -1.0;
+        AutomationWatchValue               backendValue{};
         if ( pBackendWatch == nullptr || pBackendWatch->_pFunction == nullptr || pBackendWatch->_pFunction( nullptr, backendValue ) == false )
         {
             context.recordFailure( step, "the RHI backend is unknown (watch RHI.Backend) - an image assertion needs a rendering host" );
             return;
         }
         // 골든 꼬리는 쿠킹 표의 명령줄 이름이다(`AutomationGoldenUtil::findBackendTag`) — 손으로 적은 표가 WebGPU 를 빠뜨려 그 골든을 뜰 수 없었다.
-        const optional<string_view> backendTag = AutomationGoldenUtil::findBackendTag( static_cast<uint32>( backendValue ) );
+        const optional<RHIBackend>  backend    = tryParseEnum<RHIBackend>( backendValue._text ); // 감시 값은 열거자 이름이다
+        const optional<string_view> backendTag = backend.has_value() ? AutomationGoldenUtil::findBackendTag( static_cast<uint32>( *backend ) ) : nullopt;
         if ( backendTag.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax256> text;
-            text.appendFormat( "the RHI backend %# is not in the cook table - no golden name for it", AutomationStepArgsUtil::formatNumber( backendValue ) );
+            text.appendFormat( "the RHI backend '%#' is not in the cook table - no golden name for it", backendValue._text );
             context.recordFailure( step, text.view() );
             return;
         }

@@ -24,7 +24,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="editor play.start"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
 	<EditorWaitStable/>
@@ -36,7 +36,7 @@
 	<WaitUntil watch="Editor.SelectedProperty" equals="7" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<Expect watch="Editor.SelectedProperty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<!-- 1-1) 플레이 중 여러 오브젝트를 골라도 편집이 막히지 않는다(예전에는 단일 선택만 풀려 있었다). 값은 Stop 이 되돌린다. -->
@@ -47,7 +47,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="editor play.start"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="Editor.PlayState" is="Playing" timeoutFrames="120"/>
 	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
 	<EditorWaitStable/>
@@ -59,7 +59,7 @@
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
 	<EditorWaitStable/>
@@ -85,11 +85,11 @@
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<DevCommand line="editor play.start"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.PlayState" is="Playing"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="135"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="135"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
@@ -110,7 +110,7 @@
 	<DevCommand line="editor play.keepChanges"/>
 	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
-	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<WaitUntil watch="Editor.PlayState" is="Stopped" timeoutFrames="75"/>
 	<Expect watch="Editor.SelectedProperty" equals="7"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<EditorWaitStable/>

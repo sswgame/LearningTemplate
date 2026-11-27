@@ -21,7 +21,7 @@
 namespace sw
 {
     SW_AUTOMATION_GETTER_WATCH( mechArenaEnded, "MechArena.Ended", "1 when the mech arena match is over", MechArenaGameModeComponent, &MechArenaGameModeComponent::getEnded );
-    SW_AUTOMATION_GETTER_WATCH( mechArenaPlayerState, "MechArena.PlayerState", "Player pilot state (0 waiting, 1 active, 2 down, 3 destroyed, 4 retired)", MechArenaGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( mechArenaPlayerState, "MechArena.PlayerState", "MechPilotState name of the player pilot", MechArenaGameModeComponent,
                                 &MechArenaGameModeComponent::getPlayerState );
     SW_AUTOMATION_GETTER_WATCH( mechArenaPlayerAmmo, "MechArena.PlayerAmmo", "Magazine of the player's main weapon", MechArenaGameModeComponent, &MechArenaGameModeComponent::getPlayerAmmo );
     SW_AUTOMATION_GETTER_WATCH( mechArenaEnemyGauge, "MechArena.EnemyGauge", "Cost gauge left for the enemy team", MechArenaGameModeComponent, &MechArenaGameModeComponent::getEnemyGauge );

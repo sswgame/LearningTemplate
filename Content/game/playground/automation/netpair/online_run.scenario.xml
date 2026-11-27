@@ -9,7 +9,7 @@
 <Scenario name="game.playground.netpair.online_run" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.connect"/>
-	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Online.SessionState" isOneOf="Ready,VersionMismatch,HandshakeFailed" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.servicestatus"/>
 	<WaitUntil watch="Log.Count" key="Playground.OnlineServiceStatus" atLeast="1" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.login"/>
@@ -20,7 +20,7 @@
 	<WaitUntil watch="Log.Count" key="Playground.OnlineMailList" atLeast="1" timeoutWallSeconds="30"/>
 	<DevCommand line="minigame.enter shooter3d_match"/>
 	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" is="Playing" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Minigame.Active" is="shooter3d_match" timeoutWallSeconds="60"/>
 	<!-- 서버가 이 접속의 몸을 조종할 사람으로 정했다 — 그 뒤에 나가야 서버가 점수를 낸다 -->
 	<WaitUntil watch="Shooter.ServerHealth" atLeast="1" timeoutWallSeconds="60"/>

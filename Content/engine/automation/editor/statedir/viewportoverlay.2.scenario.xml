@@ -8,7 +8,7 @@
 <Scenario name="editor.viewportoverlay.2" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<EditorWaitStable/>
 	<Variable name="gv_editorWatchOverlay" value="view"/>
-	<Expect watch="Editor.OverlayDock" equals="3"/>
+	<Expect watch="Editor.OverlayDock" is="Left"/>
 	<Expect watch="Editor.OverlayVertical" equals="1"/>
 	<Variable name="gv_editorWatchOverlay" value="transform"/>
 	<EditorWaitStable/>
@@ -22,7 +22,7 @@
 	<Expect watch="Editor.OverlayFlags" equals="1"/>
 	<Variable name="gv_editorWatchOverlay" value="view"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.OverlayDock" equals="1"/>
+	<Expect watch="Editor.OverlayDock" is="Top"/>
 	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

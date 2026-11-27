@@ -9,14 +9,14 @@
 <Scenario name="game.playground.partyarena" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="partyarena"/>
 	<Launch variable="gv_playgroundAutoPlay" value="0"/>
-	<WaitUntil watch="PartyArena.Phase" equals="0" timeoutFrames="120"/>
+	<WaitUntil watch="PartyArena.Phase" is="Round" timeoutFrames="120"/>
 	<Expect watch="PartyArena.PlayerRingOuts" equals="0"/>
 	<Press slot="Key.D"/>
 	<WaitUntil watch="PartyArena.PlayerRingOuts" atLeast="1" timeoutFrames="900"/>
 	<ExpectLog id="PartyArena.RingOut" atLeast="1"/>
-	<WaitUntil watch="PartyArena.Phase" equals="1" timeoutFrames="1800"/>
+	<WaitUntil watch="PartyArena.Phase" is="Intermission" timeoutFrames="1800"/>
 	<Expect watch="PartyArena.PlayerTotal" atLeast="1"/>
-	<WaitUntil watch="PartyArena.Phase" equals="2" timeoutFrames="5400"/>
+	<WaitUntil watch="PartyArena.Phase" is="Finished" timeoutFrames="5400"/>
 	<Release slot="Key.D"/>
 	<ExpectLog id="PartyArena.Finished" count="1"/>
 	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->

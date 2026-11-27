@@ -139,7 +139,7 @@ SW_TEST_CASE( MetroidvaniaGameModeTest, RestPickupAndBossWinTheGame )
     SW_REQUIRE_TRUE( test._pGameMode->submitPlayerInput( attack ) );
     test.run( 3 );
     SW_EXPECT_FALSE( test._pGameMode->isEnemyAlive( 0 ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( MetroidvaniaPhase::Won ), test._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MetroidvaniaPhase::Won, test._pGameMode->getPhase() );
     SW_EXPECT_FALSE( test._pGameMode->isAcceptingInput() );
     vector<MinigameResultValue> listValue;
     static_cast<const GameModeComponent*>( test._pGameMode )->collectMinigameResult( listValue );

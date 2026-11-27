@@ -21,7 +21,8 @@ namespace sw
     class AdventureRegionCatalog;
     struct AdventureRegionDef;
 
-    /** @brief 전투의 단계입니다(감시 값 `Velmora.Phase` 의 수). */
+    /** @brief 전투의 단계입니다(감시 값 `Velmora.Phase` 가 이름을 읽는다). */
+    ENUM()
     enum class VelmoraPhase : uint8
     {
         Explore = 0, ///< 지역 사이를 걷는다(전투 없음)
@@ -60,7 +61,7 @@ namespace sw
         // ---- 읽기(클라이언트 · 감시 값) ----
         const ActionCombatRoom& getRoom() const { return _room; }
         bool                    isFighting() const { return _phase == VelmoraPhase::Hall || _phase == VelmoraPhase::Boss; }
-        int32                   getPhase() const { return static_cast<int32>( _phase ); }
+        VelmoraPhase            getPhase() const { return _phase; }
         int32                   getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
         /** @brief 다음 공격 입력이 먹으면 true 입니다 — 쿨다운이 끝났고 걸음을 기다리는 공격도 없다. */
         bool isAttackReady() const { return _room.isAttackReady() && _bAttackQueued == SW_FALSE; }

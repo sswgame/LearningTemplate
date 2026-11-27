@@ -31,11 +31,11 @@ namespace sw
         _interestGrid._loadingRadius = 96.0f;
     }
 
-    int32 HubSimulationComponent::getNetRoleValue() const
+    HubNetRole HubSimulationComponent::getNetRole() const
     {
         if ( _pServer != nullptr )
-            return 1;
-        return _client.isActive() ? 2 : 0;
+            return HubNetRole::Server;
+        return _client.isActive() ? HubNetRole::Client : HubNetRole::Alone;
     }
 
     void HubSimulationComponent::onBeginPlay()

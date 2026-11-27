@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( cardBattlePhase, "CardBattle.Phase", "Deck battle phase (0 player turn, 1 won, 2 lost)", CardBattleGameModeComponent, &CardBattleGameModeComponent::getPhase );
+    SW_AUTOMATION_GETTER_WATCH( cardBattlePhase, "CardBattle.Phase", "CardBattlePhase name of the deck battle", CardBattleGameModeComponent, &CardBattleGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( cardBattleTurn, "CardBattle.Turn", "Deck battle turn (1 = first)", CardBattleGameModeComponent, &CardBattleGameModeComponent::getTurn );
     SW_AUTOMATION_GETTER_WATCH( cardBattlePlayerHP, "CardBattle.PlayerHP", "Player HP", CardBattleGameModeComponent, &CardBattleGameModeComponent::getPlayerHP );
     SW_AUTOMATION_GETTER_WATCH( cardBattleEnemyHP, "CardBattle.EnemyHP", "Enemy HP", CardBattleGameModeComponent, &CardBattleGameModeComponent::getEnemyHP );

@@ -22,10 +22,10 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( battleRoyalePhase, "BattleRoyale.Phase", "Battle royale phase (0 drop, 1 battle, 2 ended)", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getPhase );
+    SW_AUTOMATION_GETTER_WATCH( battleRoyalePhase, "BattleRoyale.Phase", "BattleRoyalePhase name of the battle royale match", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( battleRoyaleRemaining, "BattleRoyale.Remaining", "People not dead (downed included)", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getRemaining );
     SW_AUTOMATION_GETTER_WATCH( battleRoyaleZoneRadius, "BattleRoyale.ZoneRadius", "Radius of the safe zone (m)", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getZoneRadius );
     SW_AUTOMATION_GETTER_WATCH( battleRoyalePlayerMagazine, "BattleRoyale.PlayerMagazine", "Rounds in the player weapon", BattleRoyaleGameModeComponent, &BattleRoyaleGameModeComponent::getPlayerMagazine );
-    SW_AUTOMATION_GETTER_WATCH( battleRoyalePlayerDropStage, "BattleRoyale.PlayerDropStage", "Player drop stage (0 on the plane, 1 falling, 2 landed)", BattleRoyaleGameModeComponent,
+    SW_AUTOMATION_GETTER_WATCH( battleRoyalePlayerDropStage, "BattleRoyale.PlayerDropStage", "BattleRoyaleDropStage name of the player", BattleRoyaleGameModeComponent,
                                 &BattleRoyaleGameModeComponent::getPlayerDropStage );
 } // namespace sw

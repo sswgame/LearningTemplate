@@ -16,7 +16,7 @@
 	<ExpectLog id="ModSetDigest.SaveModMissing" count="1"/> <!-- 확장 팩 없이 그 판을 부르면 알리고 이어 간다 -->
 	<Expect watch="Adventure.PlayerX" near="0" tolerance="0.05"/>
 	<Expect watch="Adventure.Region" is="hearth"/>
-	<Expect watch="Velmora.Phase" equals="0"/>
+	<Expect watch="Velmora.Phase" is="Explore"/>
 	<Expect watch="Quest.Status" target="ember_oath" is="Active"/>
 	<!-- 다시 걸을 수 있다 — 동쪽으로 1 초 -->
 	<ActionAxis name="Move" x="1" seconds="1"/>

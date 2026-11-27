@@ -8,10 +8,12 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
 {
     /** @brief 미리보기에 보여 줄 채널입니다. 한 채널만 고르면 그 값을 회색으로 보여 줍니다. */
+    ENUM()
     enum class RenderTargetChannel : uint8
     {
         RGBA = 0, ///< 색 그대로 보여 준다. 알파는 무시한다

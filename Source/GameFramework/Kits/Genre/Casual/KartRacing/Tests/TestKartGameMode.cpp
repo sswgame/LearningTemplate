@@ -159,11 +159,11 @@ SW_TEST_CASE_F( KartGameModeTest, AutoPlayedRaceEndsWithPlacesAndReward )
     _manager.beginPlay();
     SW_REQUIRE_TRUE( _pGameMode->isStarted() );
     SW_EXPECT_FALSE( _pGameMode->isAcceptingInput() ); // AI 가 몬다
-    for ( int32 frame = 0; frame < kMaxRaceFrames && _pGameMode->getPhase() != static_cast<int32>( MatchPhase::Ended ); ++frame )
+    for ( int32 frame = 0; frame < kMaxRaceFrames && _pGameMode->getPhase() != MatchPhase::Ended; ++frame )
     {
         advance( 1 );
     }
-    SW_REQUIRE_EQUAL( static_cast<int32>( MatchPhase::Ended ), _pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MatchPhase::Ended, _pGameMode->getPhase() );
     SW_EXPECT_EQUAL( _pGameMode->getRace().getRacerCount(), _pGameMode->getFinishedCount() );
     const int32 place = _pGameMode->getPlayerFinishPlace();
     SW_REQUIRE_TRUE( 1 <= place && place <= 4 );

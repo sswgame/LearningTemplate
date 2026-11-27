@@ -125,16 +125,16 @@ SW_TEST_CASE( MonsterCollectorGameModeTest, WinsAndCapturesLeadToVictory )
     SW_EXPECT_FALSE( fixture._pGameMode->submitBall() );        // 걷는 동안은 전투 명령이 없다
 
     fixture.walkToEncounter();
-    SW_REQUIRE_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterCollectorPhase::Battle, fixture._pGameMode->getPhase() );
     SW_EXPECT_TRUE( fixture._pGameMode->getFoeHP() > 0 );
     SW_EXPECT_FALSE( fixture._pGameMode->submitAttack( 1 ) ); // 빈 슬롯
     SW_REQUIRE_TRUE( fixture._pGameMode->submitAttack( 0 ) );
-    SW_EXPECT_EQUAL( 0, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterCollectorPhase::Explore, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 1024, fixture._pGameMode->getLeaderXP() ); // 56 × 3 / 7 = 24
 
     fixture.walkToEncounter();
     SW_REQUIRE_TRUE( fixture._pGameMode->submitBall() );
-    SW_EXPECT_EQUAL( 0, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterCollectorPhase::Explore, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getCaptureCount() );
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getPartySize() );
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getRemainingBallCount() );
@@ -143,7 +143,7 @@ SW_TEST_CASE( MonsterCollectorGameModeTest, WinsAndCapturesLeadToVictory )
     SW_REQUIRE_TRUE( fixture._pGameMode->submitSwitch( 1 ) ); // 잡은 개체로 바꾼다 — 라운드를 쓴다
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getBattle().getActiveIndex( MonsterBattle::kPlayerSide ) );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitBall() );
-    SW_EXPECT_EQUAL( 2, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterCollectorPhase::Victory, fixture._pGameMode->getPhase() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitMove( float2{ 1.0f, 0.0f } ) );
     fixture._manager.endPlay();
 }
@@ -157,7 +157,7 @@ SW_TEST_CASE( MonsterCollectorGameModeTest, BattleStateSurvivesARoundTrip )
     game::ScopedGameScope scopedScope( source._scope );
     source.beginPlay();
     source.walkToEncounter();
-    SW_REQUIRE_EQUAL( 1, source._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterCollectorPhase::Battle, source._pGameMode->getPhase() );
     Archive state;
     source._pGameMode->writeState( state );
     vector<uint8> bytes( state.getData(), state.getData() + state.getSize() );
@@ -167,9 +167,9 @@ SW_TEST_CASE( MonsterCollectorGameModeTest, BattleStateSurvivesARoundTrip )
     restored.beginPlay();
     vector<uint8> truncated( bytes.begin(), bytes.end() - 4 );
     restored._pGameMode->restoreState( std::move( truncated ) );
-    SW_EXPECT_EQUAL( 0, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterCollectorPhase::Explore, restored._pGameMode->getPhase() );
     restored._pGameMode->restoreState( std::move( bytes ) );
-    SW_REQUIRE_EQUAL( 1, restored._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterCollectorPhase::Battle, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( source._pGameMode->getFoeHP(), restored._pGameMode->getFoeHP() );
     SW_EXPECT_EQUAL( source._pGameMode->getPlayerX(), restored._pGameMode->getPlayerX() );
     SW_REQUIRE_TRUE( restored._pGameMode->submitBall() );

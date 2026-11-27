@@ -17,7 +17,7 @@
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="material"/>
 	<EditorWaitStable/>
-	<Expect watch="Engine.FramePacingState" equals="3"/>
+	<Expect watch="Engine.FramePacingState" is="Automation"/>
 	<!-- 머티리얼 창을 열어 미리보기가 그려지고 틱하게 한다 -->
 	<EditorWaitStable/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
@@ -51,7 +51,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PreviewTickCount" differsFrom="hiddenTicks" timeoutFrames="300"/>
 	<EditorWaitStable/>
-	<Expect watch="Engine.FramePacingState" equals="3"/>
+	<Expect watch="Engine.FramePacingState" is="Automation"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitStable/>

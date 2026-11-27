@@ -12,7 +12,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus packaging"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.PackagingState" equals="0"/>
+	<Expect watch="Editor.PackagingState" is="Idle"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitStable/>
 	<EditorClick mark="packaging.skipBuild" state="Down"/>
@@ -26,11 +26,11 @@
 	<EditorClick mark="packaging.package" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="packaging.package" state="Up"/>
-	<WaitUntil watch="Editor.PackagingState" equals="1" timeoutWallSeconds="10"/>
+	<WaitUntil watch="Editor.PackagingState" is="Running" timeoutWallSeconds="10"/>
 	<EditorWaitStable/>
-	<WaitUntil watch="Editor.PackagingState" equals="2" timeoutWallSeconds="300"/>
+	<WaitUntil watch="Editor.PackagingState" is="Succeeded" timeoutWallSeconds="300"/>
 	<EditorWaitStable/>
-	<Expect watch="Editor.PackagingState" equals="2"/>
+	<Expect watch="Editor.PackagingState" is="Succeeded"/>
 	<!-- 도는 동안 출력이 왔다(감사 E-15) — 끝나기 전에 받은 줄 수로 본다(상태를 본 시점과 무관하다). 예전에는 줄이 끝난 결과로만 와서 0 이다 -->
 	<Expect watch="Editor.PackagingLiveLineCount" atLeast="1"/>
 	<ExpectLog id="Packaging.Done" count="1"/>

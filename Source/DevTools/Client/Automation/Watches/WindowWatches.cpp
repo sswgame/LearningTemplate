@@ -16,12 +16,12 @@ namespace sw
         struct WindowWatchesInternal
         {
             /** @brief 감시 값 `Engine.FramePacingState` — 앱 루프가 이번 프레임에 고른 페이싱 상태 번호입니다. 주 창 서비스가 없으면(헤드리스) 값이 없습니다. */
-            [[nodiscard]] static bool readFramePacingState( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readFramePacingState( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
             {
                 const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
                 if ( pWindowHost == nullptr )
                     return false;
-                outValue = static_cast<float64>( static_cast<uint32>( pWindowHost->getFramePacer().getState() ) );
+                outValue.setEnum( pWindowHost->getFramePacer().getState() );
                 return true;
             }
 
@@ -48,7 +48,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_WATCH( engineFramePacingState, "Engine.FramePacingState",
-                         "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
+                         "FramePacingState name of the app loop pacing this frame (Background follows gv_backgroundFrameRate, FullSpeed gv_framePacing)",
                          &WindowWatchesInternal::readFramePacingState );
     SW_AUTOMATION_WATCH( windowRenderPausedTicks, "Window.RenderPausedTicks", "Main loop ticks that ran no frame because the surface was lost or the app was suspended", &WindowWatchesInternal::readWindowRenderPausedTicks );
     SW_AUTOMATION_WATCH( windowMinimized, "Window.Minimized", "1 while the main window is minimized (as the platform reported it)", &WindowWatchesInternal::readWindowMinimized );

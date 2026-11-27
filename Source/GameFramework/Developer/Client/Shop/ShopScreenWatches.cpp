@@ -11,7 +11,6 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/UISystem.h"
@@ -67,7 +66,10 @@ namespace sw
                 const ShopScreen* pShop = findTopShop( outValue );
                 if ( pShop == nullptr )
                     return false;
-                outValue.setText( pShop->getFinishedCount() == 0 ? "none" : getEnumName( pShop->getLastReceipt()._status ) );
+                if ( pShop->getFinishedCount() == 0 )
+                    outValue.setText( "none" );
+                else
+                    outValue.setEnum( pShop->getLastReceipt()._status );
                 return true;
             }
 

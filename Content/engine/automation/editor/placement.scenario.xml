@@ -37,7 +37,7 @@
 	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
-	<Expect watch="Editor.PlacementSurface" atLeast="1"/>
+	<Expect watch="Editor.PlacementSurface" isOneOf="Collider,Bounds,GroundPlane"/>
 	<!-- 놓기 전 회전: 끄는 동안 Z 는 직각 걸음(_placementRotateStep)만큼, Shift+Z 는 반대로 돈다(모델 테스트 RotateStepsWrapAndMapToTheUpAxis) -->
 	<EditorKey key="Z"/>
 	<WaitUntil watch="Editor.PlacementYaw" equals="90" timeoutFrames="30"/>
@@ -71,7 +71,7 @@
 	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
-	<Expect watch="Editor.PlacementSurface" equals="0"/>
+	<Expect watch="Editor.PlacementSurface" is="None"/>
 	<CaptureEditorUI file="placement/nosurface.png"/>
 	<EditorClick mark="sceneView.canvas" state="Up"/>
 	<WaitUntil watch="Editor.PlacementRefusedCount" equals="1" timeoutFrames="90"/>

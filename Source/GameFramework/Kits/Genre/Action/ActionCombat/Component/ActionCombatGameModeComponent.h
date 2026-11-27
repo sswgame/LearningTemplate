@@ -67,7 +67,7 @@ namespace sw
         bool                    isAcceptingInput() const override;
         const ActionCombatRoom& getRoom() const { return _room; }
         ActionCombatPhase       getCombatPhase() const { return _phase; }
-        int32                   getPhase() const { return static_cast<int32>( _phase ); }
+        ActionCombatPhase       getPhase() const { return _phase; }
         int32                   getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
         int32                   getPlayerHP() const { return _playerHP; }
         int32                   getPlayerMaxHP() const { return _playerMaxHP; }

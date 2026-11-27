@@ -51,7 +51,7 @@
 	<ExpectLog id="SurvivalHorror.PuzzleSolved" contains="gateDial" count="1"/>
 	<!-- 정문으로 나간다 -->
 	<ActionAxis name="Move" x="1" seconds="1"/>
-	<WaitUntil watch="SurvivalHorror.Result" equals="1" timeoutSeconds="3"/>
+	<WaitUntil watch="SurvivalHorror.Result" is="Win" timeoutSeconds="3"/>
 	<ExpectLog id="SurvivalHorror.Ended" contains="got out" count="1"/>
 	<!-- 결과를 보인 뒤 미니게임이 스스로 끝난다 -->
 	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>

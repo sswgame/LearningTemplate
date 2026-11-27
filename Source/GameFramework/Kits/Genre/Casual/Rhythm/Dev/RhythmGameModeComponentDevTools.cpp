@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( rhythmState, "Rhythm.State", "Song state (0 playing, 1 cleared, 2 failed)", RhythmGameModeComponent, &RhythmGameModeComponent::getState );
+    SW_AUTOMATION_GETTER_WATCH( rhythmState, "Rhythm.State", "RhythmPlayState name of the song", RhythmGameModeComponent, &RhythmGameModeComponent::getState );
     SW_AUTOMATION_GETTER_WATCH( rhythmMusicTime, "Rhythm.MusicTime", "Music time the song is judged at (s)", RhythmGameModeComponent, &RhythmGameModeComponent::getMusicTime );
     SW_AUTOMATION_GETTER_WATCH( rhythmJudged, "Rhythm.Judged", "Judgments so far (long notes count twice)", RhythmGameModeComponent, &RhythmGameModeComponent::getJudged );
     SW_AUTOMATION_GETTER_WATCH( rhythmMissed, "Rhythm.Missed", "Missed judgments", RhythmGameModeComponent, &RhythmGameModeComponent::getMissed );

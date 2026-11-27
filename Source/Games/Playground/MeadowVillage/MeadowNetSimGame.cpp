@@ -12,11 +12,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -68,35 +68,27 @@ namespace sw
 
             /**
              * @brief 이 월드의 열린 하우징 부지(월드에 하나) 값입니다. `PlacementCount` · `ViewCount` · `Funds` · `Owned`(이 월드의 플레이어가 주인이면 1) · `PendingRequests` ·
-             *        `LastResult` 는 글 값(`readText`)이다. 열린 부지가 없으면 값이 없다.
+             *        `LastResult`(`HousingPlaceResult` 이름)입니다. 열린 부지가 없으면 값이 없다.
              */
-            bool readValue( string_view key, float64& outValue ) const override
+            bool readValue( string_view key, AutomationWatchValue& outValue ) const override
             {
                 const HousingPlotComponent* pPlot = findPlot();
                 if ( pPlot == nullptr )
                     return false;
                 if ( key == "PlacementCount" )
-                    outValue = static_cast<float64>( pPlot->getLayout().getPlacements().size() );
+                    outValue.setNumber( static_cast<float64>( pPlot->getLayout().getPlacements().size() ) );
                 else if ( key == "ViewCount" )
-                    outValue = static_cast<float64>( pPlot->getViewCount() );
+                    outValue.setNumber( static_cast<float64>( pPlot->getViewCount() ) );
                 else if ( key == "Funds" )
-                    outValue = static_cast<float64>( pPlot->getFunds() );
+                    outValue.setNumber( static_cast<float64>( pPlot->getFunds() ) );
                 else if ( key == "Owned" )
-                    outValue = pPlot->isOwnedLocally() ? 1.0 : 0.0;
+                    outValue.setNumber( pPlot->isOwnedLocally() ? 1.0 : 0.0 );
                 else if ( key == "PendingRequests" )
-                    outValue = static_cast<float64>( pPlot->getPendingRequestCount() );
+                    outValue.setNumber( static_cast<float64>( pPlot->getPendingRequestCount() ) );
+                else if ( key == "LastResult" )
+                    outValue.setEnum( pPlot->getLastResult() );
                 else
                     return false;
-                return true;
-            }
-
-            /** @brief `LastResult`(`HousingPlaceResult` 의 이름)입니다. */
-            bool readText( string_view key, string& outText ) const override
-            {
-                const HousingPlotComponent* pPlot = findPlot();
-                if ( pPlot == nullptr || key != "LastResult" )
-                    return false;
-                outText = getEnumName( pPlot->getLastResult() );
                 return true;
             }
 

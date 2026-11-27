@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( jrpgPhase, "JRPG.Phase", "JRPG phase (0 explore, 1 battle, 2 victory, 3 defeat, 4 timing)", JRPGGameModeComponent, &JRPGGameModeComponent::getPhase );
+    SW_AUTOMATION_GETTER_WATCH( jrpgPhase, "JRPG.Phase", "JRPGGamePhase name of the JRPG game", JRPGGameModeComponent, &JRPGGameModeComponent::getPhase );
     SW_AUTOMATION_GETTER_WATCH( jrpgCommandMember, "JRPG.CommandMember", "Party member whose battle command is awaited (-1 = none)", JRPGGameModeComponent,
                                 &JRPGGameModeComponent::getCommandMember );
     SW_AUTOMATION_GETTER_WATCH( jrpgEnemies, "JRPG.EnemiesAlive", "Living enemies of the current battle (0 outside a battle)", JRPGGameModeComponent, &JRPGGameModeComponent::getEnemiesAlive );

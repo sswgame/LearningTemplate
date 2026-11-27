@@ -170,11 +170,11 @@ SW_TEST_CASE( MonsterHuntGameModeTest, HaggleInvestigateAndHuntToVictory )
     SW_EXPECT_EQUAL( 100, fixture._pGameMode->getReward() );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitRaise() );
     SW_EXPECT_EQUAL( 130, fixture._pGameMode->getReward() );
-    SW_REQUIRE_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterHuntPhase::Investigate, fixture._pGameMode->getPhase() );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitInvestigate() );
     SW_EXPECT_FALSE( fixture._pGameMode->isWeaknessKnown() );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitInvestigate() );
-    SW_REQUIRE_EQUAL( 2, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterHuntPhase::Hunt, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getFoundClueCount() );
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getKnowledge() );
     SW_EXPECT_TRUE( fixture._pGameMode->isWeaknessKnown() );
@@ -191,7 +191,7 @@ SW_TEST_CASE( MonsterHuntGameModeTest, HaggleInvestigateAndHuntToVictory )
     SW_REQUIRE_TRUE( fixture._pGameMode->submitAttack( false ) );
     fixture.update( 2 );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitAttack( false ) );
-    SW_EXPECT_EQUAL( 3, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterHuntPhase::Victory, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 0, fixture._pGameMode->getMonsterHP() );
     SW_EXPECT_EQUAL( 40, fixture._pGameMode->getPlayerHP() ); // 괴물의 첫 공격(2 초) 전이다
     SW_EXPECT_EQUAL( 2, fixture._soundPlayer.countPosted( "MonsterHuntClue" ) );
@@ -219,7 +219,7 @@ SW_TEST_CASE( MonsterHuntGameModeTest, MonsterStrikesUntilTheHunterFallsUnlessDo
     fixture.update( 16 );
     SW_EXPECT_EQUAL( 10, fixture._pGameMode->getPlayerHP() );
     fixture.update( 16 );
-    SW_EXPECT_EQUAL( 4, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterHuntPhase::Defeat, fixture._pGameMode->getPhase() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitAttack( false ) );
     fixture._manager.endPlay();
 }
@@ -245,9 +245,9 @@ SW_TEST_CASE( MonsterHuntGameModeTest, HuntStateSurvivesARoundTrip )
     restored.beginPlay();
     vector<uint8> truncated( bytes.begin(), bytes.end() - 4 );
     restored._pGameMode->restoreState( std::move( truncated ) );
-    SW_EXPECT_EQUAL( 0, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( MonsterHuntPhase::Haggle, restored._pGameMode->getPhase() );
     restored._pGameMode->restoreState( std::move( bytes ) );
-    SW_REQUIRE_EQUAL( 2, restored._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterHuntPhase::Hunt, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 60, restored._pGameMode->getMonsterHP() );
     SW_EXPECT_EQUAL( 5, restored._pGameMode->getOilHits() );
     SW_EXPECT_EQUAL( 130, restored._pGameMode->getReward() );
@@ -287,7 +287,7 @@ SW_TEST_CASE( MonsterHuntGameModeTest, SkillsAndMutagensStrengthenTheHunterAndSu
     SW_REQUIRE_TRUE( restored.initialize( domain ) );
     restored.beginPlay();
     restored._pGameMode->restoreState( vector<uint8>( state.getData(), state.getData() + state.getSize() ) );
-    SW_REQUIRE_EQUAL( 2, restored._pGameMode->getPhase() );
+    SW_REQUIRE_EQUAL( MonsterHuntPhase::Hunt, restored._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 2, restored._pGameMode->getLearnedSkillCount() );
     SW_EXPECT_EQUAL( 30, restored._pGameMode->getSignIntensity() );
     SW_EXPECT_FALSE( restored._pGameMode->submitLearnSkill() );

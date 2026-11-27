@@ -59,7 +59,7 @@ namespace sw::editor
         /** @brief 미리보기 몸의 래그돌이 만든 바디 수입니다. 몸이 없거나 래그돌이 아직 서지 않았으면 false 입니다(감시 값 `Editor.RagdollPreviewBuiltBodies`). */
         [[nodiscard]] bool findBuiltBodyCount( uint32& outCount ) const;
         /** @brief 미리보기 몸의 래그돌 상태(`RagdollState` 의 번호)입니다. 몸이 없으면 false 입니다(감시 값 `Editor.RagdollPreviewState`). */
-        [[nodiscard]] bool findRagdollState( uint32& outState ) const;
+        [[nodiscard]] bool findRagdollState( RagdollState& outState ) const;
 
     protected:
         /** @brief 틱 + 물리 + 플레이, 고정 스텝은 촘촘히(관절 한계를 보려는 창이다). */
@@ -166,13 +166,13 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readRagdollState( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readRagdollState( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
             {
                 const RagdollPreviewPanel* pPanel = findOpenPanel();
-                uint32                     state{ 0 };
+                RagdollState               state{};
                 if ( pPanel == nullptr || pPanel->findRagdollState( state ) == false )
                     return false;
-                outValue = static_cast<float64>( state );
+                outValue.setEnum( state );
                 return true;
             }
 
@@ -199,7 +199,7 @@ namespace sw::editor
                          &RagdollPreviewPanelInternal::readBuiltBodies );
     SW_AUTOMATION_WATCH( editorRagdollShapeHandleCount, "Editor.RagdollShapeHandleCount", "Shape size handles of the body picked in the Ragdoll Preview panel (fails while the panel is closed)",
                          &RagdollPreviewPanelInternal::readShapeHandleCount );
-    SW_AUTOMATION_WATCH( editorRagdollPreviewState, "Editor.RagdollPreviewState", "RagdollState number of the preview body (0 Animated, 1 Ragdoll, 2 Partial, 3 BlendingBack; fails while there is no body)",
+    SW_AUTOMATION_WATCH( editorRagdollPreviewState, "Editor.RagdollPreviewState", "RagdollState name of the preview body (fails while there is no body)",
                          &RagdollPreviewPanelInternal::readRagdollState );
     SW_AUTOMATION_WATCH( editorRagdollPreviewSceneFrames, "Editor.RagdollPreviewSceneFrames", "Frames the Ragdoll Preview panel asked the renderer to draw its preview scene",
                          &RagdollPreviewPanelInternal::readPreviewSceneFrames );
@@ -522,7 +522,7 @@ namespace sw::editor
         return true;
     }
 
-    bool RagdollPreviewPanel::findRagdollState( uint32& outState ) const
+    bool RagdollPreviewPanel::findRagdollState( RagdollState& outState ) const
     {
         RagdollPreviewState state;
         _model.gatherRagdoll( getPreviewScene(), state );

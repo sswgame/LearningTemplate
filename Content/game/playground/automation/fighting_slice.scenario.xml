@@ -15,9 +15,9 @@
 	<Expect watch="Fighting.MatchWinner" equals="-1"/>
 	<Expect watch="Fighting.OpponentHealth" equals="150"/>
 	<!-- 하단 버튼 한 번 = 공격 상태에 든다(중립이 아니면 선입력이 잊힐 수 있어 중립에서 누른다 — 상대는 아직 걸어오는 중이다) -->
-	<WaitUntil watch="Fighting.PlayerState" equals="0" timeoutFrames="300"/>
+	<WaitUntil watch="Fighting.PlayerState" is="Neutral" timeoutFrames="300"/>
 	<Action name="Fighting.Low"/>
-	<WaitUntil watch="Fighting.PlayerState" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="Fighting.PlayerState" is="Attacking" timeoutFrames="30"/>
 	<!-- 자동 플레이로 대전을 끝까지 — 라운드 20 초 · 두 라운드 선승이라 길어도 세 라운드다 -->
 	<Variable name="gv_playgroundAutoPlay" value="1"/>
 	<WaitUntil watch="Fighting.MatchWinner" atLeast="0" timeoutFrames="5400"/>

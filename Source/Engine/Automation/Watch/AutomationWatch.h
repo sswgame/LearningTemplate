@@ -12,26 +12,21 @@
 #include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
+#include "Engine/Reflection/TypeFqn.h"
+
+#include <type_traits>
 
 namespace sw
 {
     class GameObject;
     class GameObjectManager;
 
-    /** @brief 감시 값 함수입니다. 활성 씬의 오브젝트 매니저(없으면 nullptr)를 받아 값을 씁니다. 값을 낼 수 없으면(대상 없음) false 입니다. 게임 스레드에서 부릅니다. */
-    using AutomationWatchFunction = bool ( * )( const GameObjectManager* pManager, float64& outValue );
-    /** @brief 씬을 도는 감시 값 함수입니다(`SW_AUTOMATION_SCENE_WATCH`). 레지스트리가 순회 열쇠를 넘긴다 — 틱 코드는 열쇠가 없다(`SceneIterationKey`). */
-    using AutomationSceneWatchFunction = bool ( * )( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue );
-    /**
-     * @brief 벽시계 감시 값의 활동 수 함수입니다(`SW_AUTOMATION_WALL_WATCH`). 따르는 바깥 일이 나아가면 바뀌는 수(읽은 바이트 · 남은 일 수 · 받은 출력 줄 수)를 냅니다.
-     * @details `<WaitUntil timeoutWallSeconds>` 는 이 수가 `ScenarioRun.json` 의 `_stallWallSeconds` 동안 그대로면 `WaitStalled` 로 진다. 게임 스레드에서 프레임마다 부른다 — 비싼 훑기를 하지 않는다.
-     */
-    using AutomationWatchActivityFunction = uint64 ( * )( const GameObjectManager* pManager );
-
     /**
      * @struct AutomationWatchValue
-     * @brief 질의 감시 값이 내는 값 하나입니다. 수(`near` · `atLeast` 등으로 비교)나 글(`is` 로 비교 — AI 상태 · 일정 활동 이름)입니다.
+     * @brief 감시 값이 내는 값 하나입니다. 수(`near` · `atLeast` 등으로 비교)나 글(`is` 로 비교 — AI 상태 · 일정 활동 이름)입니다.
      * @details 수 값도 `is` 로 비교할 수 있다(실행기가 끝의 0 을 정리한 글로 바꿔 비교한다). 글 값은 수 비교를 할 수 없다.
+     *          열거는 `setEnum` 으로 열거자 이름(`ENUM()`)만 낸다. 번호를 내면 열거자가 끼거나 빠질 때 시나리오의 `equals="N"` 이 조용히 다른 값을 기다린다
+     *          (언리얼 Automation 도 열거를 `UEnum::GetNameStringByValue` 글로 견준다). 그래서 열거를 `setNumber` 에 넘기는 호출은 컴파일되지 않는다.
      */
     struct AutomationWatchValue
     {
@@ -44,12 +39,72 @@ namespace sw
             _number = number;
             _bText  = false;
         }
+        template <typename E, std::enable_if_t<std::is_enum_v<E>, int> = 0>
+        void setNumber( E ) = delete; // 열거는 setEnum — 번호는 열거자가 끼면 밀린다
         void setText( string_view text )
         {
             _text  = string( text );
             _bText = true;
         }
+        /** @brief 열거자 @p value 의 이름(`ENUM()`)을 글로 냅니다. `ENUM()` 이 없거나 범위 밖이면 그 사실을 적은 글이라 `is` 비교가 진다. */
+        template <typename E>
+        void setEnum( E value )
+        {
+            static_assert( std::is_enum_v<E>, "setEnum takes an ENUM() enum" );
+            setEnumValue( typeFqn<E>(), static_cast<int64>( value ) );
+        }
+
+        /**
+         * @brief 등록 매크로가 감시 함수를 이 값을 쓰는 꼴로 맞춥니다. 수만 내는 함수는 `float64&` 로 적어도 된다(대부분의 감시 값).
+         * @details 열거를 내는 함수는 `AutomationWatchValue&` 를 받아 `setEnum` 을 부른다. 등록 항목의 함수 꼴은 하나라 레지스트리 · 실행기가 수 · 글을 가르지 않는다.
+         */
+        template <auto TFunction>
+        [[nodiscard]] static bool readManagerWatch( const GameObjectManager* pManager, AutomationWatchValue& outValue )
+        {
+            if constexpr ( std::is_invocable_v<decltype( TFunction ), const GameObjectManager*, AutomationWatchValue&> )
+            {
+                return TFunction( pManager, outValue );
+            }
+            else
+            {
+                float64 number = 0.0;
+                if ( TFunction( pManager, number ) == false )
+                    return false;
+                outValue.setNumber( number );
+                return true;
+            }
+        }
+
+        template <auto TFunction>
+        [[nodiscard]] static bool readSceneWatch( SceneIterationKey key, const GameObjectManager* pManager, AutomationWatchValue& outValue )
+        {
+            if constexpr ( std::is_invocable_v<decltype( TFunction ), SceneIterationKey, const GameObjectManager*, AutomationWatchValue&> )
+            {
+                return TFunction( key, pManager, outValue );
+            }
+            else
+            {
+                float64 number = 0.0;
+                if ( TFunction( key, pManager, number ) == false )
+                    return false;
+                outValue.setNumber( number );
+                return true;
+            }
+        }
+
+    private:
+        SW_API void setEnumValue( const hashed_string& enumTypeFqn, int64 value );
     };
+
+    /** @brief 감시 값 함수입니다. 활성 씬의 오브젝트 매니저(없으면 nullptr)를 받아 값을 씁니다. 값을 낼 수 없으면(대상 없음) false 입니다. 게임 스레드에서 부릅니다. */
+    using AutomationWatchFunction = bool ( * )( const GameObjectManager* pManager, AutomationWatchValue& outValue );
+    /** @brief 씬을 도는 감시 값 함수입니다(`SW_AUTOMATION_SCENE_WATCH`). 레지스트리가 순회 열쇠를 넘긴다 — 틱 코드는 열쇠가 없다(`SceneIterationKey`). */
+    using AutomationSceneWatchFunction = bool ( * )( SceneIterationKey key, const GameObjectManager* pManager, AutomationWatchValue& outValue );
+    /**
+     * @brief 벽시계 감시 값의 활동 수 함수입니다(`SW_AUTOMATION_WALL_WATCH`). 따르는 바깥 일이 나아가면 바뀌는 수(읽은 바이트 · 남은 일 수 · 받은 출력 줄 수)를 냅니다.
+     * @details `<WaitUntil timeoutWallSeconds>` 는 이 수가 `ScenarioRun.json` 의 `_stallWallSeconds` 동안 그대로면 `WaitStalled` 로 진다. 게임 스레드에서 프레임마다 부른다 — 비싼 훑기를 하지 않는다.
+     */
+    using AutomationWatchActivityFunction = uint64 ( * )( const GameObjectManager* pManager );
 } // namespace sw
 
 namespace sw
@@ -212,7 +267,7 @@ namespace sw
      */
     #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) \
         SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_WATCH" );  \
-        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false, nullptr )
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, (&::sw::AutomationWatchValue::readManagerWatch<pFunction>), nullptr, false, false, false, nullptr )
 
     /**
      * @brief 씬 전체를 도는 감시 값을 등록합니다. @p pSceneFunction 은 `bool( SceneIterationKey, const GameObjectManager*, float64& )` 입니다 — 레지스트리가 순회 열쇠를 넘긴다.
@@ -220,7 +275,7 @@ namespace sw
      */
     #define SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, pSceneFunction ) \
         SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_SCENE_WATCH" );       \
-        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, nullptr, false, false, false, pSceneFunction )
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, nullptr, false, false, false, (&::sw::AutomationWatchValue::readSceneWatch<pSceneFunction>))
 
     /**
      * @brief 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시 · 워커 비동기 로드 · GPU 회수)을 따라 바뀌는 감시 값을 등록합니다. 인자는 `SW_AUTOMATION_WATCH` 와 같습니다.
@@ -231,7 +286,7 @@ namespace sw
      */
     #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity ) \
         SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_WALL_WATCH" );             \
-        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true, nullptr, pActivity )
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, (&::sw::AutomationWatchValue::readManagerWatch<pFunction>), nullptr, false, false, true, nullptr, pActivity )
 
     /**
      * @brief 질의 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계의 `target`(오브젝트 이름 · NPC id) · `key`(블랙보드 키 · 장소 id)를 받고 수나 글을 냅니다.

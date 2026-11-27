@@ -136,6 +136,8 @@ namespace sw
         float32 _tolerance{ 0.0f };
         PROPERTY()
         string _is{};
+        PROPERTY( Tooltip = "Comma-separated texts; the value must be one of them - an enum watch that may settle on any of several enumerators" )
+        string _isOneOf{};
         PROPERTY()
         string _sameAs{};
         PROPERTY()

@@ -138,7 +138,7 @@ SW_TEST_CASE_F( CardBattleGameModeTest, AutoPlayedBattleIsWonWithTheReward )
     SW_REQUIRE_TRUE( _pGameMode->isStarted() );
     SW_EXPECT_FALSE( _pGameMode->playCard( 0 ) ); // 사람이 하지 않는다
     advance( 60 * 2 );                            // 여섯 수(세 장 · 턴 끝 · 두 장)와 결과 0.5 초를 넘긴다
-    SW_EXPECT_EQUAL( static_cast<int32>( CardBattlePhase::Won ), _pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( CardBattlePhase::Won, _pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 2, _pGameMode->getTurn() );
     SW_EXPECT_EQUAL( 45, _pGameMode->getPlayerHP() );
     vector<MinigameResultValue> listValue;

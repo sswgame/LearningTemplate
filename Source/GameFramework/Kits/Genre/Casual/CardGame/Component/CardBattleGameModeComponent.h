@@ -53,7 +53,7 @@ namespace sw
         bool isPlayable( int32 handIndex ) const;
         /** @brief 상대가 이번 턴 끝에 할 일입니다. 할 일이 없으면 nullptr 입니다. */
         const CardBattleEffect* findEnemyIntent() const;
-        int32                   getPhase() const { return static_cast<int32>( _battle.getPhase() ); }
+        CardBattlePhase         getPhase() const { return _battle.getPhase(); }
         int32                   getTurn() const { return _battle.getTurn(); }
         int32                   getPlayerHP() const { return _battle.getPlayerHP(); }
         int32                   getEnemyHP() const { return _battle.getEnemy()._hp; }

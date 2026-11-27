@@ -18,7 +18,7 @@ namespace sw::editor
     namespace
     {
         /** @brief 렌더 타깃 창 값 하나를 읽습니다. 열려 있지 않으면 값을 내지 않으며, 픽셀 값은 읽은 적이 없으면 내지 않습니다. */
-        [[nodiscard]] bool readRenderTargetPanelValue( uint32 which, float64& outValue )
+        [[nodiscard]] bool readRenderTargetPanelValue( uint32 which, AutomationWatchValue& outValue )
         {
             const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
             const RenderTargetPanel*  pPanel  = pPanels != nullptr ? pPanels->findPanel<RenderTargetPanel>() : nullptr;
@@ -28,41 +28,41 @@ namespace sw::editor
             {
                 case 0:
                 {
-                    outValue = pPanel->hasSnapshot() ? 1.0 : 0.0;
+                    outValue.setNumber( pPanel->hasSnapshot() ? 1.0 : 0.0 );
                     break;
                 }
                 case 1:
                 {
-                    outValue = pPanel->isSelectedDepth() ? 1.0 : 0.0;
+                    outValue.setNumber( pPanel->isSelectedDepth() ? 1.0 : 0.0 );
                     break;
                 }
                 case 2:
                 {
-                    outValue = static_cast<float64>( pPanel->getChannel() );
+                    outValue.setEnum( pPanel->getChannel() );
                     break;
                 }
                 case 3:
                 {
-                    outValue = pPanel->isDepthLinearized() ? 1.0 : 0.0;
+                    outValue.setNumber( pPanel->isDepthLinearized() ? 1.0 : 0.0 );
                     break;
                 }
                 case 5:
                 {
-                    outValue = static_cast<float64>( pPanel->getSelectedPassUseCount() );
+                    outValue.setNumber( static_cast<float64>( pPanel->getSelectedPassUseCount() ) );
                     break;
                 }
                 default:
                 {
                     if ( pPanel->hasProbedPixel() == false )
                         return false;
-                    outValue = static_cast<float64>( pPanel->getProbedPixel()._x );
+                    outValue.setNumber( static_cast<float64>( pPanel->getProbedPixel()._x ) );
                     break;
                 }
             }
             return true;
         }
 
-        [[nodiscard]] bool readRenderTargetSnapshotReady( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderTargetSnapshotReady( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderTargetPanelValue( 0, outValue );
         }
@@ -73,27 +73,27 @@ namespace sw::editor
             return RenderPresentCounter::read();
         }
 
-        [[nodiscard]] bool readRenderTargetSelectedDepth( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderTargetSelectedDepth( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderTargetPanelValue( 1, outValue );
         }
 
-        [[nodiscard]] bool readRenderTargetChannel( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderTargetChannel( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderTargetPanelValue( 2, outValue );
         }
 
-        [[nodiscard]] bool readRenderTargetLinearized( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderTargetLinearized( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderTargetPanelValue( 3, outValue );
         }
 
-        [[nodiscard]] bool readRenderTargetPixelRed( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderTargetPixelRed( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderTargetPanelValue( 4, outValue );
         }
 
-        [[nodiscard]] bool readRenderTargetPassUses( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readRenderTargetPassUses( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readRenderTargetPanelValue( 5, outValue );
         }
@@ -103,7 +103,7 @@ namespace sw::editor
                               &readRenderTargetSnapshotReady, &readRenderTargetActivity );
     SW_AUTOMATION_WATCH( editorRenderTargetSelectedDepth, "Editor.RenderTargetSelectedDepth", "1 when the Render Targets panel shows a depth attachment",
                          &readRenderTargetSelectedDepth );
-    SW_AUTOMATION_WATCH( editorRenderTargetChannel, "Editor.RenderTargetChannel", "Channel the Render Targets panel shows: 0 RGBA, 1 R, 2 G, 3 B, 4 A",
+    SW_AUTOMATION_WATCH( editorRenderTargetChannel, "Editor.RenderTargetChannel", "RenderTargetChannel name of the channel the Render Targets panel shows",
                          &readRenderTargetChannel );
     SW_AUTOMATION_WATCH( editorRenderTargetLinearized, "Editor.RenderTargetLinearized", "1 when the Render Targets panel linearizes depth",
                          &readRenderTargetLinearized );

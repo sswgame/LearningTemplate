@@ -12,20 +12,20 @@
 -->
 <Scenario name="game.playground.kitdemo_respawn" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="kitdemo_respawn"/>
-	<WaitUntil watch="ActionPlatformer.State" equals="1" timeoutFrames="120"/>
+	<WaitUntil watch="ActionPlatformer.State" is="Playing" timeoutFrames="120"/>
 	<DevCommand line="gpu.timings on"/> <!-- 프레임 프로파일러를 켠다 — GameMode.StepMs · Save.CaptureMs 는 프로파일러 구간을 읽는다 -->
 	<WaitUntil watch="ActionPlatformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
 	<Expect watch="ActionPlatformer.Respawns" equals="0"/>
-	<Expect watch="ActionPlatformer.RespawnPhase" equals="0"/>
+	<Expect watch="ActionPlatformer.RespawnPhase" is="Alive"/>
 
 	<!-- 1) 땅 위에서 죽는다 — 0.5 초 대기 뒤 그 자리 -->
 	<Press slot="Key.D"/>
 	<WaitUntil watch="ActionPlatformer.PlayerX" atLeast="5" timeoutFrames="120"/>
 	<Release slot="Key.D"/>
 	<DevCommand line="actionplatformer.kill"/>
-	<WaitUntil watch="ActionPlatformer.RespawnPhase" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="ActionPlatformer.RespawnPhase" is="Waiting" timeoutFrames="10"/>
 	<WaitUntil watch="ActionPlatformer.Respawns" equals="1" timeoutSeconds="2"/>
-	<Expect watch="ActionPlatformer.LastRespawnPolicy" equals="1"/>
+	<Expect watch="ActionPlatformer.LastRespawnPolicy" is="InPlace"/>
 	<Expect watch="ActionPlatformer.LastRespawnShift" near="0" tolerance="0.01"/>
 	<Expect watch="ActionPlatformer.PlayerY" near="1.45" tolerance="0.05"/>
 	<Expect watch="ActionPlatformer.InPlaceUses" equals="1"/>
@@ -35,7 +35,7 @@
 	<WaitUntil watch="ActionPlatformer.PlayerY" atMost="0" timeoutFrames="180"/>
 	<Release slot="Key.D"/>
 	<WaitUntil watch="ActionPlatformer.Respawns" equals="2" timeoutSeconds="4"/>
-	<Expect watch="ActionPlatformer.LastRespawnPolicy" equals="1"/>
+	<Expect watch="ActionPlatformer.LastRespawnPolicy" is="InPlace"/>
 	<Expect watch="ActionPlatformer.LastRespawnShift" atLeast="1"/>
 	<Expect watch="ActionPlatformer.InPlaceUses" equals="2"/>
 	<WaitUntil watch="ActionPlatformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="10"/>
@@ -49,7 +49,7 @@
 	<WaitUntil watch="ActionPlatformer.PlayerY" atMost="0" timeoutFrames="240"/>
 	<Release slot="Key.D"/>
 	<WaitUntil watch="ActionPlatformer.Respawns" equals="3" timeoutSeconds="4"/>
-	<Expect watch="ActionPlatformer.LastRespawnPolicy" equals="0"/>
+	<Expect watch="ActionPlatformer.LastRespawnPolicy" is="LastCheckpoint"/>
 	<Expect watch="ActionPlatformer.PlayerX" near="15" tolerance="0.05"/>
 	<Expect watch="ActionPlatformer.InPlaceUses" equals="2"/>
 	<WaitUntil watch="ActionPlatformer.PlayerY" near="1.45" tolerance="0.05" timeoutFrames="60"/>
@@ -74,16 +74,16 @@
 	<WaitUntil watch="ActionPlatformer.Respawns" equals="3" timeoutFrames="10"/>
 	<Expect watch="ActionPlatformer.Checkpoint" equals="0"/>
 	<Expect watch="ActionPlatformer.InPlaceUses" equals="2"/>
-	<Expect watch="ActionPlatformer.RespawnPhase" equals="0"/>
+	<Expect watch="ActionPlatformer.RespawnPhase" is="Alive"/>
 	<Expect watch="ActionPlatformer.PlayerX" near="15" tolerance="0.05"/>
 	<!-- 불러온 체크포인트가 부활 지점이다 -->
 	<Press slot="Key.D"/>
 	<WaitUntil watch="ActionPlatformer.PlayerY" atMost="0" timeoutFrames="240"/>
 	<Release slot="Key.D"/>
 	<WaitUntil watch="ActionPlatformer.Respawns" equals="4" timeoutSeconds="4"/>
-	<Expect watch="ActionPlatformer.LastRespawnPolicy" equals="0"/>
+	<Expect watch="ActionPlatformer.LastRespawnPolicy" is="LastCheckpoint"/>
 	<Expect watch="ActionPlatformer.PlayerX" near="15" tolerance="0.05"/>
-	<Expect watch="ActionPlatformer.State" equals="1"/>
+	<Expect watch="ActionPlatformer.State" is="Playing"/>
 	<ExpectLog id="ActionPlatformer.Checkpoint" count="1"/>
 	<ExpectLog id="ActionPlatformer.Died" count="5"/>
 	<ExpectLog id="ActionPlatformer.Respawned" count="5"/>

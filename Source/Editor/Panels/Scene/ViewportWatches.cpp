@@ -22,6 +22,7 @@
 #include "Editor/Viewport/Model/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Graphics/View/RenderViewMode.h"
 
 #include <imgui.h>
 
@@ -74,13 +75,13 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 마지막 고스트 · 놓기가 찾은 표면입니다(`EditorPlacementSurface` 번호). */
-        [[nodiscard]] bool readPlacementSurface( const GameObjectManager* /*pManager*/, float64& outValue )
+        /** @brief 마지막 고스트 · 놓기가 찾은 표면입니다(`EditorPlacementSurface` 이름). */
+        [[nodiscard]] bool readPlacementSurface( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             const EditorPlacementStats* pStats = findPlacementStats();
             if ( pStats == nullptr )
                 return false;
-            outValue = static_cast<float64>( pStats->_surface );
+            outValue.setEnum( pStats->_surface );
             return true;
         }
 
@@ -351,13 +352,13 @@ namespace sw::editor
         }
 
         /** @brief 바가 붙은 쪽입니다. 0 은 떠 있음, 1 은 위, 2 는 아래, 3 은 왼쪽, 4 는 오른쪽입니다. */
-        [[nodiscard]] bool readOverlayDock( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readOverlayDock( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             EditorOverlayBarState          state{};
             const EditorOverlayBarRuntime* pRuntime = nullptr;
             if ( findWatchedOverlay( state, pRuntime ) == false )
                 return false;
-            outValue = static_cast<float64>( state._dock );
+            outValue.setEnum( state._dock );
             return true;
         }
 
@@ -414,23 +415,23 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 씬 뷰(툴바)나 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 읽습니다. 렌더러가 없으면 false 입니다. */
-        [[nodiscard]] bool readViewMode( bool bSceneView, float64& outValue )
+        /** @brief 씬 뷰(툴바)나 주 출력(게임 뷰)의 보기 모드(`RenderViewMode` 이름)를 읽습니다. 렌더러가 없으면 false 입니다. */
+        [[nodiscard]] bool readViewMode( bool bSceneView, AutomationWatchValue& outValue )
         {
-            uint32     mode   = 0;
-            const bool bFound = bSceneView ? SceneViewModel::findViewMode( mode ) : GameViewModel::findViewMode( mode );
+            RenderViewMode mode   = RenderViewMode::Lit;
+            const bool     bFound = bSceneView ? SceneViewModel::findViewMode( mode ) : GameViewModel::findViewMode( mode );
             if ( bFound == false )
                 return false;
-            outValue = static_cast<float64>( mode );
+            outValue.setEnum( mode );
             return true;
         }
 
-        [[nodiscard]] bool readSceneViewMode( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readSceneViewMode( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readViewMode( true, outValue );
         }
 
-        [[nodiscard]] bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readGameViewMode( const GameObjectManager* /*pManager*/, AutomationWatchValue& outValue )
         {
             return readViewMode( false, outValue );
         }
@@ -478,7 +479,7 @@ namespace sw::editor
                          &readHoveredObject );
     SW_AUTOMATION_WATCH( editorSelectionOutlineBoxes, "Editor.SelectionOutlineBoxes", "Selection boxes the scene view drew in the last frame",
                          &readSelectionOutlineBoxes );
-    SW_AUTOMATION_WATCH( editorOverlayDock, "Editor.OverlayDock", "Docked side of the scene view overlay bar gv_editorWatchOverlay: 0 free, 1 top, 2 bottom, 3 left, 4 right",
+    SW_AUTOMATION_WATCH( editorOverlayDock, "Editor.OverlayDock", "EditorOverlayDock name of the docked side of the scene view overlay bar gv_editorWatchOverlay",
                          &readOverlayDock );
     SW_AUTOMATION_WATCH( editorOverlayX, "Editor.OverlayX", "Left of the overlay bar gv_editorWatchOverlay, pixels from the scene view's left", &readOverlayX );
     SW_AUTOMATION_WATCH( editorOverlayY, "Editor.OverlayY", "Top of the overlay bar gv_editorWatchOverlay, pixels from the scene view's top", &readOverlayY );
@@ -487,14 +488,14 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorOverlayFlags, "Editor.OverlayFlags", "Overlay bar gv_editorWatchOverlay: 1 when visible, plus 10 when collapsed",
                          &readOverlayFlags );
     SW_AUTOMATION_WATCH( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &readGizmoOperation );
-    SW_AUTOMATION_WATCH( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity, 11 ShadedWireframe, 12 LODLevel, 13 LODFadeCode, 14 MarkerSlots",
+    SW_AUTOMATION_WATCH( editorSceneViewMode, "Editor.SceneViewMode", "RenderViewMode name of the scene view",
                          &readSceneViewMode );
-    SW_AUTOMATION_WATCH( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
+    SW_AUTOMATION_WATCH( editorGameViewMode, "Editor.GameViewMode", "RenderViewMode name of the main output (game view) - stays Lit while the scene view changes",
                          &readGameViewMode );
     SW_AUTOMATION_WATCH( editorPlacementGhostShown, "Editor.PlacementGhostShown", "1 while an asset dragged over the scene view draws its placement ghost",
                          &readPlacementGhostShown );
     SW_AUTOMATION_WATCH( editorPlacementSurface, "Editor.PlacementSurface",
-                         "Surface the last placement ghost or drop found: 0 none (nothing is placed), 1 collider, 2 object bounds, 3 ground plane", &readPlacementSurface );
+                         "EditorPlacementSurface name of the surface the last placement ghost or drop found (None: nothing is placed)", &readPlacementSurface );
     SW_AUTOMATION_WATCH( editorPlacedCount, "Editor.PlacedCount", "Assets the scene view placed on a surface this session", &readPlacedCount );
     SW_AUTOMATION_WATCH( editorPlacementRefusedCount, "Editor.PlacementRefusedCount", "Asset drops the scene view refused because no surface was under the cursor",
                          &readPlacementRefusedCount );

@@ -27,6 +27,7 @@ namespace sw
 
     class IPhysicsDebugRenderer;
     class RagdollComponent;
+    enum class RagdollState : uint8;
     class Scene;
 } // namespace sw
 
@@ -61,7 +62,7 @@ namespace sw::editor
     {
         vector<RagdollPreviewBuiltBody> _listBuiltBody;
         const utf8*                     _pStateName{ "" }; ///< 래그돌 상태 이름(정적 글)
-        uint32                          _state{ 0 };       ///< 래그돌 상태 값(감시 값)
+        RagdollState                    _state{};          ///< 래그돌 상태(감시 값)
         uint8                           _bHasRagdoll{ SW_FALSE };
         uint8                           _bAsleep{ SW_FALSE };
     };

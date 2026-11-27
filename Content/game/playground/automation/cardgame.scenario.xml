@@ -32,7 +32,7 @@
 	<Action name="Card.Confirm"/>
 	<WaitUntil watch="CardBattle.EnemyHP" equals="6" timeoutFrames="30"/>
 	<Action name="Card.Confirm"/>
-	<WaitUntil watch="CardBattle.Phase" equals="1" timeoutFrames="30"/>
+	<WaitUntil watch="CardBattle.Phase" is="Won" timeoutFrames="30"/>
 	<ExpectLog id="CardBattle.Finished" count="1"/>
 	<!-- 결과를 보인 뒤 스스로 끝난다 — 돌아올 자리가 없으면 입구 씬(마을)으로 간다 -->
 	<WaitUntil watch="Minigame.Active" is="none" timeoutFrames="600"/>

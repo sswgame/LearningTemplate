@@ -21,6 +21,7 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -56,6 +57,7 @@ namespace sw
     };
 
     /** @enum PairedAnimationSessionState @brief 세션의 상태입니다. */
+    ENUM()
     enum class PairedAnimationSessionState : uint8
     {
         Idle = 0, ///< 아직 시작하지 않았거나 시작이 거절됐다
