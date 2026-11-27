@@ -23,8 +23,6 @@ namespace sw
 {
     class Texture2D;
 
-    struct AssetComposeContext;
-
     /**
      * @struct SpriteClipFrame
      * @brief 클립의 프레임 하나입니다. 아틀라스 안의 UV 사각형과 보여 줄 시간을 담습니다.
@@ -211,10 +209,8 @@ namespace sw
     private:
         /** @brief 읽은 값의 의미를 고칩니다(음수 크기 · 테두리는 오류, 프레임 밖 구간은 자르고 알림). 어긋나 읽을 수 없으면 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
-        /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromAsset` · `loadFromDiskFile`)의 공통 단계입니다. */
-        [[nodiscard]] bool loadFromXMLText( const string& text, string_view sourceLabel );
-        /** @brief 합친 글을 클립으로 옮깁니다(`ConfigManager::readComposedXMLDocument`). 에셋 id 로 읽으면(`loadFromFile`) @p context 에 `withAsset` 이 실린다. */
-        [[nodiscard]] bool loadComposed( string_view text, string_view sourceLabel, const AssetComposeContext& context );
+        /** @brief 읽었으면(@p bRead) 값의 의미를 고칩니다. 어느 쪽이든 틀리면 비우고 false 입니다(세 입구 — 에셋 id · 디스크 파일 · 글 — 의 끝). */
+        [[nodiscard]] bool finishLoad( bool bRead, string_view sourceLabel );
     };
 
     /** @brief 경로별로 나눠 주는 캐시입니다(`SharedAssetCache<SpriteClipAsset>` — 같은 클립을 쓰는 스프라이트 백 개가 파일을 백 번 읽지 않는다). 약한 참조라 마지막 사용자가 놓으면 사라진다. */

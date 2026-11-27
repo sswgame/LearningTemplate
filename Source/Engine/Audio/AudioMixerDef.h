@@ -22,8 +22,6 @@
 
 namespace sw
 {
-    struct AssetComposeContext;
-
     /**
      * @brief 버스 하나의 채널 구성입니다. Wwise 버스의 Channel Configuration, 언리얼 서브믹스의 채널 형식에 해당합니다.
      * @details `Output` 은 장치 협상이 정한 출력 레이아웃을 그대로 쓰는 선언된 모드다(믹서 그래프는 채널 중립). `Stereo` 는 출력이 5.1 · 7.1 · 헤드폰이어도 두 채널(FL FR)로 처리한다 —
@@ -312,11 +310,6 @@ namespace sw
         /** @brief XML 문자열을 펼쳐(`_base`) 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
 
-    private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
-
-    public:
         /** @brief 이름, 루트, 부모, 센드, 고리를 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 

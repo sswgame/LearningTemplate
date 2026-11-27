@@ -47,9 +47,9 @@ SW_TEST_CASE( PackEngineSettingsTest, RejectsIncompleteOrUnknownSettings )
     SW_EXPECT_LOG( "PackSettings.ElementMissing" );
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startMap>x</startMap></GameSettings>", "no element" ) );
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<Settings><Engine _windowTitle=\"T\" /></Settings>", "wrong root" ) );
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><Engine _bUIPauseMenu=\"true\" /></GameSettings>", "no title" ) );
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><Engine _windowTitle=\"T\" _windowTitel=\"typo\" /></GameSettings>", "unknown key" ) );
     SW_EXPECT_LOG( "PackSettings.FileMissing" );
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><Engine _windowTitle=\"T\" _uiThemes=\"game/probe/data/missing.uithemes.xml\" /></GameSettings>", "missing file" ) );

@@ -20,6 +20,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetGUID.h"
+#include "Engine/Content/AssetIDKey.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -323,8 +324,8 @@ namespace sw
         [[nodiscard]] AssetRegistryLayer makeRegistryLayer( string_view sourceName ) const;
 
     private:
-        unordered_map<AssetGUID, string> _mapGUIDToPath;
-        unordered_map<string, AssetGUID> _mapPathToGUID; ///< 키는 소문자 에셋 id
-        vector<AssetIdentityRedirect>    _listRedirect;  ///< 도메인 리다이렉트 표의 정체성 대체 줄
+        unordered_map<AssetGUID, string>     _mapGUIDToPath;
+        unordered_map<AssetIDKey, AssetGUID> _mapPathToGUID; ///< 키는 접은 에셋 id
+        vector<AssetIdentityRedirect>        _listRedirect;  ///< 도메인 리다이렉트 표의 정체성 대체 줄
     };
 } // namespace sw

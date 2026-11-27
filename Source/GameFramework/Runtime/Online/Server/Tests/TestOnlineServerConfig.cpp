@@ -73,7 +73,7 @@ SW_TEST_CASE( OnlineServerConfigTest, TopologyServerIDAndLimitsAreRequired )
 {
     // 빠진 칸의 초기값(0)은 반사의 `Min` 밖이라 읽기 공통 끝도 칸마다 알린다 — 빠졌다는 오류와 함께 난다.
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     const auto loadsWithout = []( sw::string_view fieldText )
     {
         sw::string   text     = sw::test::OnlineRuntimeFixture::withBaseSettings( R"({ "_listKit": [] })" );
@@ -102,7 +102,7 @@ SW_TEST_CASE( OnlineServerConfigTest, MissingSettingsReadAsEmptyObject )
     SW_EXPECT_TRUE( makeEntry( "" ).readSettings( kitConfig ) );
     SW_EXPECT_EQUAL( 1, kitConfig._port );
 
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     sw::OnlineConfigTestRequiredConfig required;
     const sw::expected<void>           result = makeEntry( "" ).readSettings( required );
     SW_REQUIRE_FALSE( result.has_value() );
@@ -114,7 +114,7 @@ SW_TEST_CASE( OnlineServerConfigTest, MissingSettingsReadAsEmptyObject )
  */
 SW_TEST_CASE( OnlineServerConfigTest, SettingsRejectUnknownKeyAndMalformedValue )
 {
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     sw::OnlineConfigTestKitConfig kitConfig;
     const sw::expected<void>      unknownKey = makeEntry( R"({ "_prot": 9001 })" ).readSettings( kitConfig );
     SW_REQUIRE_FALSE( unknownKey.has_value() );

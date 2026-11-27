@@ -68,7 +68,7 @@ SW_TEST_CASE( SpriteLibraryTest, RejectsBrokenFiles )
     SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary _atlasPath="a.dds"><_listCategory><SpriteLibraryCategory _name="B"><_listLabel><SpriteLibraryLabel _name="X" /><SpriteLibraryLabel _name="X" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>)", "<test>" ) );
     SW_EXPECT_LOG( "SpriteLibrary.BorderNeedsAtlasSize" );
     SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary _atlasPath="a.dds"><_listCategory><SpriteLibraryCategory _name="B"><_listLabel><SpriteLibraryLabel _name="X" _borderPixels="1,0,0,0" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>)", "<test>" ) );
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     SW_EXPECT_FALSE( library.loadFromXMLText( R"(<SpriteLibrary _atlasPath="a.dds" _colour="red" />)", "<test>" ) );
     SW_EXPECT_TRUE( library._listCategory.empty() );
 }

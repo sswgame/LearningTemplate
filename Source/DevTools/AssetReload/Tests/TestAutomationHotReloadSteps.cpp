@@ -47,7 +47,7 @@ SW_TEST_CASE( AutomationHotReloadStepsTest, VariantTableReadsOnlyWellFormedVaria
 
     SW_EXPECT_FALSE( parse( R"({ "_mapVariant": { "escape": { "_header": "../Source/Probe.h", "_text": "x" } } })" ).has_value() ); // `..` 로 추적 소스를 덮지 못한다
     SW_EXPECT_FALSE( parse( R"({ "_mapVariant": { "blank": { "_header": "sw/dev/Probe.h", "_text": "" } } })" ).has_value() );
-    SW_EXPECT_LOG( "Config.NotJSONObject" );
+    SW_EXPECT_LOG( "Serialization.NotRead" );
     SW_EXPECT_FALSE( parse( "[ 1, 2 ]" ).has_value() );
 }
 

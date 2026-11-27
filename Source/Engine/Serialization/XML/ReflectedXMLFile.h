@@ -1,6 +1,6 @@
 /**
  * @file ReflectedXMLFile.h
- * @brief 리플렉션 desc 하나를 XML 파일로 읽고(에셋 id) 씁니다(디스크 경로 - `AssetPaths::toDiskPath` 로 푼 것). 렌더 패스 · 파이프라인 · 네트워크 흉내 프리셋 에셋이 씁니다.
+ * @brief 리플렉션 desc 하나를 XML 파일로 읽고(에셋 id) 씁니다(디스크 경로 - `AssetPaths::toDiskPath` 로 푼 것). 데이터 에셋 로더(`loadAsset` — 읽고 `validate` 로 검사)도 여기 있습니다.
  *
  * [왜 있는가]
  * 에셋들(`RenderFeatureAsset` · `RenderPipelineAsset` · `NetEmulationPresetTable`)이 "리플렉션 desc 하나를 에셋 상대 경로의 XML 로 오간다" 는
@@ -49,7 +49,7 @@ namespace sw
          *          게임 런타임 코드는 쓰지 않습니다.
          */
         template <typename DescType>
-        [[nodiscard]] static bool loadDescFromDiskFile( const AbsolutePath& diskPath, DescType& outDesc )
+        [[nodiscard]] static bool loadDescFromDiskFile( const DiskPath& diskPath, DescType& outDesc )
         {
             return loadDescFromDiskFileInternal( diskPath, &outDesc, DescType::StaticType() );
         }
@@ -59,6 +59,34 @@ namespace sw
         [[nodiscard]] static bool loadDescFromText( string_view text, string_view sourceName, DescType& outDesc )
         {
             return parseDesc( sourceName, AssetID{}, string( text ), &outDesc, DescType::StaticType() );
+        }
+
+        /**
+         * @brief 데이터 에셋 하나를 에셋 id 로 읽습니다. 비우고, 합쳐 엄격하게 읽고(`loadDesc`), 검사하고, 틀리면 다시 비웁니다(반쯤 찬 에셋을 남기지 않는다).
+         * @details 종류는 칸과 검사 `[[nodiscard]] bool validate( string_view sourceLabel ) const`(오류는 그 함수가 로그로 남긴다)만 적는다.
+         *          언리얼 `UDataAsset` · 유니티 `ScriptableObject` · Godot `Resource` 처럼 읽는 몸통을 종류마다 다시 쓰지 않는다. 복사한 몸통은 id 를 버리는 입구와 갈라진 로그를 낳았다.
+         */
+        template <typename TAsset>
+        [[nodiscard]] static bool loadAsset( const AssetID& assetID, TAsset& outAsset )
+        {
+            outAsset = TAsset{};
+            return finishAsset( loadDesc( assetID, outAsset ), assetID.view(), outAsset );
+        }
+
+        /** @brief `loadAsset` 의 글 판입니다. 에셋 id 가 없어 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다(테스트 · 에디터 미리 보기). @p sourceName 은 로그에 찍는 이름입니다. */
+        template <typename TAsset>
+        [[nodiscard]] static bool loadAssetFromText( string_view text, string_view sourceName, TAsset& outAsset )
+        {
+            outAsset = TAsset{};
+            return finishAsset( loadDescFromText( text, sourceName, outAsset ), sourceName, outAsset );
+        }
+
+        /** @brief `loadAsset` 의 디스크 파일 판입니다(`loadDescFromDiskFile` 과 같은 자리 — 쿠커 · 도구 · 테스트). */
+        template <typename TAsset>
+        [[nodiscard]] static bool loadAssetFromDiskFile( const DiskPath& diskPath, TAsset& outAsset )
+        {
+            outAsset = TAsset{};
+            return finishAsset( loadDescFromDiskFile( diskPath, outAsset ), diskPath.str(), outAsset );
         }
 
         /**
@@ -88,13 +116,23 @@ namespace sw
         }
 
     private:
+        /** @brief 읽었으면 검사하고, 어느 쪽이든 틀리면 비웁니다. 검사는 const 로 부른다 — 검사가 값을 고치면 읽은 글과 에셋이 갈린다. */
+        template <typename TAsset>
+        [[nodiscard]] static bool finishAsset( const bool bRead, const string_view sourceLabel, TAsset& outAsset )
+        {
+            if ( bRead && static_cast<const TAsset&>( outAsset ).validate( sourceLabel ) )
+                return true;
+            outAsset = TAsset{};
+            return false;
+        }
+
         /**
          * @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XMLSerializer` 는 .cpp 에서만 봅니다).
          * @details 에셋 id 와 디스크 경로는 입구를 형식으로 가른다 — 한 함수가 열거형으로 고르면 같은 `string_view` 가 어느 쪽으로도 흘러간다.
          */
         [[nodiscard]] static bool loadDescInternal( const AssetID& assetID, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 디스크 파일 판입니다. */
-        [[nodiscard]] static bool loadDescFromDiskFileInternal( const AbsolutePath& diskPath, void* pDesc, const TypeInfo* pTypeInfo );
+        [[nodiscard]] static bool loadDescFromDiskFileInternal( const DiskPath& diskPath, void* pDesc, const TypeInfo* pTypeInfo );
         /**
          * @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다.
          * @param assetID 에셋 입구면 그 id(덮어쓰기 층 · 다시 읽기 기록), 디스크 입구면 빈 id 입니다.

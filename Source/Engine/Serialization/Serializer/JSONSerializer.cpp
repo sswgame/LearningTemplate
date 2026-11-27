@@ -24,17 +24,17 @@ namespace sw
     {
         struct JSONSerializerInternal
         {
-            /** @brief 빠진 필수 칸을 경로마다 알립니다. 하나도 없으면 true 입니다(엄격한 읽기 `deserialize` · `loadFromFile` 의 끝). */
-            static bool reportMissingRequired( const JSONValue& root, const TypeInfo& typeInfo )
+            /** @brief 객체로 읽힌 @p root 를 엄격하게 읽습니다(`readStrict` · `loadFromAsset` 의 한 몸통). */
+            [[nodiscard]] static StrictRead readStrictRoot( const JSONValue& root, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
             {
+                if ( pInstance == nullptr || root.isObject() == false )
+                    return StrictRead( typeInfo, SoftReadResult::NotParsed, {}, {} );
+                vector<SchemaOrphanValue> listOrphan;
+                const SoftReadResult      result = JSONSerializer::readObject( root, pInstance, typeInfo, &listOrphan, nullptr, context ) == FieldReadResult::Read ? SoftReadResult::Read : SoftReadResult::Rejected;
+                // 필수 칸은 초기값으로 대신하지 않는다.
                 vector<string> listMissing;
                 JSONSerializer::collectMissingRequired( root, typeInfo, listMissing );
-                for ( const string& missingPath : listMissing )
-                {
-                    SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "%# has no required '%#' (PROPERTY( Required ) - the initial value is not a default)", typeInfo._name.c_str(),
-                                     missingPath.c_str() );
-                }
-                return listMissing.empty();
+                return StrictRead( typeInfo, result, std::move( listOrphan ), std::move( listMissing ) );
             }
 
             /**
@@ -528,12 +528,15 @@ namespace sw
     bool JSONSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                       const SerializeContext& context )
     {
-        const bool bRead = deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, context ) == SoftReadResult::Read;
-        // 필수 칸은 초기값으로 대신하지 않는다. 문서를 한 번 더 읽는다 — 엄격한 읽기는 표 · 설정 크기다.
+        return readStrict( pInstance, typeInfo, jsonStr, context ).report( typeInfo._name.c_str() );
+    }
+
+    StrictRead JSONSerializer::readStrict( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const SerializeContext& context )
+    {
         JSONDocument document;
         if ( document.parse( jsonStr ) == false )
-            return false;
-        return JSONSerializerInternal::reportMissingRequired( document.getRoot(), typeInfo ) && bRead;
+            return StrictRead( typeInfo, SoftReadResult::NotParsed, {}, {} );
+        return JSONSerializerInternal::readStrictRoot( document.getRoot(), pInstance, typeInfo, context );
     }
 
     void JSONSerializer::collectMissingRequired( const JSONValue& object, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix )
@@ -610,8 +613,7 @@ namespace sw
         JSONDocument doc;
         if ( doc.loadAsset( assetID ) == false )
             return false;
-        const bool bRead = readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context ) == FieldReadResult::Read;
-        return JSONSerializerInternal::reportMissingRequired( doc.getRoot(), typeInfo ) && bRead;
+        return JSONSerializerInternal::readStrictRoot( doc.getRoot(), pInstance, typeInfo, context ).report( assetID.view() );
     }
 
     void JSONSerializer::writeObject( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo,

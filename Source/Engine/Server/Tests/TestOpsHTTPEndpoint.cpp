@@ -78,7 +78,7 @@ namespace
         unique_ptr<IStreamTransport> _serverTransport{ _network.createTransport() };
         unique_ptr<IStreamTransport> _clientTransport{ _network.createTransport() };
         MetricRegistry               _metrics{};
-        ServiceHealthRegistry        _health{};
+        ServiceHealthRegistry        _health{ 10000 };
         OpsHTTPEndpoint              _endpoint{};
         OpsHTTPProbe                 _probe{};
 
@@ -122,7 +122,7 @@ namespace
 SW_TEST_CASE( OpsHTTPEndpointTest, RoutesAndStatusCodes )
 {
     MetricRegistry        metrics;
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     metrics.registerCounter( "probe_total", "Probe" )->add( 2 );
     string response;
     SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1\r\nHost: x", &metrics, &health, 0, {}, response ), 200 );
@@ -152,7 +152,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, RoutesAndStatusCodes )
 SW_TEST_CASE( OpsHTTPEndpointTest, BearerTokenGuardsMetricsAndPublicBinds )
 {
     MetricRegistry        metrics;
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     health.markTick( 0 );
     const int32 store = health.registerCheck( "service_store", true );
     health.setCheck( store, HealthState::Ok, "" );
@@ -222,7 +222,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
     unique_ptr<IStreamTransport> clientTransport = StreamTransportFactory::createPlatformTransport();
     SW_REQUIRE_TRUE( serverTransport != nullptr && clientTransport != nullptr );
     MetricRegistry        metrics;
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     OpsHTTPEndpoint       endpoint;
     OpsHTTPProbe          probe;
     OpsHTTPEndpointConfig opsSettings;

@@ -231,7 +231,7 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
     test::OnlineRuntimeFixture rig;
     string                     error;
     {
-        const auto result = rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseSettings( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs );
+        const auto result = rig.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ) ), test::OnlineRuntimeFixture::withBaseSettings( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     const auto poll = [&rig]()
@@ -275,7 +275,7 @@ SW_TEST_CASE( RESPEndToEndTest, MissingSecretStopsStartup )
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( 6379 ), test::OnlineRuntimeFixture::withBaseSettings( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
+    error = describeError( rig.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( RESPEndToEndTestUtil::makeServerJSON( 6379 ) ), test::OnlineRuntimeFixture::withBaseSettings( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "valkey" ) != string::npos );
 }
@@ -286,7 +286,7 @@ SW_TEST_CASE( RESPEndToEndTest, UnknownDriverStopsStartup )
     constexpr const utf8*      kServerJSON = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "valkey", "_driver": "memcached", "_endpoint": "127.0.0.1:1" } ] })";
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseSettings( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
+    error = describeError( rig.fromConfig( test::OnlineRuntimeFixture::withServerBaseSettings( kServerJSON ), test::OnlineRuntimeFixture::withBaseSettings( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "memcached" ) != string::npos );
 }

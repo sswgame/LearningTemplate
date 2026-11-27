@@ -7,6 +7,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetIDKey.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -27,12 +28,12 @@ namespace sw
             /** @brief 줄들에 겹친 GUID · 경로(대소문자 무시)가 없으면 빈 결과, 있으면 그 까닭입니다. 정렬된 목록을 받는다. */
             [[nodiscard]] static expected<void> validateUnique( const vector<AssetPackIndexEntry>& listSorted )
             {
-                unordered_set<string> setPath;
+                unordered_set<AssetIDKey> setPath;
                 for ( size_t index = 0; index < listSorted.size(); ++index )
                 {
                     if ( index > 0 && listSorted[index]._guid == listSorted[index - 1]._guid )
                         return unexpected( Error{ ErrorKind::AlreadyExists, "two files of one pack carry the same asset GUID", listSorted[index]._path } );
-                    if ( listSorted[index]._path.empty() || setPath.insert( StringUtil::toLower( listSorted[index]._path.c_str() ) ).second == false )
+                    if ( listSorted[index]._path.empty() || setPath.insert( AssetIDKey( listSorted[index]._path ) ).second == false )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "an asset index line has an empty or repeated path", listSorted[index]._path } );
                 }
                 return {};

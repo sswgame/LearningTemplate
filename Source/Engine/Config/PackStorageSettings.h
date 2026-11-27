@@ -24,7 +24,9 @@ namespace sw
         PROPERTY( Required )
         vector<string> _listStoredExtension; ///< 압축하지 않고 담는 확장자(`.dds` - 이미 압축된 형식, 대소문자 무시)
 
-        /** @brief 리소스 @p assetID 를 읽습니다. 못 읽었거나 목록이 비었거나 `.` 로 시작하지 않는 확장자가 있으면 오류를 남기고 false 입니다. */
+        /** @brief 리소스 @p assetID 를 읽고 검사합니다(`ReflectedXMLFile::loadAsset`). 틀리면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 목록이 비지 않았고 확장자가 모두 `.` 로 시작하는지 봅니다. 어긋나면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
     };
 } // namespace sw

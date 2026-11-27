@@ -128,7 +128,7 @@
 	<OverwriteConfig configFile="Editor/editortooldefaults.json" from="guid:735b0c218f654ed9919824fa259ec606"/>
 	<WaitUntil watch="Reload.FailedCount" increaseFrom="failedAfterCatalog" increaseBy="1" timeoutWallSeconds="30"/>
 	<EditorWaitStable/>
-	<ExpectLog id="Config.NotJSONObject" count="1"/>
+	<ExpectLog id="Serialization.NotRead" count="1"/>
 	<ExpectLog id="ConfigReload.ConfigReloadKeptPrevious" count="1"/>
 	<!-- 낡은 길 셋(모듈 · 카탈로그 · 설정)이 집계에 STALE 로 남는다 -->
 	<Expect watch="Reload.StaleCount" equals="3"/>

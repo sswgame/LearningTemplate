@@ -242,7 +242,7 @@ SW_TEST_CASE( MemorySnapshotTest, TextRoundTripsAndRejectsBadRows )
 SW_TEST_CASE( MemorySnapshotTest, PolicyNeedsBothKeysInRange )
 {
     SW_EXPECT_TRUE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "MemorySnapshots", "_allocationSiteLimit": 8 })", "test" ).has_value() );
-    SW_EXPECT_LOG( "Config.KeyMissing" );             // 필수 칸 없음 — 설정 읽기가 칸 이름을 남긴다
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" ); // 필수 칸 없음 — 설정 읽기가 칸 이름을 남긴다
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" ); // 빠진 칸의 초기값 0 과 적힌 0 이 사이트 상한 범위(1 이상) 밖이다
     SW_EXPECT_FALSE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "MemorySnapshots" })", "test" ).has_value() );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<MemorySnapshotPolicy>( R"({ "_exportFolder": "a/b", "_allocationSiteLimit": 8 })", "test" ).has_value() );

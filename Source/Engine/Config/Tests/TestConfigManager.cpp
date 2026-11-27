@@ -110,7 +110,7 @@ SW_TEST_CASE( ConfigManagerTest, MissingRequiredFileFails )
 
     // 4) 깨진 JSON 은 로드 실패다 — 절반만 채워 넣지 않는다.
     SW_EXPECT_LOG( "JSON.ParseError" );
-    SW_EXPECT_LOG( "Config.NotJSONObject" );
+    SW_EXPECT_LOG( "Serialization.NotRead" );
     {
         ConfigManager manager;
         SW_EXPECT_FALSE( manager.loadConfigFromJSON<EngineConfig>( string( "{ this is not json" ), "test" ) );
@@ -154,7 +154,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
     // 깨진 JSON 은 이전 값을 지킨다.
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "{ \"_window\": { \"_width\": " ) );
     SW_EXPECT_LOG( "JSON.ParseError" );
-    SW_EXPECT_LOG( "Config.NotJSONObject" );
+    SW_EXPECT_LOG( "Serialization.NotRead" );
     SW_EXPECT_LOG( "Config.ReloadInvalid" );
     SW_EXPECT_TRUE( manager.reloadConfigFile( path.str() ) == ReloadResult::Failed );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
@@ -172,8 +172,8 @@ namespace
     };
 
     const InvalidEngineConfigKey kArrInvalidEngineConfigKey[] = {
-        { "_maxFrameDeltaTme", 0.2,             "Config.KeyUnknown"}, // 모르는 키
-        {"_MaxFrameDeltaTime", 0.2,             "Config.KeyUnknown"}, // 대소문자만 다르다
+        { "_maxFrameDeltaTme", 0.2,     "Serialization.OrphanValue"}, // 모르는 키
+        {"_MaxFrameDeltaTime", 0.2,     "Serialization.OrphanValue"}, // 대소문자만 다르다
         {   "_fixedDeltaTime", 0.0, "Serialization.ValueOutOfRange"}, // Min 밖
     };
 } // namespace
@@ -283,7 +283,7 @@ SW_TEST_CASE( ConfigManagerTest, PlatformOverrideFileLayersOnTheBase )
 
     // 4) 덮어쓰기의 모르는 키는 바탕과 같은 엄격 읽기에서 진다 — 기본값으로 떨어지지 않는다.
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_windw": { "_width": 1280 } })" ) );
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     {
         ConfigManager manager;
         SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath.str(), overridePath.str() ) ) );
@@ -396,7 +396,7 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityRejectsUnknownTierAndKey )
     }
 
     // 3) 단계의 모르는 키, 그리고 `_render` 밖 칸(단계는 `_render` 안쪽이라 `_window` 는 RenderConfig 의 모르는 키다).
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     for ( const utf8* pTiers : { R"({ "low": { "_shadowCullSlots": 4 } })", R"({ "low": { "_window": { "_width": 1 } } })" } )
     {
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, pTiers ) );

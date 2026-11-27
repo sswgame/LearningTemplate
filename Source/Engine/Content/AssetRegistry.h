@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetGUID.h"
+#include "Engine/Content/AssetIDKey.h"
 
 namespace sw
 {
@@ -121,8 +122,8 @@ namespace sw
         void put( const AssetGUID& guid, string_view assetID );
 
     private:
-        unordered_map<AssetGUID, string>    _mapGUIDToPath;
-        unordered_map<string, AssetGUID>    _mapPathToGUID; ///< 키는 소문자 에셋 id
-        unordered_map<AssetGUID, AssetGUID> _mapRedirect;   ///< 정체성 대체(옛 GUID → 끝 GUID, 사슬은 합칠 때 접는다)
+        unordered_map<AssetGUID, string>     _mapGUIDToPath;
+        unordered_map<AssetIDKey, AssetGUID> _mapPathToGUID; ///< 키는 접은 에셋 id
+        unordered_map<AssetGUID, AssetGUID>  _mapRedirect;   ///< 정체성 대체(옛 GUID → 끝 GUID, 사슬은 합칠 때 접는다)
     };
 } // namespace sw

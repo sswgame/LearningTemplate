@@ -1,4 +1,16 @@
 {
     "_listenAddress": "127.0.0.1",
-    "_servicePort": 0
+    "_servicePort": 0,
+    "_ops": {
+        "_maxConnections": 64,
+        "_idleTimeoutSeconds": 10,
+        "_processSampleIntervalMs": 1000,
+        "_minFrameDumpIntervalMs": 10000,
+        "_loadWarningIntervalMs": 60000,
+        "_crashTailTicks": 40,
+        "_livenessTimeoutMs": 10000
+    },
+    "_admin": {
+        "_idleTimeoutSeconds": 300
+    }
 }

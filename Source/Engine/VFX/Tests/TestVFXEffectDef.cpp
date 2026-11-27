@@ -569,7 +569,7 @@ SW_TEST_CASE( VFXEffectDefTest, MissingOrEmptyFilesFail )
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "Xml.FileNotFound" );
     SW_EXPECT_LOG( "Xml.ParseError" );
-    SW_EXPECT_LOG( "Xml.NotRead" );
+    SW_EXPECT_LOG( "Serialization.NotRead" );
     SW_EXPECT_LOG( "Xml.WrongRoot" );
     SW_EXPECT_LOG( "VFXEffectDef.VFXNoEmittersListEmitter" );
 

@@ -14,11 +14,6 @@
 
 namespace sw
 {
-    struct AssetComposeContext;
-} // namespace sw
-
-namespace sw
-{
     /** @struct MeshLODSettings @brief 메시 LOD · 경계 정책 표입니다(엔진 기본 데이터 하나 — 처음 물을 때 읽는다). */
     REFLECT()
     struct SW_API MeshLODSettings
@@ -30,12 +25,12 @@ namespace sw
         PROPERTY( Min = 1.0, Tooltip = "Skinned mesh bounds = bind-pose bounds x this - animation moves vertices outside the bind pose, culling must not clip them" )
         float32 _skinnedBoundsScale{ 0.0f };
 
-        /** @brief XML 을 읽습니다. 모르는 키 · 범위 밖 값은 오류이고 false 입니다(`ConfigManager::readConfigXMLDocument`). */
+        /** @brief XML 을 읽고 검사합니다. 모르는 키 · 범위 밖 값 · 검사 실패는 오류이고 false 입니다(`ReflectedXMLFile::loadAssetFromText`). */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 에셋 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 에셋 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
-        [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
+        /** @brief `_refineHysteresis` 가 0 보다 크고 `_skinnedBoundsScale` 이 1 이상인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 엔진 기본 표(`EngineDefaultAssets::_meshLODSettings`)를 한 번 읽어 돌려줍니다. 읽지 못하면 오류로 멈춘다(값이 없으면 단계 · 컬링이 정해지지 않는다). */
         static const MeshLODSettings& getDefault();
     };

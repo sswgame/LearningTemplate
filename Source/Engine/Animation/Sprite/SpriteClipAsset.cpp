@@ -7,11 +7,10 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
@@ -35,18 +34,11 @@ namespace sw
 {
     bool SpriteClipAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
         clear();
-        if ( path.empty() )
+        // 빈 id 는 "클립 없음" 이다 — 읽기 오류로 알리지 않는다.
+        if ( assetID.view().empty() )
             return false;
-
-        string text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite", "Could not read sprite clip '%#'", path );
-            return false;
-        }
-        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return finishLoad( ReflectedXMLFile::loadDesc( assetID, *this ), assetID.view() );
     }
 
     bool SpriteClipAsset::loadFromDiskFile( const DiskPath& diskPath )
@@ -54,25 +46,12 @@ namespace sw
         clear();
         if ( diskPath.empty() )
             return false;
-
-        string text;
-        if ( AssetIO::readTextFile( diskPath, text ) == false )
-        {
-            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath.str() );
-            return false;
-        }
-        return loadFromXMLText( text, diskPath.str() );
+        return finishLoad( ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ), diskPath.str() );
     }
 
-    bool SpriteClipAsset::loadFromXMLText( const string& text, string_view sourceLabel )
+    bool SpriteClipAsset::finishLoad( const bool bRead, string_view sourceLabel )
     {
-        return loadComposed( text, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
-    }
-
-    bool SpriteClipAsset::loadComposed( string_view text, string_view sourceLabel, const AssetComposeContext& context )
-    {
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값은 오류다(`readComposedXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), text, sourceLabel, context ) && resolveLoadedValues( sourceLabel ) )
+        if ( bRead && resolveLoadedValues( sourceLabel ) )
             return true;
         clear();
         return false;
@@ -88,7 +67,7 @@ namespace sw
     bool SpriteClipAsset::loadFromXMLText( string_view xml )
     {
         clear();
-        return loadComposed( xml, "<sprite clip text>", AssetComposeContext::forType( *StaticType() ) );
+        return finishLoad( ReflectedXMLFile::loadDescFromText( xml, "<sprite clip text>", *this ), "<sprite clip text>" );
     }
 
     SpriteClipAsset::SpriteClipAsset() = default;

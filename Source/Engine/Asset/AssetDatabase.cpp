@@ -25,8 +25,6 @@ namespace sw
     {
         struct AssetDatabaseInternal
         {
-            static string toLowerID( string_view assetID ) { return StringUtil::toLower( assetID ); }
-
             /** @brief 서술 에셋 id(`a/b.png.meta`)의 원본 에셋 id(`a/b.png`)입니다. */
             static string_view toSourceID( string_view sidecarID ) { return sidecarID.substr( 0, sidecarID.size() - AssetMeta::kExtension.size() ); }
 
@@ -44,7 +42,7 @@ namespace sw
             }
 
             /** @brief @p guid 를 @p assetID 로 올립니다. 이미 있으면 겹침을 결함으로 남기고 올리지 않습니다. */
-            static void registerGUID( unordered_map<AssetGUID, string>& inoutMapGUIDToPath, unordered_map<string, AssetGUID>& inoutMapPathToGUID, const AssetGUID& guid,
+            static void registerGUID( unordered_map<AssetGUID, string>& inoutMapGUIDToPath, unordered_map<AssetIDKey, AssetGUID>& inoutMapPathToGUID, const AssetGUID& guid,
                                       string_view assetID, vector<AssetIdentityIssue>& outListIssue )
             {
                 const auto found = inoutMapGUIDToPath.find( guid );
@@ -54,7 +52,7 @@ namespace sw
                     return;
                 }
                 inoutMapGUIDToPath.emplace( guid, string( assetID ) );
-                inoutMapPathToGUID.emplace( toLowerID( assetID ), guid );
+                inoutMapPathToGUID.emplace( AssetIDKey( assetID ), guid );
             }
 
             /** @brief 정체성을 드는 파일의 글 @p text 에서 `AssetDatabase::build` 가 보는 것만 남긴 글입니다(훑기 캐시에 둔다). 결함이 있는 글은 없음입니다 — 다음 훑기가 다시 읽는다. */
@@ -168,7 +166,7 @@ namespace sw
     bool AssetIdentityRules::isUnderDerivedFolder( string_view assetID ) const
     {
         StringBuilder<constant::buffer::kMax512> wrapped;
-        wrapped.appendFormat( "/%#", AssetDatabaseInternal::toLowerID( assetID ) );
+        wrapped.appendFormat( "/%#", AssetIDKey( assetID ).view() );
         StringBuilder<constant::buffer::kMax256> marker;
         for ( const AssetImportedFolder& imported : _listImportedFolder )
         {
@@ -478,23 +476,23 @@ namespace sw
         using Internal = AssetDatabaseInternal;
         // 순서를 고정한다 — 겹친 GUID 의 어느 쪽이 남는지가 목록 순서에 기대지 않게.
         vector<const AssetIdentityFile*> listSorted;
-        unordered_set<string>            setSourceID;
-        unordered_set<string>            setSidecarID;
+        unordered_set<AssetIDKey>        setSourceID;
+        unordered_set<AssetIDKey>        setSidecarID;
         for ( const AssetIdentityFile& file : listFile )
         {
             listSorted.push_back( &file );
             const AssetIdentityKind kind = rules.classify( file._assetID );
             if ( kind == AssetIdentityKind::Source )
-                setSourceID.insert( Internal::toLowerID( file._assetID ) );
+                setSourceID.insert( AssetIDKey( file._assetID ) );
             else if ( kind == AssetIdentityKind::Sidecar )
-                setSidecarID.insert( Internal::toLowerID( file._assetID ) );
+                setSidecarID.insert( AssetIDKey( file._assetID ) );
         }
         VectorUtil::sort( listSorted, []( const AssetIdentityFile* pLeft, const AssetIdentityFile* pRight )
         { return pLeft->_assetID < pRight->_assetID; } );
 
-        AssetDatabase                    database;
-        vector<const string*>            listOutputID;  // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
-        unordered_map<string, AssetMeta> mapSourceMeta; // 원본 에셋 id(소문자) → 그 `.meta`(산출물 표를 본다)
+        AssetDatabase                        database;
+        vector<const string*>                listOutputID;  // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
+        unordered_map<AssetIDKey, AssetMeta> mapSourceMeta; // 원본 에셋 id(접은 열쇠) → 그 `.meta`(산출물 표를 본다)
         for ( const AssetIdentityFile* pFile : listSorted )
         {
             const string& assetID = pFile->_assetID;
@@ -533,7 +531,7 @@ namespace sw
                     AssetMeta                          meta;
                     const optional<AssetGUID>          guid    = meta.parseXML( pFile->_text, assetID );
                     const optional<AssetSourceAddress> address = AssetSourceAddress::tryParse( meta._source );
-                    const bool                         bBeside = setSourceID.contains( Internal::toLowerID( sourceID ) );
+                    const bool                         bBeside = setSourceID.contains( AssetIDKey( sourceID ) );
                     if ( guid.has_value() && address->isStored() == false && bBeside == false )
                     {
                         outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::OrphanMeta, assetID, {} } );
@@ -546,11 +544,11 @@ namespace sw
                         break;
                     }
                     Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, *guid, sourceID, outListIssue );
-                    mapSourceMeta.insert_or_assign( Internal::toLowerID( sourceID ), std::move( meta ) );
+                    mapSourceMeta.insert_or_assign( AssetIDKey( sourceID ), std::move( meta ) );
                     break;
                 }
                 case AssetIdentityKind::Source:
-                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ) ) ) )
+                    if ( setSidecarID.contains( AssetIDKey( AssetMeta::makePath( assetID ) ) ) )
                         break;
                     if ( rules.isUnderDerivedFolder( assetID ) )
                         listOutputID.push_back( &assetID );
@@ -566,7 +564,7 @@ namespace sw
             rules.collectImportedSources( *pOutputID, listSource );
             for ( const AssetImportedSource& source : listSource )
             {
-                const auto itMeta = mapSourceMeta.find( source._sourceID ); // 후보 id 는 소문자다(`collectImportedSources`)
+                const auto itMeta = mapSourceMeta.find( AssetIDKey( source._sourceID ) );
                 if ( itMeta == mapSourceMeta.end() )
                     continue;
                 // 표의 줄이 정체성이다. 없으면 이름으로 짐작하지 않고 결함이다 — 표를 쓰기 전의 산출물이거나 임포트가 표를 맞추지 못했다.
@@ -681,7 +679,7 @@ namespace sw
 
     optional<AssetGUID> AssetDatabase::findGUID( string_view assetID ) const
     {
-        const auto found = _mapPathToGUID.find( AssetDatabaseInternal::toLowerID( assetID ) );
+        const auto found = _mapPathToGUID.find( AssetIDKey( assetID ) );
         if ( found == _mapPathToGUID.end() )
             return nullopt;
         return found->second;

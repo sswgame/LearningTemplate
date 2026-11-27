@@ -46,6 +46,6 @@ SW_TEST_CASE( SavedCleanupSettingsTest, ProjectFileReadsAndRoundTrips )
 SW_TEST_CASE( SavedCleanupSettingsTest, MissingRequiredFieldFails )
 {
     using Settings = SavedCleanupTestAccess::Settings;
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<Settings>( R"({ "_minAgeSeconds": 1, "_trashFolder": ".Trash", "_listRule": [ { "_folder": "Logs", "_keepCount": 3, "_bPerChild": false } ] })", "test" ).has_value() );
 }

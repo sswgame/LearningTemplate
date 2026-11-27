@@ -8,11 +8,9 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
@@ -45,14 +43,13 @@ namespace sw
 {
     bool FacialRig::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        return loadComposed( xml, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
+        *this = FacialRig{};
+        return finishLoad( ReflectedXMLFile::loadDescFromText( xml, sourceLabel, *this ), sourceLabel );
     }
 
-    bool FacialRig::loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
+    bool FacialRig::finishLoad( const bool bRead, string_view sourceLabel )
     {
-        *this = FacialRig{};
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validateFile( sourceLabel ) )
+        if ( bRead && validateFile( sourceLabel ) )
         {
             _gaze._forwardAxis = _gaze._forwardAxis.normalize();
             return true;
@@ -63,15 +60,8 @@ namespace sw
 
     bool FacialRig::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
-        string            text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "FacialRig.FacialRigCouldNot", "Facial rig '%#' could not be read", path );
-            *this = FacialRig{};
-            return false;
-        }
-        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        *this = FacialRig{};
+        return finishLoad( ReflectedXMLFile::loadDesc( assetID, *this ), assetID.view() );
     }
 
     bool FacialRig::validateFile( string_view sourceLabel ) const

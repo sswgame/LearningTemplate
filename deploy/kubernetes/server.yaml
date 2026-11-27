@@ -18,7 +18,10 @@ data:
       "_shutdownGraceSeconds": 15,
       "_tickLoadWarnPercent": 70,
       "_slowTickDumpMs": 100,
-      "_frameHistoryTicks": 600
+      "_frameHistoryTicks": 600,
+      "_ops": { "_maxConnections": 64, "_idleTimeoutSeconds": 10, "_processSampleIntervalMs": 1000, "_minFrameDumpIntervalMs": 10000,
+                "_loadWarningIntervalMs": 60000, "_crashTailTicks": 40, "_livenessTimeoutMs": 10000 },
+      "_admin": { "_idleTimeoutSeconds": 300 }
     }
 ---
 apiVersion: apps/v1

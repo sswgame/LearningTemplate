@@ -20,11 +20,6 @@
 
 namespace sw
 {
-    struct AssetComposeContext;
-} // namespace sw
-
-namespace sw
-{
 
     /**
      * @brief 대화 노드 타입입니다. 파일에는 열거자 이름(`"Choice"`)으로 적힙니다.
@@ -278,10 +273,7 @@ namespace sw
         PROPERTY( Tooltip = "Comment boxes of the graph editor" )
         vector<GraphCommentBox> _listComment;
 
-    private:
-        /** @brief 읽은 본문(@p xml)을 이 그래프에 채우고 의미를 봅니다. 틀리면 그래프를 비우고 false 입니다. */
-        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
         /** @brief 노드 · 링크 · 화자 id 가 1 이상이고 겹치지 않는지, 링크 끝이 있는 노드의 있는 핀인지(출력 핀마다 링크 하나), 기다림 없는 고리가 없는지, 노드의 화자가 목록에 있는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
-        [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
     };
 } // namespace sw

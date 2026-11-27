@@ -6,11 +6,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {
@@ -116,39 +115,25 @@ namespace sw
 {
     bool DialogueGraphAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view     path = assetID.view();
         const ScopedMemoryTag memoryScope{ kMemoryTag };
-        _listSpeaker.clear();
-        _listNode.clear();
-        _listLink.clear();
-        if ( path.empty() )
-            return false;
-
-        string text;
-        if ( AssetIO::readTextAsset( assetID, text ) == false )
+        // 빈 id 는 "그래프 없음" 이다 — 읽기 오류로 알리지 않는다.
+        if ( assetID.view().empty() )
         {
-            SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue", "Could not read dialogue graph '%#'", path );
+            *this = DialogueGraphAsset{};
             return false;
         }
-        return readText( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     bool DialogueGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
-        _listSpeaker.clear();
-        _listNode.clear();
-        _listLink.clear();
         if ( diskPath.empty() )
-            return false;
-
-        string text;
-        if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue2", "Could not read dialogue graph file '%#'", diskPath.str() );
+            *this = DialogueGraphAsset{};
             return false;
         }
-        return readText( text, diskPath.str(), AssetComposeContext::forType( *StaticType() ) );
+        return ReflectedXMLFile::loadAssetFromDiskFile( diskPath, *this );
     }
 
     bool DialogueGraphAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -158,28 +143,12 @@ namespace sw
         return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
-    bool DialogueGraphAsset::loadFromXMLText( string_view xmlView )
+    bool DialogueGraphAsset::loadFromXMLText( string_view xml )
     {
-        return readText( xmlView, "<dialogue graph text>", AssetComposeContext::forType( *StaticType() ) );
+        return ReflectedXMLFile::loadAssetFromText( xml, "<dialogue graph text>", *this );
     }
 
-    bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
-    {
-        _listSpeaker.clear();
-        _listNode.clear();
-        _listLink.clear();
-        _listComment.clear();
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readComposedXMLDocument` 가 로그로 알린다).
-        if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validateFile( sourceLabel ) )
-            return true;
-        _listSpeaker.clear();
-        _listNode.clear();
-        _listLink.clear();
-        _listComment.clear();
-        return false;
-    }
-
-    bool DialogueGraphAsset::validateFile( string_view sourceLabel ) const
+    bool DialogueGraphAsset::validate( string_view sourceLabel ) const
     {
         bool bValid = true;
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )

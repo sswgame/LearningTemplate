@@ -187,9 +187,9 @@ SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
  */
 SW_TEST_CASE( DialogueGraphTest, MissingRequiredOrDuplicateIDIsRejected )
 {
-    SW_EXPECT_LOG( "Config.KeyMissing" );      // 노드 · 링크의 _id 가 없다
-    SW_EXPECT_LOG( "Dialogue.NodeIDInvalid" ); // 노드 id 가 겹친다
-    SW_EXPECT_LOG( "Config.KeyUnknown" );      // 옛 키 이름
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" ); // 노드 · 링크의 _id 가 없다
+    SW_EXPECT_LOG( "Dialogue.NodeIDInvalid" );        // 노드 id 가 겹친다
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );     // 옛 키 이름
     DialogueGraphAsset asset;
     SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
     SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode><_listLink><DialogueAssetLink _fromPin="102" _toPin="201" /></_listLink></DialogueGraphAsset>)" ) );
@@ -356,7 +356,7 @@ SW_TEST_CASE( DialogueGraphTest, SpeakerIsAnIDOfTheSpeakerList )
 
     SW_EXPECT_LOG( "Dialogue.SpeakerMissing" );   // 목록에 없는 화자
     SW_EXPECT_LOG( "Dialogue.SpeakerIDInvalid" ); // 겹친 화자 id
-    SW_EXPECT_LOG( "Config.KeyUnknown" );         // 화자 칸에 이름 글(옛 모양) — 읽지 못한 값
+    SW_EXPECT_LOG( "Serialization.OrphanValue" ); // 화자 칸에 이름 글(옛 모양) — 읽지 못한 값
     SW_EXPECT_LOG( "Dialogue.StartNodeCount" );   // 시작 없는 그래프
     SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _speaker="7" /></_listNode></DialogueGraphAsset>)" ) );
     SW_EXPECT_FALSE( asset.loadFromXMLText(

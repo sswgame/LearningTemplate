@@ -29,8 +29,7 @@ namespace sw
 {
     bool KinematicVehicleSettings::loadFromAsset( const AssetID& assetID )
     {
-        *this = KinematicVehicleSettings{};
-        return ReflectedXMLFile::loadDesc( assetID, *this ) && validate( assetID.view() );
+        return ReflectedXMLFile::loadAsset( assetID, *this );
     }
 
     bool KinematicVehicleSettings::validate( string_view sourceName ) const

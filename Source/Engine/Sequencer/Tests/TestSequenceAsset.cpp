@@ -105,7 +105,7 @@ SW_TEST_CASE( SequencerTest, MoveKeysCarriesEveryChannel )
 SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
 {
     SW_EXPECT_LOG( "Xml.ParseError" );
-    SW_EXPECT_LOG( "Config.NotXMLElement" );
+    SW_EXPECT_LOG( "Serialization.NotRead" );
     SequenceAsset asset;
     asset._frameMin = 5;
     asset._frameMax = 30;
@@ -143,7 +143,7 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersAreRejected )
  */
 SW_TEST_CASE( SequencerTest, FinishPolicyIsRequired )
 {
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SequenceAsset asset;
     SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<SequenceAsset _frameMin="0" _frameMax="10" />)" ) );
     SW_EXPECT_TRUE( asset.loadFromXMLText( R"(<SequenceAsset _frameMin="0" _frameMax="10" _whenFinished="KeepState" />)" ) );
@@ -248,7 +248,7 @@ SW_TEST_CASE( SequencerTest, BindingIdsAreCheckedOnRead )
     SW_EXPECT_LOG( "SequenceAsset.TrackBindingUnknown" );
     SW_EXPECT_FALSE( asset.loadFromXMLText(
         R"(<SequenceAsset _frameMin="0" _frameMax="10" _whenFinished="RestoreState"><_listTrack><SequenceKeyTrack _name="Move" _binding="4" _kind="Property"><_listChannel><FloatCurve><_listKey /></FloatCurve></_listChannel></SequenceKeyTrack></_listTrack></SequenceAsset>)" ) );
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     SW_EXPECT_FALSE(
         asset.loadFromXMLText( R"(<SequenceAsset _frameMin="0" _frameMax="10" _whenFinished="RestoreState"><_listItem><SequenceTrackItem _name="Old" _targetObject="Hero" _kind="Event" /></_listItem></SequenceAsset>)" ) );
 }

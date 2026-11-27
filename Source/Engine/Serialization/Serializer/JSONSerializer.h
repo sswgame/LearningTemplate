@@ -10,6 +10,7 @@
 #include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/StrictRead.h"
 
 namespace sw
 {
@@ -41,11 +42,14 @@ namespace sw
                                                                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
-         * @brief JSON 문자열에서 객체를 역직렬화합니다. 빠진 필수 칸(`PROPERTY( Required )`)은 경로마다 `Serialization.RequiredMissing` 으로 알리고 실패입니다.
-         * @details 층을 겹쳐 읽는 쪽(설정)은 `deserializeSoft` 로 읽고 다 겹친 뒤에 `collectMissingRequired` 로 본다.
+         * @brief JSON 문자열에서 객체를 엄격하게 역직렬화합니다. 모르는 키 · 읽지 못한 값 · 범위 밖 값 · 빠진 필수 칸(`PROPERTY( Required )`)은 실패입니다.
+         * @details `readStrict` 의 결과를 타입 이름으로 알린다(`StrictRead::report`). 층을 겹쳐 읽는 쪽(설정)은 `deserializeSoft` 로 읽고 다 겹친 뒤에 `collectMissingRequired` 로 본다.
          */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief JSON 문자열을 엄격하게 읽습니다. 문제를 모두 결과에 담고 로그는 남기지 않습니다(XML 의 `XMLSerializer::readStrict` 와 같은 계약). */
+        [[nodiscard]] static StrictRead readStrict( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /**
          * @brief `PROPERTY( Required )` 칸 가운데 @p object 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다.
          * @details 구조체 칸과 구조체 목록(배열)의 원소 안으로 들어간다. 필수 칸의 초기값은 형식일 뿐이라, 빠진 칸을 초기값으로 읽으면
@@ -56,7 +60,7 @@ namespace sw
         /** @brief Pretty JSON 을 절대 경로에 씁니다. indentSpaces 가 0 이면 serializePretty 와 같이 4 칸을 씁니다. */
         [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
                                               const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-        /** @brief 절대 · 에셋 경로에서 JSON 을 읽어 역직렬화합니다. 빠진 필수 칸은 `deserialize` 와 같이 실패입니다. */
+        /** @brief 절대 · 에셋 경로에서 JSON 을 읽어 엄격하게 역직렬화합니다(`deserialize` 와 같은 규칙, 알리는 이름은 에셋 id). */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo,
                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 

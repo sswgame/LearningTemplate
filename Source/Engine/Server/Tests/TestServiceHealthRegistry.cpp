@@ -11,7 +11,7 @@ using namespace sw;
 
 SW_TEST_CASE( ServiceHealthRegistryTest, LivenessFollowsTheTick )
 {
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     health.setLivenessTimeoutMs( 1000 );
     SW_EXPECT_FALSE( health.isLive( 0 ) ); // 아직 한 번도 돌지 않았다
     health.markTick( 5000 );
@@ -23,7 +23,7 @@ SW_TEST_CASE( ServiceHealthRegistryTest, LivenessFollowsTheTick )
 
 SW_TEST_CASE( ServiceHealthRegistryTest, ReadinessNeedsRequiredChecksAndNotDraining )
 {
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     const int32           store = health.registerCheck( "service_store", true );
     const int32           cache = health.registerCheck( "ephemeral_store", false );
     SW_EXPECT_FALSE( health.isReady( 100 ) ); // 틱 없음
@@ -45,7 +45,7 @@ SW_TEST_CASE( ServiceHealthRegistryTest, ReadinessNeedsRequiredChecksAndNotDrain
 SW_TEST_CASE( ServiceHealthRegistryTest, SameNameReusesTheCheck )
 {
     // 서비스를 멈췄다 다시 시작하면(모듈 리로드) 같은 이름을 다시 올린다 — 줄이 둘이 되지 않고 처음 상태로 돌아간다.
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     const int32           first = health.registerCheck( "online_services", true );
     health.setCheck( first, HealthState::Ok, "" );
     const int32 again = health.registerCheck( "online_services", true );
@@ -59,7 +59,7 @@ SW_TEST_CASE( ServiceHealthRegistryTest, SameNameReusesTheCheck )
 
 SW_TEST_CASE( ServiceHealthRegistryTest, ReportListsEveryCheck )
 {
-    ServiceHealthRegistry health;
+    ServiceHealthRegistry health{ 10000 };
     const int32           store = health.registerCheck( "service_store", true );
     (void)health.registerCheck( "ephemeral_store", false ); // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
     health.setCheck( store, HealthState::Degraded, "pending=12000" );

@@ -24,6 +24,7 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookRecord.h"
+#include "Engine/Content/AssetIDKey.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 
@@ -699,8 +700,8 @@ namespace sw::editor
                     problemBuilder.appendFormat( "%#: 원본 .meta 를 읽지 못해 산출물 표를 맞추지 못했습니다", file._assetPath );
                     return string( problemBuilder.view() );
                 }
-                const AssetIdentityRules& rules    = AssetIdentityRules::getProjectRules();
-                const string              sourceID = StringUtil::toLower( FileUtil::normalizeSeparators( file._assetPath ) );
+                const AssetIdentityRules& rules = AssetIdentityRules::getProjectRules();
+                const AssetIDKey          sourceKey{ FileUtil::normalizeSeparators( file._assetPath ) };
                 vector<AbsolutePath>      listImported;
                 importer.collectImportedFiles( file._importedPath, listImported );
                 vector<string>              listName;
@@ -713,7 +714,7 @@ namespace sw::editor
                     rules.collectImportedSources( FileUtil::normalizeSeparators( importedPath.str().substr( rootDir.size() + 1 ) ), listSource );
                     for ( const AssetImportedSource& source : listSource )
                     {
-                        if ( source._sourceID != sourceID )
+                        if ( AssetIDKey( source._sourceID ) != sourceKey )
                             continue;
                         listName.push_back( source._outputName );
                         break;

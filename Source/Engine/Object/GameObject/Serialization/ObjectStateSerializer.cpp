@@ -28,6 +28,7 @@
 #include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/StrictRead.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -90,14 +91,10 @@ namespace sw
             template <typename TSerializer>
             static bool reportMissingRequiredOnLoad( const TypeInfo& typeInfo, string_view stateText )
             {
-                string               objectName;
-                const vector<string> listMissing = collectMissingRequired<TSerializer>( typeInfo, stateText, objectName );
-                for ( const string& missingPath : listMissing )
-                {
-                    SW_LOG_ERROR_ID( "ObjectStateSerializer.RequiredMissing", "Object '%#' has no required '%#' or it is empty (PROPERTY( Required ) - write it in the prefab or scene)",
-                                     objectName.empty() ? "(unnamed)" : objectName.c_str(), missingPath.c_str() );
-                }
-                return listMissing.empty();
+                string         objectName;
+                vector<string> listMissing = collectMissingRequired<TSerializer>( typeInfo, stateText, objectName );
+                // 모르는 칸 · 읽지 못한 값은 상태 읽기가 따로 다룬다 — 여기서는 빠진 필수 칸만 엄격한 읽기와 같은 로그로 알린다.
+                return StrictRead( typeInfo, SoftReadResult::Read, {}, std::move( listMissing ) ).report( objectName.empty() ? string_view( "(unnamed)" ) : string_view( objectName ) );
             }
 
             /** @brief 저작 저장(씬 · 프리팹)이 쓴 글의 빠졌거나 빈 필수 칸을 경고로 알립니다 — 저장은 막지 않지만 다음 로드가 실패할 글이다. */

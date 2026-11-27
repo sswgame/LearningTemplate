@@ -50,7 +50,7 @@ SW_TEST_CASE( PrefabRequiredPropertiesTest, RequiredPropertiesAreCheckedOnTheMer
     SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, merged, ObjectLoadContext{ SerializePurpose::Authoring } ) );
     SW_EXPECT_NOT_NULL( pObject->getComponent<LocomotionWarpingComponent>() );
 
-    SW_EXPECT_LOG( "ObjectStateSerializer.RequiredMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_REQUIRE_TRUE( PrefabOverrides::makeInstanceState( kMissing, overrides, "Walker", merged ) );
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( pObject, merged, ObjectLoadContext{ SerializePurpose::Authoring } ) );
 

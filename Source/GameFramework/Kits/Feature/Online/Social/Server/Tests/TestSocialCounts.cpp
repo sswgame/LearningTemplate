@@ -174,7 +174,7 @@ SW_TEST_CASE( SocialLinkRulesTest, KitConfigRequiresThePolicies )
 {
     // 빠진 칸의 초기값(0)은 반사의 `Min` 밖이라 읽기 공통 끝도 칸마다 알린다 — 빠졌다는 오류와 함께 난다.
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     OnlineServerKitEntry entry;
     entry._name     = "social";
     entry._settings = R"({ "_expiredInviteTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },

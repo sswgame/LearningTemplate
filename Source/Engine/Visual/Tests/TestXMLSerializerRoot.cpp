@@ -23,6 +23,7 @@ namespace
 SW_TEST_CASE( XMLSerializerRootTest, WrongRootIsRefusedByEveryEntry )
 {
     SW_EXPECT_LOG( "Xml.WrongRoot" );
+    SW_EXPECT_LOG( "Serialization.NotRead" ); // 엄격한 입구(`deserialize` · 설정)는 어느 글인지를 더한다
     MeshLODSettings settings;
 
     SW_EXPECT_FALSE( XMLSerializer::deserialize( &settings, *MeshLODSettings::StaticType(), XTestUtil::kWrongRoot ) );
@@ -63,7 +64,7 @@ SW_TEST_CASE( XMLSerializerRootTest, ChosenElementReadsWhateverItsName )
     SW_EXPECT_TRUE( ConfigManager::readConfigXMLElement( &settings, *MeshLODSettings::StaticType(), root.findChild( "Render" ), "element" ) );
     SW_EXPECT_EQUAL( 0.5f, settings._refineHysteresis );
 
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     MeshLODSettings typo;
     SW_EXPECT_FALSE( ConfigManager::readConfigXMLElement( &typo, *MeshLODSettings::StaticType(), root.findChild( "Typo" ), "typo" ) );
 

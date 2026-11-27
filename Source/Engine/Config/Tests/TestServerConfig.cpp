@@ -31,7 +31,9 @@ SW_TEST_CASE( ServerConfigTest, RepositoryServerConfigsLoad )
     }
 
     // 항목 배열은 값 구조체 본문의 배열이다(래핑 없음).
-    const sw::string  json = R"({ "_listStore": [ { "_name": "accounts", "_driver": "sqlite", "_connection": "Saved/accounts.db" } ],
+    const sw::string  json = R"({ "_ops": { "_maxConnections": 64, "_idleTimeoutSeconds": 10, "_processSampleIntervalMs": 1000, "_minFrameDumpIntervalMs": 10000, "_loadWarningIntervalMs": 60000, "_crashTailTicks": 40, "_livenessTimeoutMs": 10000 },
+                                  "_admin": { "_idleTimeoutSeconds": 300 },
+                                  "_listStore": [ { "_name": "accounts", "_driver": "sqlite", "_connection": "Saved/accounts.db" } ],
                                   "_listCache": [ { "_name": "presence", "_driver": "resp", "_endpoint": "127.0.0.1:6379", "_secretEnvironment": "SW_CACHE_AUTH" } ] })";
     sw::ConfigManager manager;
     SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::ServerConfig>( json, "inline" ) );

@@ -66,7 +66,7 @@ namespace sw
             issueCount += ObjectValidationInternal::forEachEmptyRequiredName( *pType, pComp, [&context, pType]( const PropertyInfo& prop )
             {
                 context.setScope( pType->_name, prop._name );
-                context.addWarning( "required name is empty - write it in the prefab or scene (the next load fails: ObjectStateSerializer.RequiredMissing)" );
+                context.addWarning( "required name is empty - write it in the prefab or scene (the next load fails: Serialization.RequiredMissing)" );
             } );
             if ( ReflectionValidation::hasValidator( *pType ) == false )
                 continue;
