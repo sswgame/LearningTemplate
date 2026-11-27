@@ -29,11 +29,9 @@ namespace sw
             static constexpr const utf8* kEventBlocked = "ParkBlocked";
             static constexpr const utf8* kEventBuilt   = "ParkBuilt";
 
-            static constexpr float32 kWalkGridMargin         = 24.0f; ///< 걷는 격자가 정문 · 놀이기구 자리 밖으로 더 덮는 거리(m) — 코스터 줄 입구와 둘러보는 자리가 든다
-            static constexpr float32 kStationCenterDistance  = 6.0f;  ///< 줄 입구를 잡는 스테이션 가운데의 트랙 거리(m)
-            static constexpr float32 kEntranceSideDistance   = 5.0f;  ///< 스테이션에서 줄 입구까지 바깥쪽 거리(m)
-            static constexpr int32   kCoasterBaseRunningCost = 8;     ///< 코스터의 분당 운영비 바탕
-            static constexpr float32 kTrackPerRunningCost    = 60.0f; ///< 트랙 이만큼(m)마다 분당 운영비가 1 오른다
+            static constexpr float32 kWalkGridMargin        = 24.0f; ///< 걷는 격자가 정문 · 놀이기구 자리 밖으로 더 덮는 거리(m) — 코스터 줄 입구와 둘러보는 자리가 든다
+            static constexpr float32 kStationCenterDistance = 6.0f;  ///< 줄 입구를 잡는 스테이션 가운데의 트랙 거리(m)
+            static constexpr float32 kEntranceSideDistance  = 5.0f;  ///< 스테이션에서 줄 입구까지 바깥쪽 거리(m)
         };
     } // namespace
 } // namespace sw
@@ -322,7 +320,7 @@ namespace sw
             const CoasterTrackFrame stationFrame = pCoaster->_pTrack->sample( ParkGameModeComponentInternal::kStationCenterDistance );
             ride._entrance                       = stationFrame._position - stationFrame._right * ParkGameModeComponentInternal::kEntranceSideDistance;
             ride._entrance._y                    = placement._position._y;
-            ride._runningCostPerMinute           = ParkGameModeComponentInternal::kCoasterBaseRunningCost + static_cast<int32>( stats._length / ParkGameModeComponentInternal::kTrackPerRunningCost );
+            ride._runningCostPerMinute           = _settings._coasterBaseRunningCost + static_cast<int32>( stats._length / _settings._coasterTrackPerRunningCost );
             SW_LOG_INFO_ID( "ParkGameMode.TestRunMLap", "[Park] test run of %#: %# m, %# s lap, top speed %# m/s, %# inversions, airtime %# s -> excitement %# · intensity %# · nausea %#",
                             pLayout->_name.c_str(), static_cast<int32>( stats._length ), static_cast<int32>( stats._lapTime ), static_cast<int32>( stats._maxSpeed ),
                             stats._inversionCount, stats._airtime, stats._excitement, stats._intensity, stats._nausea );
